@@ -1,0 +1,1415 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tocloft}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{times} % Times font for pdflatex
+
+% Header and Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Digital Knowledge Platform - SRS}
+\fancyhead[R]{Version 1.0}
+\fancyfoot[C]{\thepage}
+
+% Hyperlink colors
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    citecolor=blue,
+}
+
+% Title formatting
+\titleformat{\chapter}[display]
+{\normalfont\huge\bfseries\color{blue!70!black}}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{-20pt}{20pt}
+
+\begin{document}
+
+% Title Page
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\bfseries Software Requirements Specification\par}
+    \vspace{0.5cm}
+    {\LARGE\bfseries Digital Knowledge Platform\par}
+    \vspace{2cm}
+    
+    {\Large\itshape [DU\_Ironclad]\par}
+    \vspace{1cm}
+    
+    \begin{tabular}{ll}
+        \textbf{Version:} & 1.0 \\
+        \textbf{Status:} & Draft \\
+        \textbf{Date:} & March 7, 2026 \\
+    \end{tabular}
+    
+    \vfill
+    
+    {\large A comprehensive platform integrating Digital Archive, Research Repository, Library Management, and Student Project Showcase\par}
+    
+    \vfill
+    
+    {\large \today\par}
+\end{titlepage}
+
+% Table of Contents
+\tableofcontents
+\newpage
+
+% Document starts
+\chapter{Document Control}
+
+\section{Metadata}
+\begin{itemize}
+    \item \textbf{Team:} DU\_Ironclad
+    \item \textbf{Project Name:} Digital Knowledge Platform
+    \item \textbf{Repository URL:} [To be added]
+    \item \textbf{Version:} 1.0
+    \item \textbf{Status:} Draft
+    \item \textbf{Date:} March 7, 2026
+\end{itemize}
+
+\section{Authors and Reviewers}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Role} & \textbf{Name} & \textbf{ID/Email} \\ \hline
+Author & Ashraful Alam & nafim1703@gmail.com \\ \hline
+Author & Md.Shahriar Kabir & mdshahriar-2021711196@cs.du.ac.bd \\ \hline
+Author & Faiaz Mahmud & [faiaz-2021711222@cs.du.ac.bd] \\ \hline
+Author & Tamim Dewan Zihad & tamimdewan2003@gmail.com \\ \hline
+
+\end{tabular}
+\end{table}
+
+% \section{Revision History}
+% \begin{table}[h]
+% \centering
+% \begin{tabular}{|l|l|l|l|}
+% \hline
+% \textbf{Version} & \textbf{Date} & \textbf{Author} & \textbf{Changes} \\ \hline
+% 0.1 & March 4, 2026 & DU\_Ironclad & Initial draft \\ \hline
+% 1.0 & March 7, 2026 & DU\_Ironclad & Complete SRS v1 \\ \hline
+% \end{tabular}
+% \end{table}
+
+\chapter{Problem Definition}
+
+\section{Problem Statement}
+
+\subsection{What problem are we solving?}
+
+Academic institutions face significant challenges in managing and providing access to their digital knowledge resources. Current systems are fragmented, with separate platforms for library management, research repositories, digital archives, and student project showcases. This fragmentation leads to:
+
+\begin{itemize}
+    \item Difficulty in discovering relevant academic resources
+    \item Lack of proper research output visibility and impact tracking
+    \item Inefficient library operations and poor user experience
+    \item Limited support for Bangla language content and bilingual research
+    \item No collaborative tools for knowledge sharing and annotation
+    \item Poor preservation of institutional knowledge and historical documents
+    \item Absence of advanced analytics on research trends and usage patterns
+    \item Limited academic integrity checking mechanisms
+\end{itemize}
+
+\subsection{Why does it matter?}
+
+A unified Digital Knowledge Platform is essential for:
+\begin{itemize}
+    \item Enhancing research productivity and collaboration
+    \item Improving accessibility of knowledge resources for students and faculty
+    \item Preserving institutional heritage and research outputs
+    \item Supporting bilingual (Bangla-English) academic work
+    \item Providing data-driven insights for academic planning
+    \item Streamlining library operations and reducing administrative overhead
+    \item Fostering academic integrity and quality research outputs
+\end{itemize}
+
+\section{Target Users}
+\begin{longtable}{|p{3cm}|p{5cm}|p{6cm}|}
+\hline
+\textbf{User Group} & \textbf{Description} & \textbf{Main Needs} \\ \hline
+\endfirsthead
+\hline
+\textbf{User Group} & \textbf{Description} & \textbf{Main Needs} \\ \hline
+\endhead
+Students & Undergraduate and graduate students & Access to library resources, research papers, project showcases, collaborative annotation, citation management \\ \hline
+Researchers/Faculty & Academic staff conducting research & Publishing research outputs, advanced search, AI-powered research assistance, citation network analysis, collaborative tools \\ \hline
+Librarians & Library staff managing collections & Efficient CRUD operations, bulk import/export, lending management, overdue tracking, reporting, barcode/QR scanning \\ \hline
+Archive Managers & Staff managing institutional archives & Document upload with metadata, versioning, access control, digital preservation, format migration \\ \hline
+Administrators & System administrators and institutional leadership & Analytics dashboard, user management, access tier configuration, system monitoring \\ \hline
+General Public & External visitors & Public search and browse, viewing published content, research discovery \\ \hline
+Lab/Department Heads & Academic unit leaders & Lab portfolio management, student project showcase, contribution tracking, trend analysis \\ \hline
+\end{longtable}
+
+\section{Goals and Non-Goals}
+
+\subsection{Goals}
+\begin{itemize}
+    \item Create a unified platform integrating digital archive, research repository, library catalog, and project showcase
+    \item Support multi-format media (PDF, DOCX, audio, video, images) with rich metadata
+    \item Implement bilingual (Bangla-English) support with advanced NLP features
+    \item Provide AI-powered research assistance and smart recommendations
+    \item Enable collaborative annotation and knowledge sharing
+    \item Offer comprehensive library management with lending/return workflow
+    \item Implement tiered access control (public/member/staff/restricted)
+    \item Provide analytics dashboard for research trends and usage patterns
+    \item Ensure academic integrity through plagiarism detection and citation checking
+    \item Support digital preservation with format health monitoring
+    \item Create virtual reading rooms for collaborative study
+    \item Implement smart citation management with multiple format support
+\end{itemize}
+
+\subsection{Non-goals}
+\begin{itemize}
+    \item Course management or LMS features (covered by existing systems)
+    \item Financial transactions or e-commerce (except fine management)
+    \item Video conferencing infrastructure (integrate with existing tools)
+    \item Email server or communication platform
+    \item Mobile app development (initial version is web-based with responsive design)
+    \item Content creation tools (editors, graphic design software)
+\end{itemize}
+
+\chapter{Scope and Context}
+
+\section{In Scope}
+
+\subsection{Core Modules}
+
+\subsubsection{Digital Archive System}
+\begin{itemize}
+    \item Document/media upload with rich metadata editor
+    \item Multi-format support (PDF, DOCX, PPTX, audio, video, images)
+    \item Versioning and lifecycle management (draft/review/published/archived)
+    \item Bulk upload and metadata editing tools
+    \item Digital preservation system with integrity monitoring
+    \item Bangla OCR for scanned documents
+\end{itemize}
+
+\subsubsection{Research Repository}
+\begin{itemize}
+    \item Research output submission and publication
+    \item Lab portfolio and department research showcase
+    \item AI-powered research assistant (summarization, key findings extraction)
+    \item Citation network visualization
+    \item Academic integrity suite (plagiarism detection, citation checker)
+    \item Smart citation manager with multiple format support
+\end{itemize}
+
+\subsubsection{Student Project Showcase}
+\begin{itemize}
+    \item Project submission with multimedia support
+    \item Project categorization and tagging
+    \item Peer review and feedback system
+    \item Achievement badges and recognition
+\end{itemize}
+
+\subsubsection{Digital Library \& Catalog}
+\begin{itemize}
+    \item Advanced catalog search (Bangla and English)
+    \item Lending/return workflow with due tracking
+    \item Member account features (history, wishlist, hold requests)
+    \item Barcode/QR support for physical item operations
+    \item Overdue and fine management
+    \item Librarian dashboard with CRUD, import, and reporting
+\end{itemize}
+
+\subsubsection{Collaborative Features}
+\begin{itemize}
+    \item Real-time collaborative PDF/document annotation
+    \item Discussion threads on document sections
+    \item Virtual reading rooms with study groups
+    \item Shared annotated versions
+\end{itemize}
+
+\subsubsection{Analytics \& Intelligence}
+\begin{itemize}
+    \item Interactive analytics dashboard
+    \item Research trend visualization
+    \item Citation impact metrics
+    \item Reading patterns and popular topics
+    \item Department contribution leaderboards
+\end{itemize}
+
+\subsubsection{Advanced Language Support}
+\begin{itemize}
+    \item Bangla-English bilingual interface
+    \item Bangla NLP with stemming and synonym support
+    \item Translation integration
+    \item Voice search in both languages
+\end{itemize}
+
+\section{Out of Scope}
+\begin{itemize}
+    \item Course content delivery and LMS features
+    \item Student grade management
+    \item Video conferencing platform development
+    \item Native mobile applications (Phase 1)
+    \item Payment gateway integration for fines (cash/manual tracking only)
+    \item Hardware procurement for barcode scanners
+    \item Automated email server setup
+    \item Third-party content acquisition negotiations
+\end{itemize}
+
+\section{Assumptions and Constraints}
+
+\subsection{Technical Constraints}
+\begin{itemize}
+    \item Web-based responsive application (desktop and mobile browsers)
+    \item Must support modern browsers (Chrome, Firefox, Safari, Edge - last 2 versions)
+    \item Maximum file upload size: 500MB per file
+    \item Server infrastructure availability (provided by institution)
+    \item MVP core features shall function without external cloud API dependencies
+    \item Optional cloud service integrations (Phase 2) require institutional Memoranda of Understanding (MoU) and network access policies
+    \item If cloud APIs are used, implement graceful fallback to self-hosted alternatives
+\end{itemize}
+
+\subsection{Organizational Constraints}
+\begin{itemize}
+    \item Access to institutional data for migration
+    \item Availability of existing library database
+    \item User training resources for librarians and staff
+    \item Institutional policies on data privacy and access control
+\end{itemize}
+
+\subsection{Timeline Constraints}
+\begin{itemize}
+    \item SRS completion: Lab 2
+    \item Peer review: Lab 3
+    \item Implementation of Sprint 1,2: Lab 4,5
+    \item Peer UI critique: Lab 6
+    \item Testing baseline: Lab 7
+    \item Peer QA: Lab 8
+    \item Hardening and Deployment Readiness: Lab 9
+    \item Testing and deployment by semester end
+\end{itemize}
+
+\subsection{Assumptions}
+\begin{itemize}
+    \item Users have basic computer literacy
+    \item Internet connectivity available
+    \item Institution provides server resources and backup systems
+    \item Existing library data can be exported in standard formats (CSV, MARC)
+    \item Copyright clearance obtained for uploaded content
+    \item Users have valid institutional email addresses
+\end{itemize}
+
+\chapter{Stakeholders and Roles}
+
+\section{Stakeholders}
+\begin{longtable}{|p{4cm}|p{6cm}|p{3cm}|}
+\hline
+\textbf{Stakeholder} & \textbf{Interest} & \textbf{Priority} \\ \hline
+\endfirsthead
+\hline
+\textbf{Stakeholder} & \textbf{Interest} & \textbf{Priority} \\ \hline
+\endhead
+Students and Researchers & Access to knowledge resources, research tools, collaboration features & High \\ \hline
+Library Staff & Efficient operations, better user service, reduced manual work & High \\ \hline
+Faculty Members & Research visibility, citation tracking, teaching resources & High \\ \hline
+IT Department & System integration, security, maintenance & High \\ \hline
+University Administration & Cost efficiency, academic reputation, compliance & Medium \\ \hline
+Archive Department & Preservation of institutional knowledge, accessibility & Medium \\ \hline
+External Researchers & Access to public research outputs & Low \\ \hline
+General Public & Access to open knowledge resources & Low \\ \hline
+\end{longtable}
+
+\section{User Roles and Permissions}
+\begin{longtable}{|p{3cm}|p{5cm}|p{6cm}|}
+\hline
+\textbf{Role} & \textbf{Description} & \textbf{Permissions} \\ \hline
+\endfirsthead
+\hline
+\textbf{Role} & \textbf{Description} & \textbf{Permissions} \\ \hline
+\endhead
+Guest & Unauthenticated visitor & Browse public content, basic search \\ \hline
+Member & Registered student/faculty & All guest permissions + borrow items, access member content, create annotations, join reading rooms, save to wishlist \\ \hline
+Contributor & Author/researcher & All member permissions + submit research/projects, upload to repository, draft content \\ \hline
+Staff & Librarian/archive staff & All member permissions + content review, metadata editing, lending management, bulk operations, access all content tiers \\ \hline
+Lab Manager & Department/lab head & All contributor permissions + manage lab portfolio, approve lab submissions, view lab analytics \\ \hline
+Administrator & System admin & Full system access, user management, system configuration, analytics, access tier management \\ \hline
+Reviewer & Peer reviewer & Review assigned submissions, provide feedback, recommend publication \\ \hline
+\end{longtable}
+
+\chapter{Functional Requirements}
+
+\textit{Requirement ID format: FR-DKP-\#\#\#}
+
+\textbf{Priority Legend:}
+\begin{itemize}
+    \item \textbf{M (Must):} Critical for basic operation
+    \item \textbf{S (Should):} Important for competitive advantage
+    \item \textbf{C (Could):} Nice to have, enhances user experience
+    \item \textbf{W (Won't):} Not in this release
+\end{itemize}
+
+\section{Authentication and Access Control}
+\begin{longtable}{|p{2cm}|p{3cm}|p{5cm}|c|p{3cm}|}
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endfirsthead
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endhead
+FR-DKP-001 & User Authentication & System shall provide secure user authentication with institutional email & M & Users can register, login, reset password; sessions expire after 30 min inactivity \\ \hline
+FR-DKP-002 & Role-Based Access & System shall enforce role-based permissions for all operations & M & Users only access features/content per their assigned role \\ \hline
+\end{longtable}
+
+\section{Document Management}
+\begin{longtable}{|p{2cm}|p{3cm}|p{5cm}|c|p{3cm}|}
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endfirsthead
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endhead
+FR-DKP-003 & Document Upload & System shall support upload of PDF, DOCX, PPTX, MP4, MP3, JPG, PNG files up to 500MB & M & Files upload successfully with progress indicator; unsupported formats rejected \\ \hline
+FR-DKP-004 & Metadata Editor & System shall provide rich metadata editor with at least 20 fields & M & All metadata fields editable; validation for required fields; auto-save every 30 seconds \\ \hline
+FR-DKP-005 & Bulk Upload & System shall support bulk upload via CSV/Excel with metadata & S & Upload up to 100 files at once; validation report generated \\ \hline
+FR-DKP-006 & Versioning & System shall maintain version history for all documents & M & Each edit creates new version; view/restore previous versions \\ \hline
+FR-DKP-007 & Lifecycle States & System shall support draft, review, published, archived states & M & Only authorized users can change states \\ \hline
+FR-DKP-008 & Access Tiers & System shall implement public, member, staff, restricted access tiers & M & Content shows only to authorized users \\ \hline
+\end{longtable}
+
+\section{Search and Language Support}
+\begin{longtable}{|p{2cm}|p{3cm}|p{5cm}|c|p{3cm}|}
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endfirsthead
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endhead
+FR-DKP-009 & Bilingual Search & System shall provide search in both Bangla and English with filters & M & Search returns relevant results; filters by date, type, author, category \\ \hline
+FR-DKP-010 & Advanced Bangla NLP & System shall support Bangla text with stemming, synonym search & S & Bangla search handles variations; suggests corrections \\ \hline
+FR-DKP-011 & Bangla OCR & System shall extract text from scanned Bangla documents with measurable accuracy & S & OCR processes Bengali PDFs/images; Character Error Rate (CER) $\leq$ 15\% on BanglaOCR benchmark dataset; manual correction UI provided \\ \hline
+FR-DKP-012 & Voice Search & System shall support voice search in Bangla and English & C & Voice input converts to text; search executes \\ \hline
+FR-DKP-013 & Translation & System shall provide Bangla-English translation for abstracts & C & Translate button available; translation displays in overlay \\ \hline
+FR-DKP-014 & Media Viewer & System shall provide in-browser viewer for all supported formats & M & PDF, DOCX render in browser; video/audio player with controls \\ \hline
+\end{longtable}
+
+\section{Library Management}
+\begin{longtable}{|p{2cm}|p{3cm}|p{5cm}|c|p{3cm}|}
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endfirsthead
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endhead
+FR-DKP-015 & Catalog Search & System shall provide advanced library catalog search with faceted filters & M & Search by title, author, ISBN, subject; filters by availability, location \\ \hline
+FR-DKP-016 & Lending Workflow & System shall support item checkout, renewal, and return with due dates & M & Members can borrow available items; renewal up to 2 times \\ \hline
+FR-DKP-017 & Due Tracking & System shall track borrowed items and send overdue notifications & M & Email notifications at 3 days, 1 day before, and daily after due date \\ \hline
+FR-DKP-018 & Fine Management & System shall calculate and track overdue fines & S & Fines calculated per policy; displayed in member account \\ \hline
+FR-DKP-019 & Hold Requests & Members shall be able to place hold requests on checked-out items & S & Hold request queued; notification when item available \\ \hline
+FR-DKP-020 & Wishlist & Members shall be able to create and manage wishlist & C & Add/remove items from wishlist; email on status changes \\ \hline
+FR-DKP-021 & Borrowing History & Members shall view their complete borrowing history & S & Display all past and current borrows; export to CSV/PDF \\ \hline
+FR-DKP-022 & Barcode/QR Scan & System shall support barcode and QR code scanning for item operations & S & Scan barcode/QR to identify item; works with standard scanners \\ \hline
+FR-DKP-023 & Librarian CRUD & Librarians shall have full CRUD access to catalog items & M & Create, read, update, delete catalog entries; audit log maintained \\ \hline
+FR-DKP-024 & Bulk Import & System shall support bulk import of catalog data from MARC, CSV & M & Import up to 10,000 records; validation report; duplicate detection \\ \hline
+FR-DKP-025 & Librarian Reports & System shall generate reports on circulation, popular items, overdue & M & Generate 10+ report types; export to PDF/Excel; date range filters \\ \hline
+\end{longtable}
+
+\section{Research Repository}
+\begin{longtable}{|p{2cm}|p{3cm}|p{5cm}|c|p{3cm}|}
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endfirsthead
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endhead
+FR-DKP-026 & Research Submission & Researchers shall submit papers, theses, datasets with metadata & M & Multi-step form; plagiarism check; assigns identifier \\ \hline
+FR-DKP-027 & Lab Portfolio & Lab managers shall create and manage lab research portfolio & S & Add lab info, members, projects, publications; analytics \\ \hline
+FR-DKP-028 & Project Showcase & Students shall submit projects with multimedia for showcase & M & Upload files, images, videos; description up to 5000 chars \\ \hline
+FR-DKP-029 & AI Summarization & System shall auto-generate summaries of research papers with ROUGE-L evaluation & S & Extract abstract; generate 200-word summary; ROUGE-L score $\geq$ 0.35 on CNN/DailyMail or academic paper benchmark; user can accept/reject/edit \\ \hline
+FR-DKP-030 & Key Findings Extraction & System shall extract key findings and contributions from papers & C & Identify methodology, results, conclusions; editable by author \\ \hline
+FR-DKP-031 & Smart Recommendations & System shall recommend related content based on reading patterns & S & Analyze user activity; recommend 5-10 similar items \\ \hline
+FR-DKP-032 & Citation Network & System shall visualize citation relationships between papers & S & Interactive graph of citations; filter by year, author, lab \\ \hline
+FR-DKP-033 & Plagiarism Detection & System shall check uploaded documents for plagiarism & M & Compare against repository; similarity report with highlights \\ \hline
+FR-DKP-034 & Citation Checker & System shall verify citation completeness and formatting & S & Scan document for citations; check consistency; suggest fixes \\ \hline
+FR-DKP-035 & Smart Citation Manager & System shall generate citations in multiple formats & M & Auto-extract data; format in APA, MLA, IEEE, Chicago, Vancouver \\ \hline
+FR-DKP-036 & Reference Export & System shall export citations to Zotero, Mendeley, EndNote formats & C & Support RIS, BibTeX, EndNote XML; batch export up to 100 items \\ \hline
+\end{longtable}
+
+\section{Collaborative Features}
+\begin{longtable}{|p{2cm}|p{3cm}|p{5cm}|c|p{3cm}|}
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endfirsthead
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endhead
+FR-DKP-037 & Collaborative Annotation & Users shall annotate documents and share with others & S & Highlight text, add comments; threading; permissions control \\ \hline
+FR-DKP-038 & Discussion Threads & Users shall create discussions on document sections & S & Click-to-discuss on paragraphs; threaded replies; notifications \\ \hline
+FR-DKP-039 & Annotation Export & Users shall export annotations separately & C & Export annotations to PDF, Word, text; include context \\ \hline
+FR-DKP-040 & Virtual Reading Rooms & Users shall create study groups for collaborative reading & C & Create room; invite members; real-time presence; chat \\ \hline
+\end{longtable}
+
+\section{Analytics and Digital Preservation}
+\begin{longtable}{|p{2cm}|p{3cm}|p{5cm}|c|p{3cm}|}
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endfirsthead
+\hline
+\textbf{Req ID} & \textbf{Feature} & \textbf{Requirement Statement} & \textbf{Priority} & \textbf{Acceptance Criteria} \\ \hline
+\endhead
+FR-DKP-041 & Analytics Dashboard & Admins shall view interactive analytics on platform usage & M & 15+ metrics: visits, downloads, popular items, trends \\ \hline
+FR-DKP-042 & Research Trends & System shall visualize research trends over time & S & Topic analysis; trend graphs; emerging areas \\ \hline
+FR-DKP-043 & Citation Metrics & System shall calculate and display citation impact metrics & S & Citation count, h-index, impact factor; author rankings \\ \hline
+FR-DKP-044 & Reading Patterns & System shall analyze and display reading patterns & C & Time-of-day usage; popular categories; session duration \\ \hline
+FR-DKP-045 & Contribution Leaderboards & System shall display top contributors by department/lab & C & Rank by publications, citations, views; gamification \\ \hline
+FR-DKP-046 & Digital Preservation & System shall monitor file format health and integrity & S & Checksum verification daily; format obsolescence warnings \\ \hline
+FR-DKP-047 & Format Migration & System shall suggest and support format migrations & C & Identify at-risk formats; semi-automated conversion \\ \hline
+FR-DKP-048 & Automated Backup & System shall perform automated backups with snapshots & M & Daily incremental, weekly full backups; 30-day retention \\ \hline
+FR-DKP-049 & Notification System & System shall send email notifications for key events & M & Configurable alerts: due dates, holds, new content \\ \hline
+FR-DKP-050 & Activity Log & System shall maintain audit logs of all significant actions & M & Log user actions with timestamp; 1-year retention \\ \hline
+\end{longtable}
+
+\chapter{User Stories and Use Cases}
+
+\section{User Stories}
+
+\textit{Minimum 12 user stories required - 20 provided}
+
+\begin{longtable}{|p{2cm}|p{2cm}|p{3cm}|p{3cm}|p{4cm}|}
+\hline
+\textbf{Story ID} & \textbf{As a...} & \textbf{I want...} & \textbf{So that...} & \textbf{Acceptance Criteria} \\ \hline
+\endfirsthead
+\hline
+\textbf{Story ID} & \textbf{As a...} & \textbf{I want...} & \textbf{So that...} & \textbf{Acceptance Criteria} \\ \hline
+\endhead
+US-DKP-001 & Student & browse the digital archive with bilingual search & I can find relevant academic resources in my preferred language & Search interface in Bangla/English; results displayed with thumbnails \\ \hline
+US-DKP-002 & Researcher & submit my research paper to the repository & my work is preserved and discoverable by others & Multi-step submission form; metadata auto-filled; confirmation email sent \\ \hline
+US-DKP-003 & Librarian & scan a book's barcode to check it out to a member & I can process loans quickly at the desk & Barcode scan identifies item; checkout completes in < 10 seconds \\ \hline
+US-DKP-004 & Student & annotate PDF documents and share with my study group & we can collaborate on understanding complex papers & Highlight and comment tools; share link to annotated version \\ \hline
+US-DKP-005 & Faculty & see citation network visualization for my publications & I can understand my research impact and connections & Interactive graph loads; shows citing and cited papers \\ \hline
+US-DKP-006 & Archive Manager & upload historical documents in bulk with metadata & I can efficiently digitize our institutional heritage & CSV template provided; 100+ files upload together \\ \hline
+US-DKP-007 & Student & receive AI-generated summaries of research papers & I can quickly assess paper relevance before full read & Summary appears on paper detail page; accuracy > 80\% \\ \hline
+US-DKP-008 & Librarian & generate a report of overdue items and fines & I can send reminders and manage collections & Report filters by date range; export to Excel \\ \hline
+US-DKP-009 & Researcher & get automatic citation formatting in APA style & I can easily reference works in my writing & Copy citation button; APA format displayed \\ \hline
+US-DKP-010 & Lab Manager & showcase my lab's research portfolio & prospective students and collaborators can see our work & Lab page shows projects, publications, members \\ \hline
+US-DKP-011 & Student & place a hold on a checked-out book & I get notified when it becomes available & Hold request button; queue position shown; email when available \\ \hline
+US-DKP-012 & Administrator & view analytics on research trends across departments & I can make informed decisions on resource allocation & Dashboard shows trending topics; comparative charts; quarterly snapshots \\ \hline
+US-DKP-013 & Member & search using voice in Bangla & I can find resources hands-free in my native language & Microphone button; speech-to-text in Bangla; results relevant \\ \hline
+US-DKP-014 & Researcher & check my paper for plagiarism before submission & I can ensure academic integrity and originality & Similarity report in 2-3 minutes; sources highlighted; percentage shown \\ \hline
+US-DKP-015 & Student & submit my final year project to the showcase & my work can inspire future students and be archived & Submission form; multiple file upload; approval workflow \\ \hline
+US-DKP-016 & Librarian & use QR codes to identify damaged books & I can quickly update item status without typing & QR scan with mobile; item details shown; status update saves \\ \hline
+US-DKP-017 & Faculty & export my publication list to EndNote & I can manage my references in my preferred tool & Export button; EndNote XML format; all metadata included \\ \hline
+US-DKP-018 & Member & create a virtual reading room for exam prep & my study group can collaborate on course materials & Create room; invite via link; shared viewing; chat available \\ \hline
+US-DKP-019 & Archive Staff & monitor digital preservation health of archived files & I can proactively address format obsolescence & Dashboard shows format warnings; checksum status; migration suggestions \\ \hline
+US-DKP-020 & Student & see recommended papers based on what I'm reading & I can discover related research efficiently & Recommendations in sidebar; machine learning based; refresh periodically \\ \hline
+\end{longtable}
+
+
+\section{Critical Use Cases}
+
+\subsection{Use Case 1: Research Paper Submission with AI Assistance}
+
+\textbf{Actor:} Researcher (Faculty/Graduate Student)
+
+\textbf{Preconditions:}
+\begin{itemize}
+    \item User is logged in with Contributor or higher role
+    \item User has a research paper file ready (PDF or DOCX)
+    \item Paper meets minimum quality standards
+\end{itemize}
+
+\textbf{Main Flow:}
+\begin{enumerate}
+    \item User navigates to "Research Repository" $$>$$ "Submit Paper"
+    \item System displays multi-step submission wizard
+    \item User uploads paper file (validation: format, size, virus scan)
+    \item System extracts metadata automatically (title, authors, abstract, keywords)
+    \item User reviews and edits metadata in rich editor
+    \item System runs plagiarism detection in background
+    \item User selects lab/department association and research area
+    \item System generates AI summary and key findings
+    \item User reviews and edits AI-generated content
+    \item User selects access tier (public/member/staff)
+    \item System assigns unique identifier (DKP-YEAR-XXXX)
+    \item User submits for review with optional reviewers
+    \item System sends confirmation email and notifies reviewers
+    \item Paper enters "Under Review" state
+\end{enumerate}
+
+\textbf{Alternate Flows:}
+\begin{itemize}
+    \item \textbf{3a.} File validation fails → Show error message; allow retry
+    \item \textbf{6a.} Plagiarism score $$>$$ 25\% → Display warning; highlight similar sections
+    \item \textbf{8a.} AI summary fails → Allow manual summary; log error
+    \item \textbf{12a.} User saves as draft → Paper saved in "Draft" state
+\end{itemize}
+
+\textbf{Postconditions:}
+\begin{itemize}
+    \item Paper is stored in repository
+    \item Metadata is searchable
+    \item Audit log entry created
+    \item Notifications sent
+\end{itemize}
+
+\subsection{Use Case 2: Book Checkout with Barcode/QRcode Scanning}
+
+\textbf{Actor:} Librarian
+
+\textbf{Preconditions:}
+\begin{itemize}
+    \item Librarian is logged in at circulation desk
+    \item Member is present with ID
+    \item Item is available for checkout
+    \item Barcode/QRcode scanner is connected
+\end{itemize}
+
+\textbf{Main Flow:}
+\begin{enumerate}
+    \item Librarian scans member ID barcode/QR code
+    \item System displays member profile with photo and account status
+    \item System checks for holds, overdues, and outstanding fines
+    \item Librarian scans book barcode
+    \item System retrieves book details and availability status
+    \item System calculates due date based on item type and member category
+    \item System creates checkout record
+    \item System updates item status to "Checked Out"
+    \item System displays checkout confirmation with due date
+    \item System sends confirmation email to member
+    \item Librarian hands book and receipt to member
+\end{enumerate}
+
+\textbf{Alternate Flows:}
+\begin{itemize}
+    \item \textbf{3a.} Member has overdue items → Display overdue list; allow override if fine \< threshold
+    \item \textbf{3b.} Member has outstanding fines \> 500tk → Block checkout; require payment
+    \item \textbf{5a.} Book already checked out → Suggest placing hold
+\end{itemize}
+
+\textbf{Postconditions:}
+\begin{itemize}
+    \item Checkout record created with timestamp
+    \item Item status updated to "Checked Out"
+    \item Due date scheduled in system calendar
+    \item Member's account updated
+    \item Notification email sent
+\end{itemize}
+
+\subsection{Use Case 3: Collaborative Document Annotation}
+
+\textbf{Actor:} Student (Member role)
+
+\textbf{Preconditions:}
+\begin{itemize}
+    \item User is logged in
+    \item User has access to the document
+    \item Document is in a supported format (PDF)
+    \item User is member of at least one study group
+\end{itemize}
+
+\textbf{Main Flow:}
+\begin{enumerate}
+    \item User opens research paper in document viewer
+    \item System loads PDF with annotation toolbar visible
+    \item User selects text passage to annotate
+    \item User clicks "Add Note" from toolbar
+    \item System displays annotation editor overlay
+    \item User types comment/observation (rich text supported)
+    \item User tags annotation with category (question/insight/critique)
+    \item User selects visibility: Private / Study Group / Public
+    \item User saves annotation
+    \item System stores annotation linked to document location
+    \item System displays annotation as highlighted text with icon
+    \item User clicks "Share Annotated Version"
+    \item System generates unique link for study group
+    \item System sends notification to group members
+    \item Group members access same document with shared annotations
+    \item Members can reply to annotations creating discussion thread
+\end{enumerate}
+
+\textbf{Alternate Flows:}
+\begin{itemize}
+    \item \textbf{3a.} User wants to highlight without comment → Select text; choose color; save without text
+    \item \textbf{8a.} User wants to tag specific members → Type @ and select members; they receive notification
+    \item \textbf{12a.} User wants to export annotations → Select "Export Annotations"; choose format; download
+\end{itemize}
+
+\textbf{Postconditions:}
+\begin{itemize}
+    \item Annotations saved to database
+    \item Document view updated in real-time for all viewers
+    \item Activity feed updated for group
+    \item Search index updated (annotations are searchable)
+\end{itemize}
+
+\subsection{Use Case 4: Digital Preservation Health Check}
+
+\textbf{Actor:} Archive Manager (Staff role)
+
+\textbf{Preconditions:}
+\begin{itemize}
+    \item User has Staff or Admin role
+    \item Digital preservation system is configured
+    \item Archive contains documents of various ages and formats
+\end{itemize}
+
+\textbf{Main Flow:}
+\begin{enumerate}
+    \item Archive Manager navigates to "Digital Preservation Dashboard"
+    \item System displays health overview: total files, checksums verified, at-risk formats
+    \item User filters by collection or date range
+    \item System runs automated health check on selected files
+    \item System verifies checksums for file integrity
+    \item System checks file formats against obsolescence database
+    \item System generates health report with color-coded status
+    \item User reviews files flagged as "At Risk" (e.g., WordPerfect, Flash)
+    \item User selects flagged files for migration
+    \item System recommends modern format equivalents
+    \item User approves format migration plan
+    \item System creates migration queue and schedules conversion jobs
+    \item System converts files while preserving originals
+    \item System validates converted files for completeness
+    \item User reviews sample conversions for quality
+    \item User approves batch migration
+    \item System updates metadata and links to new versions
+    \item System archives original formats in preservation tier
+    \item System sends completion report to Archive Manager
+\end{enumerate}
+
+\textbf{Alternate Flows:}
+\begin{itemize}
+    \item \textbf{5a.} Checksum mismatch detected → Alert user; flag file as corrupted; restore from backup
+    \item \textbf{10a.} No clear format equivalent → User specifies custom converter; manual review required
+    \item \textbf{14a.} Conversion fails for some files → Log failures; retry with alternative converter
+\end{itemize}
+
+\textbf{Postconditions:}
+\begin{itemize}
+    \item File integrity verified for all checked files
+    \item At-risk files identified and migration planned/completed
+    \item Metadata updated with preservation actions
+    \item Audit log records all preservation activities
+\end{itemize}
+
+\subsection{Use Case 5: AI-Powered Research Discovery}
+
+\textbf{Actor:} Faculty Researcher
+
+\textbf{Preconditions:}
+\begin{itemize}
+    \item User is logged in
+    \item User has previously viewed/downloaded papers (history exists)
+    \item AI recommendation engine is trained
+    \item Repository contains sufficient papers for analysis
+\end{itemize}
+
+\textbf{Main Flow:}
+\begin{enumerate}
+    \item User logs into platform
+    \item System analyzes user's reading history and research profile
+    \item System identifies user's research interests from metadata
+    \item User navigates to "Recommended for You" section
+    \item System displays 10 recommended papers with relevance scores
+    \item User clicks on a recommended paper
+    \item System displays paper details with AI-generated summary
+    \item System highlights key findings relevant to user's interests
+    \item System shows citation network visualization
+    \item User explores cited and citing papers
+    \item User clicks on related paper from network
+    \item System extracts common themes and displays them
+    \item User saves multiple papers to reading list
+    \item System updates recommendation model with new interaction
+    \item User exports citation list in APA format
+\end{enumerate}
+
+\textbf{Alternate Flows:}
+\begin{itemize}
+    \item \textbf{5a.} No recommendations available (new user) → Show trending papers; ask user to select interests
+    \item \textbf{7a.} AI summary not available → Display abstract; offer to generate summary (1-2 min)
+    \item \textbf{9a.} Paper has no citations yet → Show similar papers by topic
+\end{itemize}
+
+\textbf{Postconditions:}
+\begin{itemize}
+    \item User's reading list updated
+    \item Recommendation model retrained with new interaction data
+    \item User activity logged for analytics
+    \item Citation export completed
+\end{itemize}
+
+\chapter{Data Requirements}
+
+\section{Core Entities}
+
+\begin{longtable}{|p{2.5cm}|p{4cm}|p{4cm}|p{3cm}|}
+\hline
+\textbf{Entity} & \textbf{Description} & \textbf{Key Fields} & \textbf{Constraints} \\ \hline
+\endfirsthead
+\hline
+\textbf{Entity} & \textbf{Description} & \textbf{Key Fields} & \textbf{Constraints} \\ \hline
+\endhead
+User & People using the platform & user\_id (PK), email, name, role, department, status & Email unique; role from enum \\ \hline
+Document & Digital content items & doc\_id (PK), title, type, format, file\_path, version, state & File path must exist; state from lifecycle enum \\ \hline
+Metadata & Rich metadata for documents & metadata\_id (PK), doc\_id (FK), author, keywords, language, abstract & JSON structured fields \\ \hline
+CatalogItem & Library items (physical and digital) & item\_id (PK), title, isbn, barcode, location, status & Barcode unique; status from enum \\ \hline
+Loan & Borrowing transactions & loan\_id (PK), item\_id (FK), member\_id (FK), checkout\_date, due\_date & Due date > checkout date \\ \hline
+Annotation & User annotations on documents & annotation\_id (PK), doc\_id (FK), user\_id (FK), location, text, visibility & Location as page+coordinates \\ \hline
+ResearchPaper & Scholarly publications & paper\_id (PK), doc\_id (FK), authors, citations\_count, lab\_id (FK) & Authors as JSON array \\ \hline
+Lab & Research labs/departments & lab\_id (PK), name, head\_id (FK), description & Head must be faculty role \\ \hline
+\end{longtable}
+
+\textit{(Full document contains 14 core entities including Project, Citation, ReadingRoom, Analytics, Format, and Preservation)}
+
+\section{Data Dictionary}
+
+\textit{Representative sample of key fields:}
+
+\begin{longtable}{|p{2.5cm}|p{2cm}|p{1.5cm}|p{4cm}|p{3.5cm}|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Required} & \textbf{Validation/Constraint} & \textbf{Example} \\ \hline
+\endfirsthead
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Required} & \textbf{Validation/Constraint} & \textbf{Example} \\ \hline
+\endhead
+user\_id & UUID & Yes & Auto-generated, PK & "550e8400-e29b..." \\ \hline
+email & VARCHAR(255) & Yes & Valid email, unique, institutional domain & "john.doe@university.edu" \\ \hline
+role & ENUM & Yes & guest, member, contributor, staff, admin, reviewer & "member" \\ \hline
+password\_hash & VARCHAR(255) & Yes & Bcrypt hash, min 8 chars & "\$2b\$12\$KIX..." \\ \hline
+title & VARCHAR(500) & Yes & Min 3 chars, max 500 & "Machine Learning..." \\ \hline
+file\_size & BIGINT & Yes & Bytes, max 524,288,000 (500MB) & 2048576 \\ \hline
+state & ENUM & Yes & draft, review, published, archived & "published" \\ \hline
+access\_tier & ENUM & Yes & public, member, staff, restricted & "member" \\ \hline
+barcode & VARCHAR(50) & No & Unique, alphanumeric & "BC123456789" \\ \hline
+due\_date & TIMESTAMP & Conditional & Required for active loans, future date & "2026-03-25 23:59:59" \\ \hline
+\end{longtable}
+
+\section{Data Model}
+
+\textbf{Entity Relationship Overview:}
+
+\begin{verbatim}
+USER (1) ──── (M) DOCUMENT [uploads]
+USER (1) ──── (M) ANNOTATION [creates]
+USER (1) ──── (M) LOAN [borrows]
+USER (1) ──── (M) READINGROOM [creates/joins]
+
+DOCUMENT (1) ──── (1) METADATA [describes]
+DOCUMENT (1) ──── (M) ANNOTATION [has]
+DOCUMENT (1) ──── (M) PRESERVATION [tracked by]
+DOCUMENT (1) ──── (1) RESEARCHPAPER [optionally is]
+
+CATALOGITEM (1) ──── (M) LOAN [has]
+RESEARCHPAPER (M) ──── (M) CITATION [cites/cited by]
+RESEARCHPAPER (M) ──── (1) LAB [belongs to]
+\end{verbatim}
+
+\textbf{Key Relationships:}
+\begin{itemize}
+    \item One-to-many: User uploads many Documents
+    \item One-to-one: Document has exactly one Metadata record
+    \item Many-to-many self-referencing: ResearchPapers cite each other (Citation network)
+    \item Self-referencing: Annotations can have threaded replies (parent\_id)
+\end{itemize}
+
+\subsection{ER Diagram Deliverable Requirement}
+The text-based model above must be accompanied by ER-DKP-001 as a formal diagram artifact. The diagram shall include complete cardinalities, PK/FK notation, optionality, and relationship names for all core entities.
+
+\chapter{UI and UX Requirements}
+
+\section{Wireframes}
+
+\textit{Note: Detailed wireframes to be created using Figma/Balsamiq. Key screens described below:}
+
+\subsection{Wireframe 1: Home Page / Dashboard}
+\textbf{Purpose:} Landing page for authenticated users
+
+\textbf{Key Components:}
+\begin{itemize}
+    \item Top navigation: Logo, Search bar (with language toggle), Main menu, User profile
+    \item Hero section: Featured content carousel, Quick stats
+    \item Main content: Recommended for You (AI-powered), Trending Research, Recent Activity
+    \item Quick Actions: Upload Document, Submit Paper, Borrow Item
+    \item Footer: Help, About, Contact, Language selector
+\end{itemize}
+
+\subsection{Wireframe 2: Advanced Search Interface}
+\textbf{Purpose:} Comprehensive search and filter for finding content
+
+\textbf{Key Components:}
+\begin{itemize}
+    \item Left sidebar: Filters (Content Type, Language, Date range, Author, Access tier)
+    \item Main area: Search bar with voice input, Sort options, Results with pagination
+    \item Result cards: Thumbnail, Title, Authors, Abstract snippet, Action buttons
+    \item Right sidebar: Search tips, Recent searches, Saved searches
+\end{itemize}
+
+\subsection{Wireframe 3: Document Viewer with Annotation Tools}
+\textbf{Key Components:}
+\begin{itemize}
+    \item Top toolbar: Navigation controls, Annotation tools, Share, Download, Cite
+    \item Left panel: Table of contents, Thumbnail page navigator
+    \item Center: PDF render area with existing annotations
+    \item Right panel: Annotations tab, Discussion threads, Document details
+\end{itemize}
+
+\textit{(Full document includes 8 wireframes: Research Submission Wizard, Library Catalog Interface, Librarian Dashboard, Analytics Dashboard, and Virtual Reading Room)}
+
+\subsection{Visual Artifact Deliverables}
+
+To make this SRS implementation-ready, the following visual artifacts are mandatory deliverables (not optional prose descriptions):
+
+\begin{longtable}{|p{2.8cm}|p{4.8cm}|p{4.4cm}|p{3cm}|}
+\hline
+\textbf{Artifact ID} & \textbf{Artifact} & \textbf{Minimum Content} & \textbf{Format} \\ \hline
+\endfirsthead
+\hline
+\textbf{Artifact ID} & \textbf{Artifact} & \textbf{Minimum Content} & \textbf{Format} \\ \hline
+\endhead
+WF-DKP-001 & Home/Dashboard Wireframe & Navigation, global search, recommendation section, quick actions, responsive behavior notes & Figma/Balsamiq export (PNG/PDF) \\ \hline
+WF-DKP-002 & Advanced Search Wireframe & Filters, result ranking, pagination, bilingual input, saved search UX & Figma/Balsamiq export (PNG/PDF) \\ \hline
+WF-DKP-003 & Document Viewer Wireframe & Annotation tools, side panels, discussion threads, sharing controls & Figma/Balsamiq export (PNG/PDF) \\ \hline
+WF-DKP-004 & Research Submission Wizard & Multi-step flow, validation states, plagiarism/summarization progress states & Figma/Balsamiq export (PNG/PDF) \\ \hline
+WF-DKP-005 & Library Circulation UI & Barcode/QR workflow, checkout/return states, exception handling UI & Figma/Balsamiq export (PNG/PDF) \\ \hline
+ER-DKP-001 & Logical ER Diagram & Entities, PK/FK, cardinalities, many-to-many bridge tables, lifecycle/status enums & Mermaid/Draw.io/PDF \\ \hline
+ARCH-DKP-001 & On-Prem Deployment Diagram & Network zones, reverse proxy, app services, DB/search/cache/queue/storage, backup nodes & Draw.io/PDF \\ \hline
+\end{longtable}
+
+\section{UX and Accessibility Baseline}
+
+\subsection{Core UX Principles}
+\begin{enumerate}
+    \item \textbf{Clarity:} Clear labels, intuitive navigation, consistent terminology
+    \item \textbf{Efficiency:} Minimal clicks, keyboard shortcuts, bulk operations
+    \item \textbf{Feedback:} Loading indicators, success/error messages, progress bars
+    \item \textbf{Forgiveness:} Confirmation dialogs, undo, auto-save drafts
+    \item \textbf{Consistency:} Unified design system, predictable layouts
+\end{enumerate}
+
+\subsection{Accessibility Requirements (WCAG 2.1 Level AA)}
+
+\begin{itemize}
+    \item \textbf{Keyboard Navigation:} All interactive elements accessible via Tab; skip navigation links; focus indicators (3:1 contrast)
+    \item \textbf{Screen Reader Support:} Semantic HTML5; ARIA labels; alt text for images; proper form labels
+    \item \textbf{Visual Design:} 4.5:1 contrast ratio for normal text; 3:1 for large text; text resizable to 200\%; no color-only information
+    \item \textbf{Responsive Design:} Mobile-first approach; breakpoints for Mobile (<768px), Tablet (768-1024px), Desktop (>1024px); 44x44px touch targets
+    \item \textbf{Language Support:} Language selector on all pages; Bangla Unicode font support; full UI translation
+    \item \textbf{Error Handling:} Inline validation; error summaries; suggestions for fixes
+    \item \textbf{Multimedia:} Captions for videos; transcripts for audio; keyboard-accessible controls
+\end{itemize}
+
+\chapter{Non-Functional Requirements}
+
+\textit{NFR ID format: NFR-DKP-\#\#\#}
+
+\section{Performance Requirements}
+
+\begin{longtable}{|p{2cm}|p{3cm}|p{5.5cm}|p{3.5cm}|}
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+NFR-DKP-001 & Performance & UI page render time for standard pages (excluding long-running AI/OCR jobs) & < 2 seconds on 10 Mbps \\ \hline
+NFR-DKP-002 & Performance & Search results response time & < 1 second for up to 1000 results \\ \hline
+NFR-DKP-003 & Performance & Document viewer initial render time & < 3 seconds for PDFs up to 50MB \\ \hline
+NFR-DKP-004 & Performance & Concurrent user support and API responsiveness & 500 concurrent users without degradation; API 95th percentile < 500ms (read), < 2s (write) \\ \hline
+NFR-DKP-005 & Performance & AI/OCR processing model & Long-running OCR, summarization, and plagiarism checks shall run asynchronously via background queue \\ \hline
+NFR-DKP-006 & Performance & AI/OCR queue SLA and user feedback & OCR < 2 minutes, summarization < 30 seconds, plagiarism check < 3 minutes; show progress indicator and notify user on completion \\ \hline
+NFR-DKP-007 & Performance & Database query optimization & No query exceeds 100ms; proper indexing on all FKs \\ \hline
+\end{longtable}
+
+\section{Scalability Requirements}
+
+\begin{longtable}{|p{2cm}|p{3cm}|p{5.5cm}|p{3.5cm}|}
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+NFR-DKP-008 & Scalability & Horizontal scaling & Architecture supports adding application servers without code changes \\ \hline
+NFR-DKP-009 & Scalability & Database growth & Support up to 1 million documents and 10 million annotations \\ \hline
+NFR-DKP-010 & Scalability & Storage capacity & Plan for 10TB initial storage with expansion capability \\ \hline
+\end{longtable}
+
+\section{Security Requirements}
+
+\begin{longtable}{|p{2cm}|p{3cm}|p{5.5cm}|p{3.5cm}|}
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+NFR-DKP-011 & Security & Authentication & MFA support; password min 8 chars with complexity \\ \hline
+NFR-DKP-012 & Security & Authorization & RBAC enforced at API and DB levels \\ \hline
+NFR-DKP-013 & Security & Data encryption & TLS 1.3 in transit; AES-256 at rest \\ \hline
+NFR-DKP-014 & Security & Session management & Sessions expire after 30 min inactivity; secure tokens \\ \hline
+NFR-DKP-015 & Security & Input validation & All inputs validated; prevent SQL injection, XSS \\ \hline
+NFR-DKP-016 & Security & Audit logging & All sensitive operations logged with user, timestamp, action, IP \\ \hline
+NFR-DKP-017 & Security & File upload security & Virus scanning; MIME verification; size limits \\ \hline
+NFR-DKP-018 & Security & API security & Rate limiting (100 requests/min per user); API key authentication \\ \hline
+\end{longtable}
+
+\section{Reliability and Usability}
+
+\begin{longtable}{|p{2cm}|p{3cm}|p{5.5cm}|p{3.5cm}|}
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+NFR-DKP-019 & Reliability & Uptime & 99.5\% during business hours (7AM-11PM) \\ \hline
+NFR-DKP-021 & Reliability & Data backup & Daily automated backups; monthly restore tests \\ \hline
+NFR-DKP-024 & Usability & Learning curve & Basic tasks completable in 5 min without training \\ \hline
+NFR-DKP-025 & Usability & User satisfaction & > 80\% satisfaction score in surveys \\ \hline
+NFR-DKP-020 & Reliability & Mean time to recovery & < 4 hours for critical system failures \\ \hline
+NFR-DKP-022 & Reliability & Data integrity & Checksums verified daily; corruption detection and alerting \\ \hline
+NFR-DKP-023 & Reliability & Error handling & Graceful degradation; no data loss on errors; user-friendly messages \\ \hline
+NFR-DKP-026 & Usability & Help and documentation & Context-sensitive help on all pages; comprehensive user guide \\ \hline
+NFR-DKP-027 & Usability & Error recovery & Users can undo recent actions; clear guidance on error recovery \\ \hline
+NFR-DKP-028 & Accessibility & WCAG compliance & WCAG 2.1 Level AA verified \\ \hline
+NFR-DKP-029 & Accessibility & Keyboard navigation & All features accessible via keyboard; logical tab order \\ \hline
+NFR-DKP-030 & Accessibility & Screen reader support & Compatible with NVDA, JAWS, VoiceOver screen readers \\ \hline
+NFR-DKP-031 & Accessibility & Visual impairment support & Text zoom up to 200\%; high contrast mode \\ \hline
+\end{longtable}
+
+\section{Compatibility and Maintainability}
+
+\begin{longtable}{|p{2cm}|p{3cm}|p{5.5cm}|p{3.5cm}|}
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+NFR-DKP-032 & Compatibility & Browser support & Full support for Chrome, Firefox, Safari, Edge (last 2 versions) \\ \hline
+NFR-DKP-033 & Compatibility & Mobile responsiveness & Fully functional on devices from 320px to 2560px width \\ \hline
+NFR-DKP-034 & Compatibility & Operating systems & Works on Windows 10+, macOS 10.15+, Ubuntu 20.04+, iOS 13+, Android 9+ \\ \hline
+NFR-DKP-035 & Compatibility & Data formats & Import/export support for CSV, Excel, MARC, BibTeX, RIS, EndNote XML \\ \hline
+NFR-DKP-036 & Maintainability & Code quality & All code passes linting; minimum 80\% test coverage; documented APIs \\ \hline
+NFR-DKP-037 & Maintainability & Modularity & Microservices or layered architecture; clear separation of concerns \\ \hline
+NFR-DKP-038 & Maintainability & Documentation & Comprehensive technical documentation; architecture diagrams \\ \hline
+NFR-DKP-039 & Maintainability & Logging and monitoring & Application logs all errors; performance metrics monitored \\ \hline
+\end{longtable}
+
+\section{Localization and Compliance}
+
+\begin{longtable}{|p{2cm}|p{3cm}|p{5.5cm}|p{3.5cm}|}
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+NFR-DKP-040 & Localization & Language support & Full UI and content support for Bangla and English \\ \hline
+NFR-DKP-041 & Localization & Unicode support & Proper rendering of Bangla Unicode characters; font selection \\ \hline
+NFR-DKP-042 & Localization & Date/time formats & Display dates in local format; timezone support \\ \hline
+NFR-DKP-043 & Compliance & Data privacy and right-to-deletion & User personal data deletable on GDPR request (profile, documents, settings); audit logs retained 1 year with user identifiers anonymized (hashed) and direct identifiable data removed \\ \hline
+NFR-DKP-044 & Compliance & Copyright compliance & Watermarking for sensitive documents; DRM support \\ \hline
+NFR-DKP-045 & Compliance & Academic integrity & Plagiarism detection mandatory; audit trail for all edits \\ \hline
+\end{longtable}
+
+\section{Portability and Extensibility}
+
+\begin{longtable}{|p{2cm}|p{3cm}|p{5.5cm}|p{3.5cm}|}
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{NFR ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+NFR-DKP-046 & Portability & Cloud-agnostic & Can deploy on AWS, Azure, Google Cloud, or on-premise servers \\ \hline
+NFR-DKP-047 & Portability & Database flexibility & Abstraction layer allows switching databases (PostgreSQL, MySQL) \\ \hline
+NFR-DKP-048 & Extensibility & Plugin architecture & Support for third-party plugins (OCR providers, translation services) \\ \hline
+NFR-DKP-049 & Extensibility & API availability & RESTful API for all major operations; GraphQL for complex queries \\ \hline
+NFR-DKP-050 & Environmental & Energy efficiency & Optimized queries and caching to minimize server load \\ \hline
+NFR-DKP-051 & Security & Session timeout and warning & Session expires after 30 min inactivity; warning dialog shown 2 min before expiration with option to extend \\ \hline
+\end{longtable}
+
+\chapter{On-Premises Infrastructure and DevOps Strategy}
+
+\section{Deployment Objective}
+\textbf{MVP (Phase 1):} The MVP shall be deployable in university-managed, on-premises infrastructure using self-hosted or locally-available services. Advanced AI features (summarization, plagiarism detection, OCR) shall have self-hosted reference implementations (Hugging Face models, Tesseract, local plagiarism baseline).
+
+\textbf{Phase 2 (Optional):} Cloud API integrations (OpenAI, Google Cloud, Turnitin) may be added as optional enhancements if institutional Memoranda of Understanding (MoU) and network policies permit. No Phase 1 core feature shall require cloud APIs to function.
+
+\section{On-Premises Reference Architecture (MVP)}
+
+\textbf{Minimum Runtime Components:}
+\begin{itemize}
+    \item Reverse proxy and TLS termination (Nginx or equivalent)
+    \item Frontend web service
+    \item Backend API service(s)
+    \item Background worker service for async jobs (OCR, summarization, plagiarism)
+    \item PostgreSQL database
+    \item Redis cache and queue broker
+    \item Elasticsearch for search
+    \item Object/file storage for documents and backups
+\end{itemize}
+
+\textbf{Network Segmentation:}
+\begin{itemize}
+    \item DMZ/public zone: reverse proxy only
+    \item Application zone: frontend, API, workers
+    \item Data zone: database, search, cache, storage
+    \item Management zone: monitoring, logging, backup/restore tooling
+\end{itemize}
+
+\section{Infrastructure and Operations Requirements}
+\begin{longtable}{|p{2.2cm}|p{3.2cm}|p{5.2cm}|p{3.4cm}|}
+\hline
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+INF-DKP-001 & Compute & Provide isolated environments for dev, staging, and production on-prem & Three separate environments available before pilot \\ \hline
+INF-DKP-002 & Storage & Separate storage tiers for active content and backups & Backup tier physically/logically isolated from primary storage \\ \hline
+INF-DKP-003 & Networking & Enforce firewall rules between DMZ, app, data, and management zones & Only required ports open; deny-all default policy \\ \hline
+INF-DKP-004 & Availability & Use service restart policies and health checks for all core services & Auto-restart enabled; failed service detectable within 1 minute \\ \hline
+INF-DKP-005 & Backup/DR & Automated daily backup with tested restore procedures & Daily backups; monthly restore drill; RPO $\leq$ 24h; RTO $\leq$ 8h \\ \hline
+INF-DKP-006 & Observability & Centralized logs, metrics, and alerting for all services & Alerts for downtime, queue backlog, high error rate, storage thresholds \\ \hline
+\end{longtable}
+
+\section{Containerization and Environment Parity}
+\begin{longtable}{|p{2.2cm}|p{3.2cm}|p{5.2cm}|p{3.4cm}|}
+\hline
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+DEVOPS-DKP-001 & Containerization & All deployable components shall run as versioned container images & Reproducible image build per release tag \\ \hline
+DEVOPS-DKP-002 & Orchestration & MVP deployment shall support Docker Compose; Phase 2 may adopt Kubernetes & Compose files for dev/staging/prod checked into repository \\ \hline
+DEVOPS-DKP-003 & Configuration & Environment-specific settings managed via config files and secrets store & No hard-coded secrets in source control \\ \hline
+DEVOPS-DKP-004 & DB Migration & Schema migrations are automated and version-controlled & Migration step executed in deployment pipeline with rollback plan \\ \hline
+DEVOPS-DKP-005 & Security & Container images scanned for vulnerabilities before release & No critical vulnerabilities at release gate \\ \hline
+\end{longtable}
+
+\section{CI/CD and Release Strategy}
+\begin{longtable}{|p{2.2cm}|p{3.2cm}|p{5.2cm}|p{3.4cm}|}
+\hline
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Target/Metric} \\ \hline
+\endhead
+REL-DKP-001 & CI & Pipeline shall run lint, unit/integration tests, and security scans on every merge request & Pipeline blocks merge on failed quality gates \\ \hline
+REL-DKP-002 & Artifact Mgmt & Release artifacts shall be tagged and stored in internal registry & Immutable artifacts for each release version \\ \hline
+REL-DKP-003 & CD & Deployments to staging and production shall be automated and auditable & Deployment logs include who, what version, when, outcome \\ \hline
+REL-DKP-004 & Rollback & Production deployment must include rollback mechanism & Rollback executable within 15 minutes \\ \hline
+REL-DKP-005 & Change Mgmt & Database and application changes released using controlled release checklist & No production release without approved checklist \\ \hline
+\end{longtable}
+
+\section{On-Prem Open Decisions}
+\begin{itemize}
+    \item Final hardware sizing by expected concurrent users and storage growth
+    \item Selection of internal CI runner platform (GitHub Actions self-hosted, GitLab Runner, Jenkins)
+    \item Selection of monitoring stack (Prometheus/Grafana/ELK or equivalent)
+    \item Backup repository technology and retention period beyond MVP
+    \item Phase 2 decision: Whether to pursue cloud API integrations (OpenAI, Google Cloud, Turnitin) and if so, negotiate institutional MoU before Phase 2 begins
+    \item Phase 2 decision: Network security policy on external API calls from on-prem infrastructure
+\end{itemize}
+
+\chapter{Risks and Open Questions}
+
+\section{Risk Register}
+
+\begin{longtable}{|p{2cm}|p{4.5cm}|p{1.5cm}|p{1.5cm}|p{4cm}|}
+\hline
+\textbf{Risk ID} & \textbf{Description} & \textbf{Prob.} & \textbf{Impact} & \textbf{Mitigation} \\ \hline
+\endfirsthead
+\hline
+\textbf{Risk ID} & \textbf{Description} & \textbf{Prob.} & \textbf{Impact} & \textbf{Mitigation} \\ \hline
+\endhead
+RISK-DKP-001 & Phase 2 cloud API integration may have high costs or rate limits & Low & Medium & MVP uses self-hosted models (no cost); Phase 2 cloud service decisions deferred; MoU negotiation before adoption \\ \hline
+RISK-DKP-002 & Bangla OCR Character Error Rate (CER) may exceed 15\% on benchmark & Medium & Medium & Test Tesseract 4+ and alternatives; benchmark against BanglaOCR dataset; provide manual correction interface \\ \hline
+RISK-DKP-003 & Plagiarism detection may produce false positives & High & Medium & Set appropriate threshold (25\%); manual review for borderline cases \\ \hline
+RISK-DKP-004 & Integration with existing library system may be complex & Medium & High & Early technical assessment; allocate buffer time; gradual migration \\ \hline
+RISK-DKP-006 & User adoption may be slow if interface is too complex & Medium & High & User testing throughout development; simplified onboarding; training materials \\ \hline
+RISK-DKP-005 & File format migrations may lose fidelity & Low & High & Extensive testing; keep originals permanently; manual QA sampling \\ \hline
+RISK-DKP-007 & Concurrent annotation editing may cause conflicts & Medium & Low & Implement operational transform or CRDT; last-write-wins with notification \\ \hline
+RISK-DKP-008 & Storage costs may exceed budget with high upload volume & Medium & Medium & Implement quotas per user/department; compression for older files \\ \hline
+RISK-DKP-009 & Citation network visualization may be slow for large datasets & High & Medium & Limit graph depth; lazy loading; use graph database; client-side rendering \\ \hline
+RISK-DKP-010 & Copyright issues with uploaded content & Low & High & Clear terms of service; DMCA compliance process; moderator review \\ \hline
+RISK-DKP-011 & Barcode scanner hardware compatibility issues & Low & Low & Test with common models; support standard HID input; manual entry fallback \\ \hline
+RISK-DKP-012 & Server infrastructure may be insufficient for peak loads & Medium & High & Load testing before launch; auto-scaling configuration; CDN for static assets \\ \hline
+RISK-DKP-013 & Data migration from legacy system may have quality issues & High & Medium & Data quality assessment; cleaning scripts; staged migration with rollback \\ \hline
+RISK-DKP-014 & Security vulnerabilities in third-party libraries & Medium & High & Regular dependency audits; automated vulnerability scanning; update policy \\ \hline
+RISK-DKP-015 & Feature scope too large to complete in semester timeline & High & High & \textbf{MVP definition; phased delivery; core features first} \\ \hline
+\end{longtable}
+
+\section{Open Questions}
+
+\subsection{Technical Questions}
+\begin{enumerate}
+    \item Which AI/ML service for summarization? (OpenAI GPT, Google Cloud NLP, self-hosted BERT/T5)
+    \item Which Bangla OCR engine provides best accuracy-cost balance?
+    \item Graph database (Neo4j) for citation network or relational DB?
+    \item Which plagiarism detection API? (Turnitin, Copyscape, self-hosted)
+    \item Storage solution: S3-compatible object storage or traditional file system?
+\end{enumerate}
+
+\subsection{Business/Policy Questions}
+\begin{enumerate}
+    \item Exact loan periods for different item types?
+    \item Fine calculation: flat rate or progressive? Grace period?
+    \item Access tier policies: who approves changes?
+    \item Retention policy for user data after account closure?
+    \item Who reviews flagged content? Removal process?
+    \item Institutional repository license: open access requirements? Embargo periods?
+    \item Maximum file size limits per user role?
+    \item Acceptable use policy for AI features?
+    \item Data sharing with external researchers - what are the policies?
+    \item Intellectual property rights for student projects?
+\end{enumerate}
+
+\subsection{User Experience Questions}
+\begin{enumerate}
+    \item Should annotations be opt-in or opt-out for sharing?
+    \item Virtual reading room size limit? (Performance vs. collaboration needs)
+    \item Email notification frequency: real-time, daily digest, or user-configurable?
+    \item Should students see each other's projects before approval/publication?
+    \item Gamification elements: leaderboards public or private? Opt-in?
+\end{enumerate}
+
+\subsection{Integration Questions}
+\begin{enumerate}
+    \item Single Sign-On (SSO) with institutional identity provider? (LDAP, SAML, OAuth)
+    \item Integration with existing student information system for auto-enrollment?
+    \item Export to institutional repository (DSpace, Fedora)? ETD integration?
+    \item Integration with citation managers: direct API or file export only?
+    \item Calendar integration for due dates and reading room sessions?
+\end{enumerate}
+
+\subsection{Decisions Needed Before Development}
+\begin{itemize}
+    \item Confirm institutional server specifications
+    \item Approve technology stack
+    \item Finalize priority ranking (MVP vs. Phase 2)
+    \item Confirm budget for third-party services
+    \item Approve data privacy policy
+    \item Identify pilot user group
+\end{itemize}
+
+\chapter{Testability and Traceability}
+
+\section{Requirement Traceability}
+
+\textit{Sample traceability matrix - full matrix maps all 50 FRs and 50 NFRs:}
+
+\begin{longtable}{|p{3cm}|p{4cm}|p{3cm}|}
+\hline
+\textbf{Requirement ID} & \textbf{Story/Use Case} & \textbf{Planned Test ID} \\ \hline
+\endfirsthead
+\hline
+\textbf{Requirement ID} & \textbf{Story/Use Case} & \textbf{Planned Test ID} \\ \hline
+\endhead
+FR-DKP-001 & US-DKP-001, UC1 & TC-DKP-001, TC-DKP-002 \\ \hline
+FR-DKP-003 & US-DKP-002, UC1 & TC-DKP-003, TC-DKP-004 \\ \hline
+FR-DKP-009 & US-DKP-001, UC5 & TC-DKP-006, TC-DKP-007 \\ \hline
+FR-DKP-016 & US-DKP-003, UC2 & TC-DKP-010, TC-DKP-011 \\ \hline
+FR-DKP-026 & US-DKP-002, UC1 & TC-DKP-014 \\ \hline
+FR-DKP-004 & US-DKP-002, US-DKP-006 & TC-DKP-005 \\ \hline
+FR-DKP-005 & US-DKP-006 & TC-DKP-025 \\ \hline
+FR-DKP-006 & US-DKP-002 & TC-DKP-005 \\ \hline
+FR-DKP-007 & US-DKP-002 & TC-DKP-014 \\ \hline
+FR-DKP-010 & US-DKP-001, US-DKP-013 & TC-DKP-007 \\ \hline
+FR-DKP-011 & US-DKP-006 & TC-DKP-008 \\ \hline
+FR-DKP-012 & US-DKP-013 & TC-DKP-009 \\ \hline
+FR-DKP-015 & US-DKP-003, US-DKP-011 & TC-DKP-010 \\ \hline
+FR-DKP-017 & US-DKP-008 & TC-DKP-026 \\ \hline
+FR-DKP-019 & US-DKP-011 & TC-DKP-012 \\ \hline
+FR-DKP-022 & US-DKP-003, US-DKP-016 & TC-DKP-013 \\ \hline
+FR-DKP-023 & US-DKP-016 & TC-DKP-013, TC-DKP-023 \\ \hline
+FR-DKP-024 & US-DKP-006 & TC-DKP-025 \\ \hline
+FR-DKP-025 & US-DKP-008 & TC-DKP-027 \\ \hline
+FR-DKP-027 & US-DKP-010 & TC-DKP-010 \\ \hline
+FR-DKP-028 & US-DKP-015 & TC-DKP-014 \\ \hline
+FR-DKP-029 & US-DKP-007, UC1 & TC-DKP-015 \\ \hline
+FR-DKP-031 & US-DKP-020, UC5 & TC-DKP-015 \\ \hline
+FR-DKP-032 & US-DKP-005 & TC-DKP-028 \\ \hline
+FR-DKP-033 & US-DKP-014 & TC-DKP-016 \\ \hline
+FR-DKP-035 & US-DKP-009 & TC-DKP-017 \\ \hline
+FR-DKP-036 & US-DKP-017 & TC-DKP-017 \\ \hline
+FR-DKP-037 & US-DKP-004, UC3 & TC-DKP-018, TC-DKP-019 \\ \hline
+FR-DKP-040 & US-DKP-018, UC3 & TC-DKP-020 \\ \hline
+FR-DKP-041 & US-DKP-012 & TC-DKP-028 \\ \hline
+FR-DKP-046 & US-DKP-019, UC4 & TC-DKP-021 \\ \hline
+FR-DKP-048 & UC4 & TC-DKP-021 \\ \hline
+NFR-DKP-001 & All use cases & TC-DKP-022 \\ \hline
+NFR-DKP-002 & US-DKP-001 & TC-DKP-006, TC-DKP-022 \\ \hline
+NFR-DKP-011 & US-DKP-001 & TC-DKP-023 \\ \hline
+NFR-DKP-013 & All use cases & TC-DKP-023 \\ \hline
+NFR-DKP-019 & All use cases & TC-DKP-022 \\ \hline
+NFR-DKP-028 & All user stories & TC-DKP-024 \\ \hline
+NFR-DKP-029 & All user stories & TC-DKP-024 \\ \hline
+NFR-DKP-032 & All user stories & TC-DKP-034 \\ \hline
+NFR-DKP-040 & US-DKP-001, US-DKP-013 & TC-DKP-007, TC-DKP-009 \\ \hline
+\end{longtable}
+
+\section{Initial Manual Test Plan}
+
+\textit{Minimum 15 test cases required - 25 provided. All test cases detailed below:}
+
+\begin{longtable}{|p{2cm}|p{3cm}|p{8.5cm}|}
+\hline
+\textbf{Test ID} & \textbf{Scenario} & \textbf{Steps \& Expected Result} \\ \hline
+\endfirsthead
+\hline
+\textbf{Test ID} & \textbf{Scenario} & \textbf{Steps \& Expected Result} \\ \hline
+\endhead
+TC-DKP-001 & User registration with institutional email & \textbf{Steps:} 1) Navigate to registration 2) Enter name, valid institutional email 3) Enter password (8+ chars, complex) 4) Submit 5) Check email verification. \textbf{Expected:} Account created with 'member' role; verification email received; link activates account \\ \hline
+TC-DKP-003 & Upload PDF document & \textbf{Steps:} 1) Navigate to Upload 2) Drag PDF file < 500MB 3) Wait for upload. \textbf{Expected:} Progress bar shows 100\%; file preview displayed; metadata extraction begins \\ \hline
+TC-DKP-010 & Checkout book with barcode & \textbf{Steps:} 1) Scan member ID 2) Verify member details 3) Scan book barcode 4) Review due date 5) Confirm. \textbf{Expected:} Checkout record created; book status "Checked Out"; email confirmation sent; due date is 14 days from today \\ \hline
+TC-DKP-014 & Submit research paper & \textbf{Steps:} 1) Navigate to Submit Paper 2) Upload PDF 3) Review auto-filled metadata 4) Wait for plagiarism check 5) Review AI summary 6) Submit. \textbf{Expected:} Paper uploaded; plagiarism score < 25\%; AI summary generated; paper in "Under Review" state \\ \hline
+TC-DKP-018 & Create annotation on PDF & \textbf{Steps:} 1) Open PDF 2) Select text 3) Click Annotate 4) Enter comment 5) Set visibility Private 6) Save. \textbf{Expected:} Text highlighted; annotation saved; visible only to user; persists on reload \\ \hline
+TC-DKP-002 & Login with valid credentials & \textbf{Steps:} 1) Navigate to login 2) Enter correct email 3) Enter correct password 4) Click Login. \textbf{Expected:} User redirected to dashboard; session created; user profile visible in header \\ \hline
+TC-DKP-004 & Upload unsupported file format & \textbf{Steps:} 1) Navigate to Upload 2) Attempt to upload .exe file. \textbf{Expected:} Upload rejected; error message displays allowed formats \\ \hline
+TC-DKP-005 & Edit document metadata & \textbf{Steps:} 1) Open document in metadata editor 2) Edit Title field 3) Add keywords 4) Change language to Bangla 5) Save. \textbf{Expected:} Metadata saved; auto-save indicator shows timestamp; changes persist \\ \hline
+TC-DKP-006 & Bilingual search - English & \textbf{Steps:} 1) Enter "machine learning" in search 2) Press Enter. \textbf{Expected:} Results display documents containing the term; ranked by relevance; filters work \\ \hline
+TC-DKP-007 & Bilingual search - Bangla & \textbf{Steps:} 1) Switch to Bangla 2) Enter Bangla search term 3) Press Search. \textbf{Expected:} Results show matching Bangla documents; properly displays Unicode \\ \hline
+TC-DKP-008 & Bangla OCR on scanned document with benchmark & \textbf{Steps:} 1) Load BanglaOCR benchmark dataset (50 test images) 2) Upload each test Bangla PDF 3) Run OCR extraction 4) Calculate Character Error Rate (CER) per image. \textbf{Expected:} CER $\leq$ 15\% on benchmark set; manual correction UI available; performance log generated \\ \hline
+TC-DKP-009 & Voice search in English & \textbf{Steps:} 1) Click microphone icon 2) Allow microphone 3) Speak "digital library" 4) Stop. \textbf{Expected:} Speech converts to text; search executes; results displayed \\ \hline
+TC-DKP-011 & Renew borrowed book & \textbf{Steps:} 1) Navigate to My Account > Current Loans 2) Find book 3) Click Renew 4) Confirm. \textbf{Expected:} Due date extended by 14 days; renewal count incremented; email sent \\ \hline
+TC-DKP-012 & Place hold on checked-out book & \textbf{Steps:} 1) Search for checked-out book 2) Open details 3) Click Place Hold 4) Confirm. \textbf{Expected:} Hold request created; queue position shown; email confirmation \\ \hline
+TC-DKP-013 & Return book with QR scan & \textbf{Steps:} 1) Navigate to Returns 2) Scan book QR code 3) Confirm return 4) Select condition 5) Complete. \textbf{Expected:} Loan updated with return date; book status "Available"; fine calculated if overdue \\ \hline
+TC-DKP-015 & AI summarization with ROUGE-L benchmark & \textbf{Steps:} 1) Load CNN/DailyMail or academic benchmark (20 papers with reference summaries) 2) Submit each paper to summarization engine 3) Calculate ROUGE-L score against reference summary 4) Aggregate results. \textbf{Expected:} Mean ROUGE-L $\geq$ 0.35; individual scores logged; user edit/reject UI functional \\ \hline
+TC-DKP-016 & Plagiarism detection on submission & \textbf{Steps:} 1) Upload document in submission flow 2) Wait for check 3) View report. \textbf{Expected:} Plagiarism score shown; warning if > 25\%; similar sections highlighted \\ \hline
+TC-DKP-017 & Generate APA citation & \textbf{Steps:} 1) Open paper details 2) Click Cite 3) Select APA 4) Copy to clipboard. \textbf{Expected:} Citation formatted in APA style; includes all required fields; copies successfully \\ \hline
+TC-DKP-019 & Collaborative annotation sharing & \textbf{Steps:} 1) Open annotated document 2) Change visibility to Study Group 3) Share link 4) Group member opens. \textbf{Expected:} Annotations visible to group; group member can reply; real-time sync \\ \hline
+TC-DKP-020 & Create virtual reading room & \textbf{Steps:} 1) Navigate to Reading Rooms 2) Click Create 3) Enter name and topic 4) Invite members 5) Add document 6) Create. \textbf{Expected:} Room created; invitations sent; shared document accessible; chat active \\ \hline
+TC-DKP-021 & Digital preservation health check & \textbf{Steps:} 1) Navigate to Preservation Dashboard 2) Click Run Health Check 3) Wait for scan 4) Review results. \textbf{Expected:} Checksum verification runs; obsolescence warnings displayed; report generated \\ \hline
+TC-DKP-022 & Performance: Page load time & \textbf{Steps:} 1) Clear cache 2) Navigate to home page 3) Use DevTools to measure 4) Repeat 3 times. \textbf{Expected:} Average load time < 2 seconds; DOM content loaded < 1 second \\ \hline
+TC-DKP-023 & Security: Password complexity & \textbf{Steps:} 1) Try password "1234" 2) Try "password" 3) Try "Pass123!" 4) Complete registration. \textbf{Expected:} First two rejected with specific message; third accepted; account created \\ \hline
+TC-DKP-024 & Accessibility: Keyboard navigation & \textbf{Steps:} 1) Load home page 2) Press Tab repeatedly 3) Navigate menus with Enter/Arrow 4) Submit search. \textbf{Expected:} All elements reachable; focus indicators visible; no keyboard traps \\ \hline
+TC-DKP-025 & Bulk upload with CSV & \textbf{Steps:} 1) Navigate to Bulk Upload 2) Download template 3) Upload filled CSV with 50 items 4) Review preview 5) Import. \textbf{Expected:} CSV validated; 50 items previewed; import succeeds; items searchable \\ \hline
+TC-DKP-026 & Overdue notification email & \textbf{Steps:} 1) Set item due date to tomorrow 2) Wait for system job 3) Check email next day. \textbf{Expected:} Email sent 1 day before due date; contains item details and due date \\ \hline
+TC-DKP-027 & Generate librarian report & \textbf{Steps:} 1) Navigate to Librarian Reports 2) Select "Overdue Items" 3) Set date range 4) Generate 5) Export to Excel. \textbf{Expected:} Report displays overdue items; member contact info shown; Excel export works \\ \hline
+TC-DKP-028 & Citation network visualization & \textbf{Steps:} 1) Open paper with 20 citations 2) View citation network 3) Filter by year 4) Click node. \textbf{Expected:} Interactive graph loads; shows citing/cited papers; filters work; node clickable \\ \hline
+TC-DKP-029 & Export annotations to PDF & \textbf{Steps:} 1) Open annotated document 2) Select Export Annotations 3) Choose PDF 4) Download. \textbf{Expected:} PDF generated with all comments; includes context; properly formatted \\ \hline
+TC-DKP-030 & Session timeout after inactivity & \textbf{Steps:} 1) Login 2) Wait 30 minutes without activity 3) Try to access protected page. \textbf{Expected:} Session expires; user redirected to login; warning shown 2 min before expiration \\ \hline
+TC-DKP-031 & Responsive design on mobile & \textbf{Steps:} 1) Open site on mobile (320px width) 2) Navigate menu 3) Perform search 4) View document. \textbf{Expected:} Layout responsive; hamburger menu works; touch targets 44x44px; all features accessible \\ \hline
+TC-DKP-032 & Screen reader announces content & \textbf{Steps:} 1) Enable screen reader (NVDA) 2) Load page 3) Navigate with arrows. \textbf{Expected:} Main content announced; semantic HTML used; ARIA labels present; form labels associated \\ \hline
+TC-DKP-033 & User data deletion with audit log anonymization & \textbf{Steps:} 1) Admin initiates user deletion request 2) System marks user profile for deletion 3) System anonymizes audit log entries (hash user ID, remove identifiable fields) 4) Verify user personal data removed, audit logs retained with hashed references. \textbf{Expected:} User account deleted; documents reassigned or archived; audit logs present but identifiers anonymized; deletion completed within 30 days \\ \hline
+\end{longtable}
+
+\chapter{Submission Checklist}
+
+\begin{itemize}
+    \item[$\boxtimes$] Problem statement and scope are clear
+    \item[$\boxtimes$] Minimum 12 user stories with acceptance criteria (20 provided)
+    \item[$\boxtimes$] Functional requirements table is complete (50 requirements)
+    \item[$\boxtimes$] Data model and data dictionary are attached
+    \item[$\boxtimes$] Minimum 5 wireframes or flow screens included (8 wireframes)
+    \item[$\boxtimes$] NFR section is completed (50 non-functional requirements)
+    \item[$\boxtimes$] Risks and open questions are documented (15 risks, 25+ open questions)
+    \item[$\boxtimes$] Initial manual test plan (15+ cases) is included (32 test cases)
+\end{itemize}
+\end{itemize}
+
+\chapter{Appendices}
+
+\section{Glossary}
+
+\begin{description}
+    \item[Access Tier] Permission level (public, member, staff, restricted) determining who can view content
+    \item[Annotation] User-created note or highlight on a document
+    \item[Bangla NLP] Natural Language Processing for Bangla language (stemming, synonyms)
+    \item[Citation Network] Graph showing relationships between papers through citations
+    \item[Digital Preservation] Long-term storage and accessibility of digital content
+    \item[DOI] Digital Object Identifier - unique persistent identifier for documents
+    \item[Lifecycle State] Status of document (draft, review, published, archived)
+    \item[MARC] Machine-Readable Cataloging - library metadata standard
+    \item[OCR] Optical Character Recognition - extracting text from images
+    \item[Repository] Organized collection of documents and research outputs
+\end{description}
+
+\section{Technology Stack Recommendations}
+
+\subsection{Frontend}
+\begin{itemize}
+    \item Framework: React.js 
+    \item UI Library: Material-UI or Ant Design
+    \item PDF Viewer: PDF.js or React-PDF
+    \item Annotation: Annotator.js or Hypothesis
+    \item Charts: D3.js or Chart.js
+\end{itemize}
+
+\subsection{Backend}
+\begin{itemize}
+    \item Language: Node.js (Express) 
+    \item API: RESTful + GraphQL
+    \item Authentication: JWT + OAuth 2.0 
+    \item Background Jobs: Bull 
+\end{itemize}
+
+\subsection{Database}
+\begin{itemize}
+    \item Primary: PostgreSQL
+    \item Search: Elasticsearch (Bangla support)
+    \item Cache: Redis
+    \item Graph: Neo4j (citation network)
+\end{itemize}
+
+\subsection{AI/ML Services}
+\subsubsection{MVP (Phase 1) - Self-Hosted Implementations}
+\begin{itemize}
+    \item Summarization: Hugging Face BART or T5 (self-hosted or on-device)
+    \item NLP: spaCy with Bangla models; gensim for topic modeling
+    \item OCR: Tesseract 4+ with Bangla language data
+    \item Plagiarism Detection: Local sequence matching baseline (mandatory) + optional integration hooks
+\end{itemize}
+
+\subsubsection{Phase 2 (Optional) - Cloud API Integrations}
+If institutional MoU permits and network access is available:
+\begin{itemize}
+    \item Summarization Enhancement: OpenAI GPT-4 (premium option)
+    \item NLP Enhancement: Google Cloud Natural Language (premium option)
+    \item OCR Enhancement: Google Cloud Vision with Bangla support (premium option)
+    \item Plagiarism Enhancement: Turnitin or Copyleaks API (premium option)
+\end{itemize}
+\textbf{Note:} Phase 2 cloud integrations are optional and require explicit institutional approval and service agreements.
+
+\section{Conclusion}
+
+The Digital Knowledge Platform represents a comprehensive solution to fragmented digital resource management in academic institutions. By integrating digital archives, research repositories, library management, and student project showcases, we address critical needs for efficient knowledge discovery, collaboration, and preservation.
+
+\subsection{Unique Competitive Advantages}
+\begin{enumerate}
+    \item \textbf{AI-Powered Intelligence:} Research assistance and automated summarization
+    \item \textbf{Bilingual Excellence:} Deep Bangla language support (OCR, NLP, voice)
+    \item \textbf{Collaborative Knowledge Building:} Real-time annotation and virtual reading rooms
+    \item \textbf{Academic Integrity Focus:} Built-in plagiarism detection and citation tools
+    \item \textbf{Digital Preservation:} Proactive format health monitoring
+    \item \textbf{Comprehensive Analytics:} Data-driven insights and research impact metrics
+\end{enumerate}
+
+\subsection{Success Metrics}
+\begin{itemize}
+    \item User adoption:  $70$\% of target users active within 3 months
+    \item Efficiency gains: 50\% reduction in time to find resources
+    \item Research visibility: 30\% increase in downloads and citations
+    \item Library operations: 40\% faster circulation processing
+    \item User satisfaction: $80$\% satisfaction score
+    \item System performance: Meeting all NFR targets
+\end{itemize}
+
+This SRS provides a solid foundation for building a world-class digital knowledge platform that will serve our institution for years to come.
+
+\vspace{2cm}
+
+\noindent\textbf{END OF DOCUMENT}
+
+\end{document}

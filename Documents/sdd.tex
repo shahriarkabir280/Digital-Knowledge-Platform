@@ -1,0 +1,582 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{setspace}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,calc,shadows}
+
+
+\title{Lab 4 Software Design Document (SDD)}
+\author{DU\_Ironclad}
+\date{March 7, 2026}
+
+\begin{document}
+\begin{titlepage}
+    \centering
+    \vspace*{1.8cm}
+
+    {\Large\textbf{University of Dhaka} \par}
+    \vspace{0.4cm}
+    {\large Department of Computer Science and Engineering \par}
+    \vspace{2.0cm}
+
+    {\huge\textbf{Lab 4 : Software Design Document (SDD)}\par}
+    \vspace{0.6cm}
+    {\LARGE\textbf{Digital Knowledge Platform}\par}
+    \vspace{3cm}
+
+    {\large\textbf{Team:} DU\_Ironclad\par}
+    \vspace{6cm}
+
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{>{\raggedright\arraybackslash}p{4.1cm} >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{6.5cm}}
+        \toprule
+        \textbf{Team Member} & \textbf{Class Roll} & \textbf{Email} \\
+        \midrule
+        Ashraful Alam & 02 & nafim1703@gmail.com \\
+        Md. Shahriar Kabir & 20 & mdshahriar-2021711196@cs.du.ac.bd \\
+        Faiaz Mahmud & 46 & faiaz-2021711222@cs.du.ac.bd \\
+        Tamim Dewan Zihad & 53 & tamim-2021011229@cs.du.ac.bd\\
+        \bottomrule
+    \end{tabular}
+
+    \vfill
+
+\end{titlepage}
+\setstretch{1.08}
+
+\section{ Team and Project Information}
+
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{>{\raggedright\arraybackslash}p{5.2cm} >{\raggedright\arraybackslash}p{9cm}}
+    \toprule
+    \textbf{Field} & \textbf{Value} \\
+    \midrule
+    Team & DU\_Ironclad \\
+    Project Name & Digital Knowledge Platform \\
+    Repository URL & https://github.com/shahriarkabir280/Digital-Knowledge-Platform \\
+    Date & April 9, 2026 \\
+    Related SRS version & 2.0 \\
+    \bottomrule
+\end{tabular}
+
+\section{System Overview}
+
+\subsection*{Problem Summary}
+\begin{itemize}
+    \item Existing institutional knowledge systems are fragmented across archive, repository, library, and project showcase modules.
+    \item Fragmentation reduces discoverability, research visibility, and operational efficiency for students, faculty, and staff.
+    \item Current workflows lack integrated collaboration, bilingual intelligence, analytics, and preservation-aware management.
+\end{itemize}
+
+\subsection*{Target Users}
+\begin{itemize}
+    \item \textbf{Students (Member role):} Access learning resources, research papers, project showcases, and collaboration tools.
+    \item \textbf{Researchers/Faculty (Contributor role):} Submit outputs, discover related work, and analyze citation and impact trends.
+    \item \textbf{Librarians (Staff role):} Manage catalog and circulation workflows with reporting, imports, and barcode/QR operations.
+    \item \textbf{Archive Managers (Staff role):} Preserve institutional documents with metadata, integrity checks, and migration planning.
+    \item \textbf{Administrators (Administrator role):} Govern users, permissions, analytics, compliance, and overall system operations.
+    \item \textbf{General Public (Guest role):} Search and view publicly published institutional knowledge resources.
+\end{itemize}
+
+\subsection*{Project Goals}
+\begin{itemize}
+    \item \textbf{Archive Upload \& Metadata Editor:} Develop a robust ingestion system for multi-format media with a rich metadata editor, supporting bulk uploads and automated field mapping for efficient archival.
+    \item \textbf{Public Search/Browse \& Media Viewer:} Implement an intuitive, bilingual (Bangla-English) discovery interface with an integrated high-performance viewer for PDFs, images, and streaming audio/video content.
+    \item \textbf{Research \& Showcase Pages:} Create specialized, high-visibility portals for institutional research outputs, laboratory portfolios, and academic project showcases to highlight innovation and excellence.
+    \item \textbf{Public Catalog Portal:} Deliver a centralized, user-friendly digital library catalog with advanced filtering, allowing users to browse physical and digital collections in real-time.
+    \item \textbf{Member Borrowing Workflow:} Automate the complete circulation lifecycle, including digital hold requests, wishlist management, personal history tracking, and automated due-date notifications.
+    \item \textbf{Librarian Operations Dashboard \& Reports:} Provide a comprehensive administrative command center for CRUD operations, inventory management, and the generation of detailed analytics and usage reports.
+\end{itemize}
+
+\subsection*{Out of Scope}
+\begin{itemize}
+    \item Course/LMS delivery and grade management are excluded from this platform scope.
+    \item Native mobile apps are excluded for Phase 1, with responsive web as the delivery mode.
+    \item Building a video conferencing platform or full communication suite is outside scope.
+    \item Payment gateway integration and hardware procurement are excluded from the software MVP.
+\end{itemize}
+\newpage
+\section{Architecture Design}
+\subsection{High-Level Architecture}
+\textbf{Main components/services:}
+\begin{itemize}
+    \item \textbf{Auth Service}: Handles login, password reset, session/token lifecycle, and role lookup.
+    \item \textbf{Repository Service}: Manages research/project submissions, metadata, versions, and review state.
+    \item \textbf{Library Service}: Manages catalog CRUD, circulation workflows, fines, and hold requests.
+    \item \textbf{OCR/AI Worker}: Runs asynchronous OCR, summarization, recommendation, and plagiarism jobs.
+    \item \textbf{Search Service}: Provides bilingual indexed search and filtering for all discoverable content.
+    \item \textbf{Notification Service}: Sends event-driven emails for review updates, due reminders, and alerts.
+    \item \textbf{Analytics Service}: Aggregates usage, research trends, and operational KPIs for dashboards.
+    \item \textbf{Data Layer}: PostgreSQL (transactional), Redis (cache), Queue broker, and object storage.
+\end{itemize}
+
+\textbf{Data Flow Summary:}
+\begin{itemize}
+\item \textbf{User Requests} from the Web UI pass through an \textbf{API Gateway} to be \textbf{authenticated} and routed to the correct \textbf{domain services}.
+\item \textbf{Domain services} then \textbf{save transactional data} into the \textbf{database} and \textbf{store files} in \textbf{object storage}.
+\item Heavy \textbf{AI or OCR tasks} are sent to a \textbf{queue} to be processed \textbf{asynchronously} by separate \textbf{worker nodes}.
+\item Once complete, the \textbf{workers update search indexes} and \textbf{trigger notifications} or \textbf{analytics events}.
+\item For \textbf{fast performance}, \textbf{search requests} and \textbf{dashboards} read directly from these \textbf{optimized data stores}.
+\end{itemize}
+
+% Data flow diagram placed directly after summary to keep architecture narrative cohesive.
+\definecolor{dfduserflow}{RGB}{0, 102, 204}
+\definecolor{dfddataflow}{RGB}{0, 153, 76}
+\definecolor{dfdasyncflow}{RGB}{204, 102, 0}
+\definecolor{dfdnotiflow}{RGB}{153, 0, 153}
+
+\tikzstyle{dfdstartstop} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm, align=center, draw=black, fill=white, drop shadow, font=\bfseries]
+\tikzstyle{dfdprocess} = [rectangle, minimum width=3cm, minimum height=1cm, align=center, draw=black, fill=white, drop shadow]
+\tikzstyle{dfddatabase} = [cylinder, cylinder uses custom fill, cylinder body fill=white, cylinder end fill=gray!20, draw=black, minimum width=2cm, minimum height=2.2cm, align=center, text width=1.8cm, shape border rotate=90, aspect=0.25, drop shadow]
+\tikzstyle{dfdqueue} = [rectangle, minimum width=2.5cm, minimum height=1cm, align=center, draw=black, fill=gray!10, dashed, drop shadow]
+\tikzstyle{dfdarrow} = [thick,->,>=stealth, shorten >=1pt]
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.68, transform shape, node distance=2.5cm and 2cm, font=\sffamily\small]
+
+    % --- LEVEL 0: The Boundary ---
+    \node (user) [dfdstartstop] {User (Web UI)};
+
+    % --- LEVEL 1: Entry Point ---
+    \node (gateway) [dfdprocess, below=of user] {\textbf{API Gateway}};
+
+    % --- LEVEL 2: Core Services ---
+    \node (auth) [dfdprocess, left=of gateway, xshift=-1cm] {\textbf{Auth Service}};
+    \node (domain) [dfdprocess, right=of gateway, xshift=1cm] {\textbf{Domain Services}\\ (Knowledge/Library)};
+
+    % --- LEVEL 3: Persistence Layer ---
+    \node (postgres) [dfddatabase, below=of domain, yshift=-0.5cm] {\textbf{PostgreSQL}\\ (Transactional Data)};
+    \node (objstore) [dfddatabase, right=of postgres] {\textbf{Object Storage}\\ (Files/Media)};
+
+    % --- LEVEL 4: Asynchronous Processing ---
+    \node (queue) [dfdqueue, below=of domain, xshift=5.5cm] {\textbf{Task Queue}\\ (OCR/AI Tasks)};
+    \node (worker) [dfdprocess, below=of queue] {\textbf{Worker Nodes}\\ (Heavy Processing)};
+
+    % --- LEVEL 5: Secondary Storage & Outputs ---
+    \node (searchengine) [dfddatabase, left=of worker, xshift=-2.5cm] {\textbf{Search Index}\\ (Elasticsearch/Solr)};
+    \node (notif) [dfdprocess, right=of worker] {\textbf{Notification}\\ \& \textbf{Analytics} Events};
+
+    % 1. User Request to Gateway
+    \draw [dfdarrow, dfduserflow] (user) -- node[anchor=west] {HTTPS/JSON Request} (gateway);
+
+    % 2. Gateway to Auth
+    \draw [dfdarrow, dfduserflow] (gateway) -- node[anchor=south] {Validate/Issue Token} (auth);
+
+    % 3. Gateway to Domain
+    \draw [dfdarrow, dfduserflow] (gateway) -- node[anchor=south] {Route Valid Request} (domain);
+
+    % 4. Domain to PostgreSQL (Persistence)
+    \draw [dfdarrow, dfddataflow] ($(domain.south)!0.3!(domain.south east)$) -- node[anchor=west] {Store Metadata} ($(postgres.north)!0.3!(postgres.north east)$);
+
+    % 5. Domain to Object Storage (Persistence)
+    \draw [dfdarrow, dfddataflow] ($(domain.south east)$) to[out=-30, in=90] node[anchor=west] {Upload Media Files} (objstore);
+
+    % 6. Domain to Task Queue (Async Publish)
+    \draw [dfdarrow, dfdasyncflow] (domain) to[out=10, in=170] node[anchor=south] {Publish Heavy Tasks} (queue);
+
+    % 7. Worker Consume from Queue
+    \draw [dfdarrow, dfdasyncflow] (queue) -- node[anchor=west] {Consume Task} (worker);
+
+    % 8. Worker Update PostgreSQL
+    \draw [dfdarrow, dfddataflow] (worker) -- node[anchor=south, xshift=-0.2cm] {Update Status} (postgres);
+
+    % 9. Worker Update Search Index
+    \draw [dfdarrow, dfdasyncflow] (worker) -- node[anchor=south] {Index Metadata} (searchengine);
+
+    % 10. Worker Trigger Notifications/Analytics
+    \draw [dfdarrow, dfdnotiflow] (worker) -- node[anchor=south] {Dispatch Events} (notif);
+
+    % 11. Search Read Flow (Feedback to User via Gateway)
+    \draw [thick, dfduserflow, dashed] (searchengine.west) to[out=150, in=-120] node[anchor=east, pos=0.7, xshift=-0.1cm] {Fast Search/Dashboard Read} (gateway.west);
+
+\end{tikzpicture}
+\caption{Detailed data flow for request handling, persistence, asynchronous processing, and user-facing read models.}
+\end{figure}
+
+\textbf{External integrations (if enabled):}
+\begin{itemize}
+    \item Optional Phase 2 cloud APIs: OpenAI, Google Cloud Vision/NLP, Turnitin/Copyleaks.
+    \item Optional institutional integrations: SSO/IdP, legacy library DB import, SMTP relay.
+\end{itemize}
+
+\subsection{Component Breakdown}
+\renewcommand{\arraystretch}{1.18}
+\setlength{\tabcolsep}{3.5pt}
+\small
+\begin{longtable}{>{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{4.0cm}}
+    \toprule
+    \textbf{Component} & \textbf{Responsibility} & \textbf{Inputs} & \textbf{Outputs} & \textbf{Notes} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Component} & \textbf{Responsibility} & \textbf{Inputs} & \textbf{Outputs} & \textbf{Notes} \\
+    \midrule
+    \endhead
+    Auth Service & Authentication, session control, role resolution & Email/password, reset tokens, session refresh requests & JWT/session token, user role claims, auth events & Enforces inactivity timeout and warning policy \\
+    Repository Service & Submission workflow, metadata/version control, review routing & Paper/project files, metadata forms, review actions & Submission records, version history, review states & Supports draft/review/published lifecycle \\
+    Library Service & Catalog and circulation operations & Catalog records, barcode/QR scans, checkout/return commands & Loan records, due dates, fine calculations, hold queues & Integrates with overdue notification triggers \\
+    OCR/AI Worker & Async OCR and AI processing & Queue jobs, document binary, model config & OCR text, summaries, similarity scores, recommendation vectors & Queue-based processing with SLA monitoring \\
+    Search Service & Bilingual indexing and query execution & Normalized metadata, OCR text, user search query/filter params & Ranked results, facets, suggestion terms & Bangla/English indexing strategy \\
+    Notification Service & Event-driven messaging & Domain events (due, hold, review, completion), templates & Email notifications, delivery logs & Retries and dead-letter handling \\
+    Analytics Service & Metrics aggregation and reporting & Usage events, citation stats, circulation data & Dashboard KPIs, trends, leaderboard datasets & Aggregated/anonymized where required \\
+    PostgreSQL DB & Source of truth for transactional domain data & CRUD operations from domain services & Persisted records, relational joins, audit rows & PK/FK constraints and migration-controlled schema \\
+    Redis Cache & Fast lookup/session/cache layer & Hot query keys, session entries, computed fragments & Cached responses, reduced DB read load & TTL-based invalidation strategy \\
+    Queue Broker & Decouples synchronous API from async workers & Job publish requests, retry policies, priorities & Worker-ready jobs, retry/dead-letter queues & Required for OCR/AI/background jobs \\
+    Object Storage & Durable storage for uploaded files and exports & File uploads, transformed derivatives, backup artifacts & File URIs, signed download links, versioned blobs & Supports large files and retention rules \\
+    \bottomrule
+\end{longtable}
+\normalsize
+\subsection{Key Design Decisions}
+\renewcommand{\arraystretch}{1.18}
+\setlength{\tabcolsep}{3.5pt}
+\small
+\begin{longtable}{>{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{4.0cm} >{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{5.0cm}}
+    \toprule
+    \textbf{Decision} & \textbf{Options Considered} & \textbf{Chosen Option} & \textbf{Reason} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Decision} & \textbf{Options Considered} & \textbf{Chosen Option} & \textbf{Reason} \\
+    \midrule
+    \endhead
+    Deployment Model & Cloud-first, On-prem only, Hybrid phased & On-prem MVP + optional cloud Phase 2 & Satisfies institutional constraints now while keeping future integration flexibility. \\
+    AI/OCR Execution Mode & Inline synchronous, Async background jobs, External-only service & Async background jobs via worker queue & Prevents UI/API latency spikes and supports retry/monitoring for long-running tasks. \\
+    Authorization Strategy & Coarse role checks, Attribute-based access, Role-based access control (RBAC) & RBAC with scoped permissions per module & Matches defined user roles and provides predictable access governance. \\
+    Queue Architecture & No queue, In-memory job runner, Dedicated queue broker + workers & Dedicated queue broker + worker services & Decouples API from heavy jobs and enables scalability, backoff, and dead-letter handling. \\
+    Data Storage Pattern & Single relational DB only, Polyglot persistence, File-system only & Polyglot persistence (PostgreSQL + Redis + object storage) & Balances consistency, performance, and large-file handling requirements. \\
+    Search Architecture & SQL full-text only, External index service, Manual metadata filtering & External indexed search service (bilingual) & Improves relevance, filtering, and response time for Bangla-English discovery. \\
+    \bottomrule
+\end{longtable}
+\normalsize
+
+\section{Data Design}
+\subsection*{Core Entities}
+\renewcommand{\arraystretch}{1.16}
+\small
+\begin{longtable}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{3.4cm} >{\raggedright\arraybackslash}p{4.0cm} >{\raggedright\arraybackslash}p{4.4cm}}
+    \toprule
+    \textbf{Entity} & \textbf{Purpose} & \textbf{Primary Keys / FKs} & \textbf{Implementation Notes} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Entity} & \textbf{Purpose} & \textbf{Primary Keys / FKs} & \textbf{Implementation Notes} \\
+    \midrule
+    \endhead
+    User & Platform identity and role ownership & user\_id (PK) & Email unique, role enum (guest/member/contributor/staff/admin/reviewer), status tracked. \\
+    Document & Canonical digital content object & doc\_id (PK), uploader\_id (FK User) & Stores title/type/format/path/version/state and access\_tier for authorization checks. \\
+    Metadata & Rich descriptive fields for document discovery & metadata\_id (PK), doc\_id (FK Document, unique) & One-to-one with Document; supports JSON and structured fields for search indexing. \\
+    Catalog Item & Library inventory item (physical or digital) & item\_id (PK) & Barcode unique; status enum controls circulation and availability. \\
+    Loan & Borrowing transaction record & loan\_id (PK), item\_id (FK), member\_id (FK User) & due\_date mandatory for active loans; supports renewals, return state, fine calculation. \\
+    Annotation & User comments/highlights on documents & annotation\_id (PK), doc\_id (FK), user\_id (FK), parent\_id (self FK) & Location stored as page + coordinates; supports threaded replies and visibility scopes. \\
+    Research Paper & Scholarly subtype of document & paper\_id (PK), doc\_id (FK), lab\_id (FK) & Citation count, author list, and submission/review attributes for repository workflows. \\
+    Lab & Research group/department profile & lab\_id (PK), head\_id (FK User) & Head must map to faculty/contributor authority; linked to publications and analytics. \\
+    Citation & Citation network edge between papers & citation\_id (PK), source\_paper\_id (FK), target\_paper\_id (FK) & Supports many-to-many self-referencing citation graph queries. \\
+    Preservation & File integrity and migration tracking & preservation\_id (PK), doc\_id (FK) & Stores checksum history, risk flags, migration recommendation/status, and actions log. \\
+    \bottomrule
+\end{longtable}
+\normalsize
+
+\subsection*{Key Relationships}
+\begin{itemize}
+    \item One User uploads many Documents; each Document belongs to exactly one uploader.
+    \item One Document has exactly one Metadata record (one-to-one cardinality).
+    \item One Document has many Annotations; one User can create many Annotations.
+    \item One CatalogItem has many Loan records over time; active loan count is constrained by availability.
+    \item ResearchPaper has many-to-many self-citations through Citation edges.
+    \item One Lab has many ResearchPapers; each ResearchPaper belongs to one Lab.
+    \item One Document can have many Preservation records for periodic integrity and migration tracking.
+\end{itemize}
+
+\subsection*{Constraints and Validation Rules}
+\begin{itemize}
+    \item User email must be unique and conform to institutional email format policy.
+    \item Document file\_size must be $\leq$ 500MB and format must be in the allowed media list.
+    \item Document state must be one of: \texttt{draft}, \texttt{review}, \texttt{published}, \texttt{archived}.
+    \item access\_tier must be one of: \texttt{public}, \texttt{member}, \texttt{staff}, \texttt{restricted}.
+    \item Barcode values in CatalogItem must be unique across the catalog.
+    \item For Loan, \texttt{due\_date} must be greater than \texttt{checkout\_date} and required while loan is active.
+    \item Annotation visibility must follow role/access policy before rendering to other users.
+    \item Audit-sensitive operations must write immutable log entries with timestamp and actor reference.
+\end{itemize}
+
+\subsection*{Data Lifecycle and Retention/Deletion Rules}
+\begin{itemize}
+    \item Document lifecycle: \texttt{draft} $\rightarrow$ \texttt{review} $\rightarrow$ \texttt{published} $\rightarrow$ \texttt{archived}.
+    \item Each document update creates a new version; previous versions remain restorable for authorized staff.
+    \item OCR/AI outputs are persisted as derived metadata and can be recalculated when models are updated.
+    \item Backup lifecycle follows daily incremental and weekly full snapshot policy.
+    \item Activity/audit logs are retained for 1 year to satisfy operational traceability requirements.
+    \item GDPR-style deletion requests remove personal profile/content ownership data where applicable.
+    \item When deletion is requested, audit logs are retained but user identifiers are anonymized (hashed).
+    \item Archived and preservation-marked records remain queryable to staff per access tier and policy.
+\end{itemize}
+\newpage
+\section{Core Flow Design}
+\subsection*{Flow 1: Research Submission + Plagiarism + Summary + Review}
+\textbf{Trigger:} A Contributor/Researcher starts a new paper submission from the repository module.
+
+\textbf{Steps:}
+\begin{enumerate}
+    \item User opens \texttt{Research Repository > Submit Paper} and uploads PDF/DOCX.
+    \item System validates file type/size, performs malware scan, and stores the file in object storage.
+    \item System extracts metadata (title, authors, abstract, keywords) and pre-fills submission form.
+    \item User reviews/edits metadata, selects lab/department, access tier, and submits for processing.
+    \item System enqueues plagiarism and AI summarization jobs in queue broker.
+    \item Worker executes plagiarism check and generates summary/key findings asynchronously.
+    \item System updates submission record with score, summary, and processing timestamps.
+    \item User reviews generated outputs and either accepts or edits summary before final submit.
+    \item System assigns submission ID, sets state to \texttt{review}, and notifies assigned reviewers.
+\end{enumerate}
+
+\textbf{Success outcome:}
+\begin{itemize}
+    \item Submission is stored with searchable metadata, review state, and versioned artifacts.
+    \item Plagiarism report and summary are attached to the submission record.
+    \item Reviewer notification is sent and audit log entry is created.
+\end{itemize}
+
+\textbf{Failure/edge cases:}
+\begin{itemize}
+    \item Invalid file format or size limit exceeded $\rightarrow$ reject upload with actionable validation message.
+    \item Plagiarism service timeout $\rightarrow$ keep submission in pending-processing state and retry from queue.
+    \item Plagiarism score above policy threshold $\rightarrow$ show warning, require user confirmation/manual review path.
+    \item Summary generation fails $\rightarrow$ allow manual summary entry; record failure event in logs.
+    \item Reviewer assignment unavailable $\rightarrow$ route to staff review pool and notify administrator.
+\end{itemize}
+
+\subsection*{Flow 2: Library Checkout/Return + Due Tracking/Notification}
+\textbf{Trigger:} Librarian scans member ID and item barcode/QR at circulation desk.
+
+\textbf{Steps:}
+\begin{enumerate}
+    \item Librarian authenticates and opens circulation interface.
+    \item System reads member profile, role/status, loan limits, fines, and active holds.
+    \item Librarian scans item code; system fetches item availability and policy constraints.
+    \item On checkout, system creates \texttt{Loan} record, computes due date, updates item status to \texttt{checked\_out}.
+    \item Notification service sends checkout confirmation with due date and renewal rules.
+    \item Scheduler evaluates due-tracking jobs daily and triggers reminder/overdue notifications.
+    \item On return scan, system closes loan, computes overdue fine (if any), and sets item to \texttt{available}.
+    \item System records circulation/audit events and refreshes member history/reporting aggregates.
+\end{enumerate}
+
+\textbf{Success outcome:}
+\begin{itemize}
+    \item Loan lifecycle is accurately recorded from checkout to return.
+    \item Member receives due/overdue notifications at configured schedule.
+    \item Item status, fines, and borrowing history remain consistent across modules.
+\end{itemize}
+
+\textbf{Failure/edge cases:}
+\begin{itemize}
+    \item Member exceeds loan limit or has blocking fines $\rightarrow$ block checkout and show override policy.
+    \item Item already checked out $\rightarrow$ prevent checkout and offer hold placement workflow.
+    \item Notification delivery failure $\rightarrow$ retry with backoff; keep delivery log and alert staff if exhausted.
+    \item Return scan mismatch or unreadable code $\rightarrow$ fallback to manual lookup with dual confirmation.
+    \item Due-tracking job delay $\rightarrow$ run catch-up processing and mark delayed notifications in ops log.
+\end{itemize}
+
+\subsection*{Flow 3: Fine Calculation + Payment/Settlement Recording}
+\textbf{Trigger:} Overdue return or damaged item event is detected during circulation processing.
+
+\textbf{Steps:}
+\begin{enumerate}
+    \item Librarian opens the active loan record from circulation history.
+    \item System computes overdue duration from \texttt{due\_date} and return timestamp, then applies configured fine rules.
+    \item If damage is reported, staff selects damage category and system adds policy-based damage charge.
+    \item System generates a provisional settlement summary (overdue fine + damage charge + waivers/discounts if authorized).
+    \item Librarian confirms settlement and records payment method (cash, card, or institutional wallet/manual ledger).
+    \item System marks settlement status as \texttt{paid}, \texttt{partially\_paid}, or \texttt{waived} with approver metadata.
+    \item Member account balance, borrowing eligibility flags, and audit logs are updated.
+    \item Receipt/confirmation is issued and optional notification is sent to the member.
+\end{enumerate}
+
+\textbf{Success outcome:}
+\begin{itemize}
+    \item Fine and settlement records are stored with traceable calculation inputs and approval metadata.
+    \item Member liability state and circulation eligibility are consistent across account and loan modules.
+    \item Audit trail captures settlement actor, timestamp, amount breakdown, and status transition.
+\end{itemize}
+
+\textbf{Failure/edge cases:}
+\begin{itemize}
+    \item Loan record missing/closed inconsistency $\rightarrow$ block settlement, require staff reconciliation path.
+    \item Policy configuration unavailable $\rightarrow$ fallback to default fine rule and flag for admin review.
+    \item Partial payment recorded $\rightarrow$ keep residual balance, mark account as restricted by policy threshold.
+    \item Unauthorized waiver attempt $\rightarrow$ reject action and require elevated approver role.
+    \item Receipt generation or notification failure $\rightarrow$ retain settlement commit and enqueue retry event.
+\end{itemize}
+
+\subsection*{Flow 4: Advanced Search + Faceted Filtering + Access-Tier Enforcement}
+\textbf{Trigger:} User submits a multilingual search query with optional filters/facets.
+
+\textbf{Steps:}
+\begin{enumerate}
+    \item User enters Bangla/English keyword query and selects optional filters (type, year, lab, author, access tier).
+    \item Search service normalizes text (tokenization/stemming/synonym expansion) and builds ranked query plan.
+    \item System resolves user role/session claims and derives allowed visibility scope from RBAC and access tiers.
+    \item Search engine executes full-text and facet aggregation query across indexed metadata/OCR fields.
+    \item Result set is post-filtered to enforce permission rules before rendering snippets and file actions.
+    \item System returns ranked results with facet counts, highlighted matches, and sort options.
+    \item User applies additional filters or opens a result; access-controlled content view is served accordingly.
+    \item Query and click events are logged for analytics and relevance tuning.
+\end{enumerate}
+
+\textbf{Success outcome:}
+\begin{itemize}
+    \item User receives relevant multilingual results with fast response and accurate facet counts.
+    \item Restricted content is never exposed beyond role and access-tier policy.
+    \item Search telemetry is captured for dashboard metrics and ranking improvements.
+\end{itemize}
+
+\textbf{Failure/edge cases:}
+\begin{itemize}
+    \item Empty or invalid query $\rightarrow$ return validation prompt and suggestion terms.
+    \item Search index lag/staleness $\rightarrow$ show last-indexed timestamp and allow retry/refresh path.
+    \item Unauthorized direct resource open $\rightarrow$ deny with access message and log security event.
+    \item High-latency query under heavy load $\rightarrow$ return partial results with degraded-mode notice.
+    \item Mixed-language tokenization miss $\rightarrow$ provide fallback fuzzy match and related-term suggestions.
+\end{itemize}
+
+\section{Security and Access Design}
+\subsection*{Authentication Approach}
+\begin{itemize}
+    \item Email/password authentication with institutional account policy and optional MFA for staff/admin roles.
+    \item Session/JWT tokens with secure storage, inactivity timeout at 30 minutes, and warning at 2 minutes before expiry.
+    \item Password reset uses single-use, time-bound tokens and audited recovery events.
+\end{itemize}
+
+\subsection*{Authorization Model (Roles/Permissions)}
+\begin{itemize}
+    \item RBAC is enforced at both API and data access layers for Guest, Member, Contributor, Staff, Admin, Reviewer.
+    \item Access tiers (public/member/staff/restricted) are checked before file, metadata, and annotation visibility.
+    \item High-risk actions (state transitions, deletion, bulk import, policy updates) require elevated role checks.
+\end{itemize}
+
+\subsection*{Sensitive Data Handling}
+\begin{itemize}
+    \item TLS 1.3 for data in transit and encrypted storage for sensitive records at rest.
+    \item Uploaded files validated by MIME/type/size checks and malware scanning before persistence.
+    \item PII minimization applied in analytics outputs; only aggregated/anonymized data exposed in dashboards.
+    \item User deletion requests remove personal profile-linked data while preserving policy-required records.
+\end{itemize}
+
+\subsection*{Audit/Logging Plan (Contradiction-Safe)}
+\begin{itemize}
+    \item Log all sensitive operations with timestamp, actor role, action, and target object reference.
+    \item Retain audit logs for 1 year for traceability, incident response, and compliance review.
+    \item On deletion requests, direct identifiers in logs are anonymized (hashed) rather than fully erased.
+    \item Maintain immutable append-only log store with access limited to authorized security/staff roles.
+\end{itemize}
+
+\section{Implementation Plan}
+\subsection*{Sprint 1 Completed Features}
+\begin{itemize}
+    \item Project foundation: architecture baseline, service boundaries, and environment setup finalized.
+    \item Authentication and RBAC baseline implemented for Guest, Member, Contributor, Staff, Admin, Reviewer roles.
+    \item Repository submission pipeline baseline implemented (file upload, metadata capture, draft/review state handling).
+    \item Library circulation baseline implemented (catalog operations, checkout/return records, due-date core logic).
+    \item Asynchronous job pipeline skeleton implemented (queue broker + worker pattern for OCR/AI tasks).
+    \item Search indexing baseline established for core metadata and document discoverability.
+\end{itemize}
+
+\subsection*{Pending Features for Sprint 2}
+\begin{itemize}
+    \item Full OCR and summarization integration with benchmark-driven quality validation pipeline.
+    \item Plagiarism processing workflow hardening with policy thresholds, retries, and reviewer escalation.
+    \item Notification service completion for due reminders, review notifications, and delivery retry handling.
+    \item Analytics dashboards for circulation, research trends, and contribution metrics.
+    \item Preservation workflows (checksum monitoring, migration recommendations, and archival action logging).
+    \item Compliance hardening (deletion workflow automation, log anonymization checks, and audit report export).
+\end{itemize}
+\newpage
+\subsection*{Technical Risks and Mitigation Plan}
+\renewcommand{\arraystretch}{1.16}
+\small
+\begin{longtable}{>{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{1.8cm} >{\raggedright\arraybackslash}p{6.8cm}}
+    \toprule
+    \textbf{Risk} & \textbf{Probability} & \textbf{Impact} & \textbf{Mitigation} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Risk} & \textbf{Probability} & \textbf{Impact} & \textbf{Mitigation} \\
+    \midrule
+    \endhead
+    OCR quality below target CER & Medium & High & Benchmark multiple OCR configs (BanglaOCR dataset), maintain correction UI, and tune preprocessing pipeline. \\
+    Queue backlog under peak processing load & Medium & High & Enforce worker autoscaling policy, priority queues, retry with backoff, and dead-letter monitoring. \\
+    On-prem resource bottlenecks (CPU/storage) & Medium & High & Capacity planning before Sprint 2, staged load tests, and storage quota/retention controls. \\
+    Notification failures reduce user trust & Medium & Medium & Add retry policy, fallback channels, delivery audits, and ops alerting for repeated failures. \\
+    Compliance conflict in deletion vs logs & Low & High & Apply strict anonymization for retained logs, automate deletion workflow, and add compliance test cases. \\
+    Integration delays for optional cloud APIs & Low & Medium & Keep self-hosted MVP path fully functional and gate cloud connectors to Phase 2 only. \\
+    \bottomrule
+\end{longtable}
+\normalsize
+
+\section{Testing Plan (Design Level)}
+\subsection*{Unit Testing Targets}
+\begin{itemize}
+    \item \textbf{Auth Service:} credential validation, token issue/refresh/revoke, role claim parsing, timeout warning logic.
+    \item \textbf{Repository Service:} metadata validation, lifecycle state transitions, version increment logic, access-tier checks.
+    \item \textbf{Library Service:} checkout/return rules, due-date calculator, renewal limits, fine computation, hold queue behavior.
+    \item \textbf{OCR/AI Worker:} job payload validation, retry/backoff decisions, result parser, fallback to manual summary path.
+    \item \textbf{Search Service:} query normalization, bilingual tokenization helpers, ranking filter composition.
+    \item \textbf{Notification Service:} template rendering, recipient policy checks, retry scheduling, dead-letter routing rules.
+    \item \textbf{Analytics Service:} event aggregation functions, metric calculators, anonymization utilities.
+    \item \textbf{Data Layer Adapters:} repository methods, cache key TTL behavior, object-storage URI signing helpers.
+\end{itemize}
+
+\subsection*{Integration Testing Targets}
+\begin{itemize}
+    \item Auth + RBAC + API gateway: protected endpoint access by role and tier-based content visibility.
+    \item Repository + Queue + Worker: submission event creates jobs; worker updates status/artifacts in repository.
+    \item Library + Notification: checkout/return updates trigger due reminders and overdue notification schedule.
+    \item Repository + Search: metadata/OCR outputs are indexed and become queryable with expected filters.
+    \item Worker + Storage + DB: OCR/summary artifacts persisted and linked to correct document versions.
+    \item Compliance integration: deletion request pipeline anonymizes audit log identifiers while preserving 1-year retention.
+    \item Observability integration: processing failures produce logs, metrics, and alert events with correlation IDs.
+\end{itemize}
+
+\subsection*{E2E Testing Targets}
+\begin{itemize}
+    \item \textbf{E2E-01 Submission Journey:} contributor uploads paper, receives plagiarism/summary outputs, submits to review.
+    \item \textbf{E2E-02 Review Journey:} reviewer receives assignment, posts feedback, and changes recommendation state.
+    \item \textbf{E2E-03 Circulation Journey:} librarian checkout/return flow including due tracking and reminder notifications.
+    \item \textbf{E2E-04 Discovery Journey:} user performs bilingual search and opens accessible content by role/tier.
+    \item \textbf{E2E-05 Compliance Journey:} user deletion request processed with retained but anonymized audit traces.
+    \item \textbf{E2E-06 Session Journey:} inactivity timeout and 2-minute warning behavior validated end-to-end.
+\end{itemize}
+
+\subsection*{Known Hard-to-Test Areas (AI/OCR and Async Queue)}
+\begin{itemize}
+    \item Non-deterministic AI outputs can cause flaky assertions; use threshold-based checks and golden reference sets.
+    \item OCR quality varies by scan quality/font; validate with benchmark datasets and CER distribution, not single samples.
+    \item Queue timing/race conditions (duplicate jobs, out-of-order completion) require deterministic test harness and idempotency checks.
+    \item Retry/dead-letter behavior is time-dependent; use controllable clocks or shortened test retry windows.
+    \item External optional APIs (Phase 2) may be unavailable in CI; test via mocks/contracts and run limited staging smoke tests.
+\end{itemize}
+
+\subsection*{Test Environment and Exit Signals}
+\begin{itemize}
+    \item Unit tests run on every merge request; integration suite runs on main branch and release candidates.
+    \item E2E suite runs against staging with production-like queue/storage configuration.
+    \item Exit criteria: critical E2E paths pass, no unresolved high-severity defects, and benchmark thresholds met for OCR/summary quality.
+\end{itemize}
+
+\section{Exit Checklist}
+\begin{itemize}
+    \item \textbf{Status: Completed} -- System overview is complete.
+    \item \textbf{Status: Completed} -- Architecture and components are documented.
+    \item \textbf{Status: Completed} -- Data model and constraints are documented.
+    \item \textbf{Status: Completed} -- At least 4 critical flows are documented.
+    \item \textbf{Status: Completed} -- Security and access model is defined.
+    \item \textbf{Status: Completed} -- Sprint implementation and risk plan is included.
+\end{itemize}
+
+\end{document}

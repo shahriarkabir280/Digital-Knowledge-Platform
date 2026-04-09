@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+BACKEND_DIR="$REPO_ROOT/backend"
+FRONTEND_DIR="$REPO_ROOT/frontend"
+
+if [[ ! -d "$BACKEND_DIR" || ! -d "$FRONTEND_DIR" ]]; then
+  echo "Error: expected backend/ and frontend/ directories under $REPO_ROOT" >&2
+  exit 1
+fi
+
+cleanup() {
+  if [[ -n "${BACKEND_PID:-}" ]]; then
+    kill "$BACKEND_PID" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${FRONTEND_PID:-}" ]]; then
+    kill "$FRONTEND_PID" >/dev/null 2>&1 || true
+  fi
+}
+
+trap cleanup INT TERM EXIT
+
+echo "Starting backend dev server..."
+npm --prefix "$BACKEND_DIR" run dev &
+BACKEND_PID=$!
+
+echo "Starting frontend dev server..."
+npm --prefix "$FRONTEND_DIR" run dev &
+FRONTEND_PID=$!
+
+wait -n "$BACKEND_PID" "$FRONTEND_PID"
+EXIT_CODE=$?
+
+echo "One process exited; shutting down the other..."
+cleanup
+exit "$EXIT_CODE"

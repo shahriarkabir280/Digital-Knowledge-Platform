@@ -14,19 +14,57 @@
   }
 }
 ---
-# React + Vite
+# Frontend Bootstrap
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend scaffold for the Digital Knowledge Platform.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Build and lint:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm run lint
+npm run build
+```
 
-## Expanding the ESLint configuration
+## Implemented Structure
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Routing skeleton with protected layout and route guards
+- Navbar + Sidebar app shell
+- Role-based navigation and admin-only route guard
+- Theme tokens and responsive page layout
+- Placeholder screens for Home, Dashboard, Repository, Library, Search, Viewer, Admin
+- API-ready UI states for repository/library/search: idle, loading, empty, error, success
+
+## Route Map
+
+- `/login` public login screen
+- `/` home screen (protected)
+- `/dashboard` protected
+- `/repository` protected
+- `/library` protected
+- `/search` protected
+- `/viewer/:docId?` protected
+- `/admin` protected + admin-only
+- `/403` unauthorized
+- `*` not found
+
+## Role Policy (Current)
+
+- `MEMBER`: Home, Dashboard, Repository, Library, Search, Viewer
+- `LIBRARIAN`: Home, Dashboard, Repository, Library, Search, Viewer
+- `ADMIN`: all routes including Admin
+
+Roles are centralized in `src/app/rbac.js` and aligned to shared backend-style enum values.
+
+## Next Integration Steps
+
+- Replace module mock loaders with backend API calls through `src/services/api/client.js`
+- Connect login with backend auth endpoint and token storage
+- Implement real viewer pane and repository document open flow
+- Add test coverage for route guards and role-based navigation

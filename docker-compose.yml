@@ -1,0 +1,6 @@
+# Placeholder Docker Compose file for Digital Knowledge Platform
+# TODO: Define services (frontend, backend, db, nginx, monitoring) as needed.
+
+version: "3.9"
+
+services: {}

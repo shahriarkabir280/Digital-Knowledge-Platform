@@ -167,3 +167,9 @@ npm install
 
 - Frontend scaffold is ready and runnable.
 - Backend scaffold is ready and runnable.
+
+## Local Run and Deploy Note
+
+- Local development currently runs with two terminals (`frontend` and `backend`) using `npm run dev`.
+- A Docker scaffold path has been prepared at `docker/compose/nginx/monitoring`.
+- A placeholder Compose file is available at `docker-compose.yml` and will be expanded with real services during deployment setup.

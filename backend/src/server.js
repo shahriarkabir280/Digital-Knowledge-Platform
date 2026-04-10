@@ -1,10 +1,17 @@
 require("dotenv").config();
 
 const app = require("./app");
+const db = require("./db");
 
 const PORT = process.env.BACKEND_PORT || 3000;
 
-app.listen(PORT, () => {
-  // Keep startup log simple and explicit for local development.
-  console.log(`Backend server running on http://localhost:${PORT}`);
+(async () => {
+  await db.ping();
+
+  app.listen(PORT, () => {
+    console.log(`Backend server running on http://localhost:${PORT}`);
+  });
+})().catch((error) => {
+  console.error("Failed to start backend", error);
+  process.exit(1);
 });

@@ -22,6 +22,7 @@ A modern Digital Knowledge Platform for creating, organizing, and sharing academ
 - Node.js 20+ (LTS recommended)
 - npm 10+
 - Git
+- Docker Desktop (for local PostgreSQL)
 
 Check versions:
 
@@ -104,13 +105,25 @@ cp .env.example .env
 npm install
 ```
 
-4. Run backend in development mode:
+4. Run database migration (first time or after schema changes):
+
+```bash
+npm run db:migrate
+```
+
+5. (Optional) Seed local development data:
+
+```bash
+npm run db:seed
+```
+
+6. Run backend in development mode:
 
 ```bash
 npm run dev
 ```
 
-5. Verify backend is running:
+7. Verify backend is running:
 
 ```text
 http://localhost:3000/health
@@ -139,6 +152,39 @@ npm run dev
 
 Note: Running `npm run dev` from repo root is not configured yet. Run commands from `frontend` and `backend` folders.
 
+## Database Setup (PostgreSQL + Docker)
+
+1. Start PostgreSQL service:
+
+```bash
+docker compose up -d db
+```
+
+2. Verify service status:
+
+```bash
+docker compose ps
+```
+
+3. Run backend DB smoke check:
+
+```bash
+cd backend
+npm run db:smoke
+```
+
+4. Roll back latest migration (if needed):
+
+```bash
+npm run db:rollback
+```
+
+5. Re-apply migrations:
+
+```bash
+npm run db:migrate
+```
+
 ## Useful Commands (Frontend)
 
 ```bash
@@ -166,10 +212,11 @@ npm install
 ## Current Status
 
 - Frontend scaffold is ready and runnable.
-- Backend scaffold is ready and runnable.
+- Backend API is runnable with PostgreSQL connectivity.
+- Core database migrations and seed flow are in place.
 
 ## Local Run and Deploy Note
 
 - Local development currently runs with two terminals (`frontend` and `backend`) using `npm run dev`.
-- A Docker scaffold path has been prepared at `docker/compose/nginx/monitoring`.
-- A placeholder Compose file is available at `docker-compose.yml` and will be expanded with real services during deployment setup.
+- PostgreSQL local service is available through `docker-compose.yml`.
+- A Docker scaffold path is prepared at `docker/compose/nginx/monitoring` for future deployment work.

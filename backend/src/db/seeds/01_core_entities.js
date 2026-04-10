@@ -1,5 +1,16 @@
 const AccessTier = require("../../../../shared/types/AccessTier");
-const Role = require("../../../../shared/types/Role");
+
+const ROLE = {
+  GUEST: "GUEST",
+  MEMBER: "MEMBER",
+  CONTRIBUTOR: "CONTRIBUTOR",
+  STAFF: "STAFF",
+  LAB_MANAGER: "LAB_MANAGER",
+  ADMIN: "ADMIN",
+  REVIEWER: "REVIEWER",
+};
+
+const DEFAULT_PASSWORD_HASH = "$2b$10$2Yf4/5CWQwduz6r.4nXn0eS7hXgR8wX94m5N6ynwQyY0f7fD9U3x2";
 
 exports.seed = async function seed(knex) {
   await knex("citations").del();
@@ -12,21 +23,34 @@ exports.seed = async function seed(knex) {
   await knex("labs").del();
   await knex("users").del();
 
-  const [adminUser] = await knex("users")
-    .insert({
-      email: "admin@dkp.local",
-      full_name: "Local Admin",
-      role: Role.ADMIN,
-      status: "ACTIVE",
-      created_at: knex.fn.now(),
-      updated_at: knex.fn.now(),
-    })
-    .returning(["id"]);
+  const seededUsers = [
+    { name: "Local Guest", email: "guest@dkp.local", role: ROLE.GUEST },
+    { name: "Local Member", email: "member@dkp.local", role: ROLE.MEMBER },
+    { name: "Local Contributor", email: "contributor@dkp.local", role: ROLE.CONTRIBUTOR },
+    { name: "Local Staff", email: "staff@dkp.local", role: ROLE.STAFF },
+    { name: "Local Lab Manager", email: "lab-manager@dkp.local", role: ROLE.LAB_MANAGER },
+    { name: "Local Admin", email: "admin@dkp.local", role: ROLE.ADMIN },
+    { name: "Local Reviewer", email: "reviewer@dkp.local", role: ROLE.REVIEWER },
+  ];
+
+  const createdUsers = await knex("users")
+    .insert(
+      seededUsers.map((user) => ({
+        ...user,
+        password_hash: DEFAULT_PASSWORD_HASH,
+        status: "ACTIVE",
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now(),
+      })),
+    )
+    .returning(["id", "role"]);
+
+  const adminUser = createdUsers.find((user) => user.role === ROLE.ADMIN);
 
   const [lab] = await knex("labs")
     .insert({
       name: "Digital Knowledge Lab",
-      head_id: adminUser.id,
+      head_id: adminUser ? adminUser.id : null,
       description: "Seed lab for local development",
       created_at: knex.fn.now(),
       updated_at: knex.fn.now(),

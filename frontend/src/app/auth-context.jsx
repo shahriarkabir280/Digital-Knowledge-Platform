@@ -1,26 +1,24 @@
 import { useMemo, useState } from 'react'
 import { AuthContext } from './auth-store.js'
 import { normalizeRole, ROLES } from './rbac.js'
-
-const STORAGE_KEY = 'dkp.auth'
-
-const readStoredAuth = () => {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
+import {
+  clearAuthSession,
+  loadAuthSession,
+  saveAuthSession,
+} from './auth-session.js'
 
 export function AuthProvider({ children }) {
   const [authState, setAuthState] = useState(() => {
-    const stored = readStoredAuth()
-    if (!stored) {
+    const stored = loadAuthSession()
+    const token = stored?.token || ''
+
+    if (!stored || !token) {
       return {
         isAuthenticated: false,
         role: ROLES.GUEST,
         name: '',
+        token: '',
+        expiresAt: null,
       }
     }
 
@@ -28,17 +26,21 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(stored.isAuthenticated),
       role: normalizeRole(stored.role),
       name: stored.name || '',
+      token,
+      expiresAt: stored.expiresAt || null,
     }
   })
 
-  const login = ({ role, name }) => {
+  const login = ({ role, name, token, expiresAt = null }) => {
     const next = {
       isAuthenticated: true,
       role: normalizeRole(role),
       name: name || 'Platform User',
+      token,
+      expiresAt,
     }
     setAuthState(next)
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    saveAuthSession(next)
   }
 
   const logout = () => {
@@ -46,9 +48,11 @@ export function AuthProvider({ children }) {
       isAuthenticated: false,
       role: ROLES.GUEST,
       name: '',
+      token: '',
+      expiresAt: null,
     }
     setAuthState(next)
-    window.localStorage.removeItem(STORAGE_KEY)
+    clearAuthSession()
   }
 
   const value = useMemo(

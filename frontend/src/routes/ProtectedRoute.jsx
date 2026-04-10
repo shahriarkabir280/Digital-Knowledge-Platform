@@ -5,7 +5,7 @@ export default function ProtectedRoute() {
   const { authState } = useAuth()
   const location = useLocation()
 
-  if (!authState.isAuthenticated) {
+  if (!authState.isAuthenticated || !authState.token) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

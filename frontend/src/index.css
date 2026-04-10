@@ -258,6 +258,11 @@ a {
   font-size: 0.95rem;
 }
 
+.form-error {
+  color: #b4432d;
+  font-size: 0.9rem;
+}
+
 .login-form {
   margin-top: 6px;
   display: grid;
@@ -303,6 +308,12 @@ select {
 .primary-btn:hover,
 .ghost-btn:hover {
   transform: translateY(-1px);
+}
+
+.primary-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
 }
 
 @media (max-width: 920px) {

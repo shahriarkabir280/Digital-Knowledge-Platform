@@ -1,28 +1,44 @@
-// Centralized API client placeholder.
-// Replace with axios or fetch wrapper in next task.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+async function parseResponseBody(response) {
+  const contentType = response.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) {
+    return response.json()
+  }
+  return response.text()
+}
+
+function extractErrorMessage(parsedBody, status) {
+  if (typeof parsedBody === 'string' && parsedBody.trim()) {
+    return parsedBody
+  }
+
+  if (parsedBody && typeof parsedBody === 'object') {
+    return parsedBody.message || parsedBody.error || `API request failed with status ${status}`
+  }
+
+  return `API request failed with status ${status}`
+}
 
 export async function apiRequest(path, options = {}) {
+  const { authToken, headers, ...restOptions } = options
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
+      'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(headers || {}),
     },
-    ...options,
-  });
+    ...restOptions,
+  })
+
+  const parsedBody = await parseResponseBody(response)
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `API request failed with status ${response.status}`);
+    throw new Error(extractErrorMessage(parsedBody, response.status))
   }
 
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    return response.json();
-  }
-
-  return response.text();
+  return parsedBody
 }
 
 

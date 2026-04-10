@@ -1,20 +1,62 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/use-auth.js'
-import { ALL_AUTH_ROLES, ROLES } from '../app/rbac.js'
+import { createDemoSession, loginRequest } from '../services/api/auth.js'
 
 export default function LoginPage() {
-  const [name, setName] = useState('')
-  const [selectedRole, setSelectedRole] = useState(ROLES.MEMBER)
-  const { login } = useAuth()
+  const [identifier, setIdentifier] = useState('')
+  const [password, setPassword] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { authState, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
   const from = location.state?.from?.pathname || '/dashboard'
 
-  const onSubmit = (event) => {
+  if (authState.isAuthenticated && authState.token) {
+    return <Navigate to={from} replace />
+  }
+
+  const onSubmit = async (event) => {
     event.preventDefault()
-    login({ role: selectedRole, name })
+    setErrorMessage('')
+
+    if (!identifier.trim() || !password.trim()) {
+      setErrorMessage('Identifier and password are required.')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      const session = await loginRequest({
+        identifier: identifier.trim(),
+        password,
+      })
+
+      login({
+        role: session.user.role,
+        name: session.user.name,
+        token: session.token,
+        expiresAt: session.expiresAt,
+      })
+
+      navigate(from, { replace: true })
+    } catch (error) {
+      setErrorMessage(error.message || 'Login failed. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const onDemoLogin = () => {
+    const session = createDemoSession(identifier.trim())
+    login({
+      role: session.user.role,
+      name: session.user.name,
+      token: session.token,
+      expiresAt: session.expiresAt,
+    })
     navigate(from, { replace: true })
   }
 
@@ -24,32 +66,38 @@ export default function LoginPage() {
         <p className="brand-kicker">Digital Knowledge Platform</p>
         <h2>Login</h2>
         <p className="helper-text">
-          Demo auth flow for protected routes and role-based navigation.
+          Sign in with your account to continue.
         </p>
         <form onSubmit={onSubmit} className="login-form">
-          <label htmlFor="name">Display Name</label>
+          <label htmlFor="identifier">Email or Username</label>
           <input
-            id="name"
-            placeholder="Tamim"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
+            id="identifier"
+            name="identifier"
+            autoComplete="username"
+            placeholder="tamim@example.com"
+            value={identifier}
+            onChange={(event) => setIdentifier(event.target.value)}
           />
 
-          <label htmlFor="role">Role</label>
-          <select
-            id="role"
-            value={selectedRole}
-            onChange={(event) => setSelectedRole(event.target.value)}
-          >
-            {ALL_AUTH_ROLES.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
 
-          <button type="submit" className="primary-btn">
-            Continue
+          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+
+          <button type="submit" className="primary-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
+          </button>
+
+          <button type="button" className="ghost-btn" onClick={onDemoLogin}>
+            Demo Login
           </button>
         </form>
       </div>

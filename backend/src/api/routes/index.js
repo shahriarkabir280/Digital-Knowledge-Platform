@@ -29,6 +29,7 @@ router.get("/status", (_req, res) => {
 router.use("/auth", authRouter);
 router.use("/users", usersRouter);
 router.use("/repository", documentsRouter);
+router.use("/documents", documentsRouter);
 router.use("/library", libraryRouter);
 
 module.exports = router;

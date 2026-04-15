@@ -3,6 +3,7 @@ const { upload, uploadErrorHandler } = require("../../api/middlewares/uploadMidd
 const requireAuth = require("../../api/middlewares/requireAuth");
 const uploadController = require("./uploadController");
 const metadataController = require("./metadataController");
+const stateController = require("./stateController");
 
 const router = Router();
 
@@ -43,5 +44,11 @@ router.post("/:id/metadata", metadataController.createMetadata);
  * PUT /api/repository/:id/metadata
  */
 router.put("/:id/metadata", metadataController.updateMetadata);
+
+/**
+ * Update lifecycle state
+ * PATCH /api/documents/:id/state
+ */
+router.patch("/:id/state", stateController.patchDocumentState);
 
 module.exports = router;

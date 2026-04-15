@@ -6,8 +6,8 @@ async function createDocumentWithMetadata(document, metadata = {}) {
       .insert({
         uploader_id: document.uploaderId,
         title: document.title,
-        document_type: document.documentType,
-        file_format: document.fileFormat,
+        type: document.documentType,
+        format: document.fileFormat,
         file_path: document.filePath,
         version: document.version || 1,
         state: document.state || "draft",

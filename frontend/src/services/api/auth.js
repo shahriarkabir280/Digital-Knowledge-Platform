@@ -6,8 +6,17 @@ function inferRoleFromIdentifier(identifier) {
   if (value.includes('admin')) {
     return ROLES.ADMIN
   }
-  if (value.includes('librarian')) {
-    return ROLES.LIBRARIAN
+  if (value.includes('lab') || value.includes('manager')) {
+    return ROLES.LAB_MANAGER
+  }
+  if (value.includes('staff') || value.includes('librarian')) {
+    return ROLES.STAFF
+  }
+  if (value.includes('reviewer')) {
+    return ROLES.REVIEWER
+  }
+  if (value.includes('contributor')) {
+    return ROLES.CONTRIBUTOR
   }
   return ROLES.MEMBER
 }
@@ -57,6 +66,29 @@ export async function loginRequest({ identifier, password }) {
     token,
     user,
     expiresAt,
+  }
+}
+
+export async function registerRequest({ name, email, password }) {
+  try {
+    const payload = await apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password }),
+    })
+
+    return payload?.user || payload
+  } catch (error) {
+    const message = String(error?.message || '')
+    const looksLikeNetworkFailure =
+      message.includes('Failed to fetch') || message.includes('NetworkError')
+
+    if (looksLikeNetworkFailure) {
+      throw new Error(
+        'Cannot reach registration API at http://localhost:3000/api/auth/register. Start backend server and try again.',
+      )
+    }
+
+    throw error
   }
 }
 

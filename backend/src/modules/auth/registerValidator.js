@@ -4,7 +4,6 @@ const registerSchema = z.object({
   email: z.string().trim().email(),
   name: z.string().trim().min(2).max(120),
   password: z.string().min(8).max(128),
-  role: z.enum(["MEMBER", "CONTRIBUTOR"]).optional(),
 });
 
 const REQUIRED_INSTITUTIONAL_DOMAIN = "cs.du.ac.bd";
@@ -54,9 +53,10 @@ function validateRegisterPayload(payload) {
   return {
     ok: true,
     data: {
-      ...data,
       email,
-      role: data.role || "MEMBER",
+      name: data.name,
+      password: data.password,
+      role: "MEMBER",
     },
   };
 }

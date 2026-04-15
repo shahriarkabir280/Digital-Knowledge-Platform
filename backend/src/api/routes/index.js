@@ -2,6 +2,7 @@ const { Router } = require("express");
 const authRouter = require("../../modules/auth");
 const documentsRouter = require("../../modules/documents");
 const libraryRouter = require("../../modules/library");
+const usersRouter = require("../../modules/users");
 const db = require("../../db");
 
 const router = Router();
@@ -26,6 +27,7 @@ router.get("/status", (_req, res) => {
 });
 
 router.use("/auth", authRouter);
+router.use("/users", usersRouter);
 router.use("/repository", documentsRouter);
 router.use("/library", libraryRouter);
 

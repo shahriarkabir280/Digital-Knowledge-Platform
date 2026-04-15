@@ -14,6 +14,7 @@ import RoutePage from '../pages/RoutePage.jsx'
 import SearchPage from '../pages/SearchPage.jsx'
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import UnauthorizedPage from '../pages/UnauthorizedPage.jsx'
+import UploadDocumentPage from '../pages/UploadDocumentPage.jsx'
 import ViewerPage from '../pages/ViewerPage.jsx'
 import ProtectedRoute from '../routes/ProtectedRoute.jsx'
 import RoleRoute from '../routes/RoleRoute.jsx'
@@ -62,12 +63,7 @@ export const appRouter = createBrowserRouter([
           },
           {
             path: '/upload-document',
-            element: (
-              <RoutePage
-                title="Upload Document"
-                description="Add a document to the platform, attach metadata, and prepare it for review."
-              />
-            ),
+            element: <UploadDocumentPage />,
           },
           {
             path: '/submit-paper',

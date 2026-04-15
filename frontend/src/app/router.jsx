@@ -11,6 +11,7 @@ import NotFoundPage from '../pages/NotFoundPage.jsx'
 import RegisterPage from '../pages/RegisterPage.jsx'
 import RepositoryPage from '../pages/RepositoryPage.jsx'
 import RoutePage from '../pages/RoutePage.jsx'
+import MetadataFormPage from '../pages/MetadataFormPage.jsx'
 import SearchPage from '../pages/SearchPage.jsx'
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import UnauthorizedPage from '../pages/UnauthorizedPage.jsx'
@@ -67,12 +68,11 @@ export const appRouter = createBrowserRouter([
           },
           {
             path: '/submit-paper',
-            element: (
-              <RoutePage
-                title="Submit Paper"
-                description="Start a submission flow for a paper, thesis, or research artifact."
-              />
-            ),
+            element: <MetadataFormPage />,
+          },
+          {
+            path: '/metadata-form',
+            element: <MetadataFormPage />,
           },
           {
             path: '/borrow-item',

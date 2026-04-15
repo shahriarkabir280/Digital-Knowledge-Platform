@@ -1,11 +1,21 @@
 export const ROLES = Object.freeze({
   GUEST: 'GUEST',
   MEMBER: 'MEMBER',
-  LIBRARIAN: 'LIBRARIAN',
+  CONTRIBUTOR: 'CONTRIBUTOR',
+  STAFF: 'STAFF',
+  LAB_MANAGER: 'LAB_MANAGER',
   ADMIN: 'ADMIN',
+  REVIEWER: 'REVIEWER',
 })
 
-export const ALL_AUTH_ROLES = [ROLES.MEMBER, ROLES.LIBRARIAN, ROLES.ADMIN]
+export const ALL_AUTH_ROLES = [
+  ROLES.MEMBER,
+  ROLES.CONTRIBUTOR,
+  ROLES.STAFF,
+  ROLES.LAB_MANAGER,
+  ROLES.ADMIN,
+  ROLES.REVIEWER,
+]
 
 export const ROUTE_ACCESS = Object.freeze({
   home: ALL_AUTH_ROLES,
@@ -16,6 +26,18 @@ export const ROUTE_ACCESS = Object.freeze({
   viewer: ALL_AUTH_ROLES,
   admin: [ROLES.ADMIN],
 })
+
+export function defaultRouteForRole(role) {
+  if (role === ROLES.ADMIN) {
+    return '/dashboard/admin'
+  }
+
+  if (role === ROLES.STAFF || role === ROLES.LAB_MANAGER) {
+    return '/dashboard/staff'
+  }
+
+  return '/dashboard'
+}
 
 export function normalizeRole(input) {
   if (!input) {
@@ -29,6 +51,10 @@ export function normalizeRole(input) {
 
   if (role === 'USER') {
     return ROLES.MEMBER
+  }
+
+  if (role === 'LIBRARIAN') {
+    return ROLES.STAFF
   }
 
   return ROLES.GUEST

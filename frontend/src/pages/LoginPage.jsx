@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { defaultRouteForRole } from '../app/rbac.js'
 import { useAuth } from '../app/use-auth.js'
 import { createDemoSession, loginRequest } from '../services/api/auth.js'
 
@@ -11,11 +12,19 @@ export default function LoginPage() {
   const { authState, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const registeredEmail = location.state?.registeredEmail || ''
 
-  const from = location.state?.from?.pathname || '/dashboard'
+  useEffect(() => {
+    if (registeredEmail && !identifier) {
+      setIdentifier(registeredEmail)
+    }
+  }, [registeredEmail, identifier])
+
+  const from = location.state?.from?.pathname || ''
 
   if (authState.isAuthenticated && authState.token) {
-    return <Navigate to={from} replace />
+    const redirectTarget = from || defaultRouteForRole(authState.role)
+    return <Navigate to={redirectTarget} replace />
   }
 
   const onSubmit = async (event) => {
@@ -41,7 +50,8 @@ export default function LoginPage() {
         expiresAt: session.expiresAt,
       })
 
-      navigate(from, { replace: true })
+      const redirectTarget = from || defaultRouteForRole(session.user.role)
+      navigate(redirectTarget, { replace: true })
     } catch (error) {
       setErrorMessage(error.message || 'Login failed. Please try again.')
     } finally {
@@ -57,7 +67,8 @@ export default function LoginPage() {
       token: session.token,
       expiresAt: session.expiresAt,
     })
-    navigate(from, { replace: true })
+    const redirectTarget = from || defaultRouteForRole(session.user.role)
+    navigate(redirectTarget, { replace: true })
   }
 
   return (
@@ -69,11 +80,11 @@ export default function LoginPage() {
           Sign in with your account to continue.
         </p>
         <form onSubmit={onSubmit} className="login-form">
-          <label htmlFor="identifier">Email or Username</label>
+          <label htmlFor="identifier">Email</label>
           <input
             id="identifier"
             name="identifier"
-            autoComplete="username"
+            autoComplete="email"
             placeholder="tamim@example.com"
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
@@ -100,6 +111,10 @@ export default function LoginPage() {
             Demo Login
           </button>
         </form>
+
+        <p className="auth-switch-text">
+          New here? <Link to="/register">Create an account</Link>
+        </p>
       </div>
     </section>
   )

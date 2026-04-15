@@ -14,7 +14,29 @@ function extractErrorMessage(parsedBody, status) {
   }
 
   if (parsedBody && typeof parsedBody === 'object') {
-    return parsedBody.message || parsedBody.error || `API request failed with status ${status}`
+    const nestedError = parsedBody.error
+
+    if (typeof nestedError === 'string' && nestedError.trim()) {
+      return nestedError
+    }
+
+    if (nestedError && typeof nestedError === 'object') {
+      const details = Array.isArray(nestedError.details)
+        ? nestedError.details
+            .map((item) => item?.message)
+            .filter(Boolean)
+            .join(', ')
+        : ''
+
+      return (
+        nestedError.message ||
+        details ||
+        parsedBody.message ||
+        `API request failed with status ${status}`
+      )
+    }
+
+    return parsedBody.message || `API request failed with status ${status}`
   }
 
   return `API request failed with status ${status}`

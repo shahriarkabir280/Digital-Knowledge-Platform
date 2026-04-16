@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useAuth } from '../app/use-auth'
 import DragDropZone from '../components/common/DragDropZone'
 import UploadProgressBar from '../components/common/UploadProgressBar'
 import { uploadDocument } from '../services/api/documents'
-import './UploadDocumentPage.css'
 
 export default function UploadDocumentPage() {
   const navigate = useNavigate()
@@ -140,70 +144,72 @@ export default function UploadDocumentPage() {
   }
 
   return (
-    <section className="page-block upload-document-page">
-      <div className="upload-header">
+    <section className="mx-auto grid w-full max-w-5xl gap-4">
+      <div className="grid gap-2">
         <p className="brand-kicker">Repository</p>
-        <h2>Upload Document</h2>
-        <p className="page-description">
+        <h2 className="text-2xl font-semibold tracking-tight">Upload Document</h2>
+        <p className="text-sm text-muted-foreground">
           Add documents to the platform, attach metadata, and prepare them for review.
         </p>
       </div>
 
-      <form className="upload-form" onSubmit={handleUpload}>
-        {/* Metadata Fields */}
-        <div className="form-section">
-          <h3>Document Information</h3>
+      <form className="grid gap-4" onSubmit={handleUpload}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Document Information</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="title">Document Title *</Label>
+              <Input
+                id="title"
+                type="text"
+                name="title"
+                value={metadata.title}
+                onChange={handleMetadataChange}
+                placeholder="e.g., Research Paper on Digital Archives"
+                disabled={uploading}
+                required
+              />
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="title">Document Title *</label>
-            <input
-              id="title"
-              type="text"
-              name="title"
-              value={metadata.title}
-              onChange={handleMetadataChange}
-              placeholder="e.g., Research Paper on Digital Archives"
-              className="form-input"
-              disabled={uploading}
-              required
-            />
-          </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="description">Description</Label>
+              <textarea
+                id="description"
+                name="description"
+                value={metadata.description}
+                onChange={handleMetadataChange}
+                placeholder="Optional: Provide additional context about this document"
+                rows={4}
+                disabled={uploading}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="form-group">
-            <label htmlFor="description">Description</label>
-            <textarea
-              id="description"
-              name="description"
-              value={metadata.description}
-              onChange={handleMetadataChange}
-              placeholder="Optional: Provide additional context about this document"
-              className="form-textarea"
-              rows={4}
-              disabled={uploading}
-            />
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Choose Files</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DragDropZone onFilesSelected={handleFilesSelected} disabled={uploading} />
+          </CardContent>
+        </Card>
 
-        {/* File Upload Section */}
-        <div className="form-section">
-          <h3>Choose Files</h3>
-          <DragDropZone
-            onFilesSelected={handleFilesSelected}
-            disabled={uploading}
-          />
-        </div>
-
-        {/* Selected Files List */}
         {selectedFiles.length > 0 && (
-          <div className="form-section">
-            <h3>Files to Upload ({selectedFiles.length})</h3>
-            <div className="files-list">
+          <Card>
+            <CardHeader>
+              <CardTitle>Files to Upload ({selectedFiles.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="file-item">
-                  <div className="file-info">
-                    <div className="file-details">
-                      <p className="file-name">{file.name}</p>
-                      <p className="file-size">
+                <div key={index} className="flex items-start justify-between gap-3 rounded-md border border-border p-3">
+                  <div className="grid min-w-0 flex-1 gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">
                         {(file.size / (1024 * 1024)).toFixed(2)} MB
                       </p>
                     </div>
@@ -216,59 +222,51 @@ export default function UploadDocumentPage() {
                   </div>
                   <button
                     type="button"
-                    className="remove-button"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-input text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
                     onClick={() => removeFile(index)}
                     disabled={uploading}
                     aria-label={`Remove ${file.name}`}
                   >
-                    ✕
+                    x
                   </button>
                 </div>
               ))}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Error Message */}
         {error && (
-          <div className="alert alert-error">
-            <span className="alert-icon">⚠</span>
-            <p>{error}</p>
-          </div>
+          <Alert variant="error">{error}</Alert>
         )}
 
-        {/* Success Message */}
         {successMessage && (
-          <div className="alert alert-success">
-            <span className="alert-icon">✓</span>
-            <div>
+          <Alert variant="success" className="grid gap-2">
+            <div className="grid gap-2">
               <p>{successMessage}</p>
               {lastUploadedDocumentId ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-secondary"
+                  variant="outline"
                   onClick={() => navigate(`/submit-paper?documentId=${lastUploadedDocumentId}`)}
                 >
                   Continue Metadata (Doc #{lastUploadedDocumentId})
-                </button>
+                </Button>
               ) : null}
             </div>
-          </div>
+          </Alert>
         )}
 
-        {/* Action Buttons */}
-        <div className="form-actions">
-          <button
+        <div className="flex flex-wrap gap-2">
+          <Button
             type="submit"
-            className="btn btn-primary"
             disabled={uploading || selectedFiles.length === 0}
           >
             {uploading ? 'Uploading...' : 'Upload Files'}
-          </button>
+          </Button>
           {selectedFiles.length > 0 && !uploading && (
-            <button
+            <Button
               type="button"
-              className="btn btn-secondary"
+              variant="outline"
               onClick={() => {
                 setSelectedFiles([])
                 setUploadProgress({})
@@ -276,7 +274,7 @@ export default function UploadDocumentPage() {
               }}
             >
               Clear All
-            </button>
+            </Button>
           )}
         </div>
       </form>

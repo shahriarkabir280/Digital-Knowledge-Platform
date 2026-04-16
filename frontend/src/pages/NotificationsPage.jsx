@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Alert } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '../app/use-auth.js'
 import { fetchNotifications } from '../services/api/documents.js'
-import './NotificationsPage.css'
 
 const STAFF_ROLES = new Set(['STAFF', 'LAB_MANAGER', 'REVIEWER', 'ADMIN'])
 
@@ -54,38 +56,41 @@ export default function NotificationsPage() {
   }
 
   return (
-    <section className="page-block notifications-page">
-      <p className="brand-kicker">Activity</p>
-      <h2>Notifications</h2>
-      <p>Review and submission lifecycle updates for your account.</p>
+    <section className="mx-auto grid w-full max-w-5xl gap-4">
+      <div className="grid gap-2">
+        <p className="brand-kicker">Activity</p>
+        <h2 className="text-2xl font-semibold tracking-tight">Notifications</h2>
+        <p className="text-sm text-muted-foreground">Review and submission lifecycle updates for your account.</p>
+      </div>
 
-      {status === 'loading' && <p className="state-text">Loading notifications...</p>}
-      {status === 'error' && <p className="state-error">{error}</p>}
-      {status === 'empty' && <p className="state-text">No notifications yet.</p>}
+      {status === 'loading' ? <Alert>Loading notifications...</Alert> : null}
+      {status === 'error' ? <Alert variant="error">{error}</Alert> : null}
+      {status === 'empty' ? <Alert>No notifications yet.</Alert> : null}
 
-      {status === 'success' && (
-        <div className="notification-list">
+      {status === 'success' ? (
+        <div className="grid gap-3">
           {items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="notification-card notification-card-btn"
-              onClick={() => onNotificationClick(item)}
-            >
-              <header>
-                <h3>{item.title}</h3>
-                <span className={`notification-badge ${item.isRead ? 'read' : 'unread'}`}>
-                  {item.isRead ? 'read' : 'new'}
-                </span>
-              </header>
-              <p className="notification-message">{item.message}</p>
-              <p className="notification-time">
-                {new Date(item.createdAt).toLocaleString()}
-              </p>
-            </button>
+            <Card key={item.id}>
+              <CardContent className="pt-6">
+                <button
+                  type="button"
+                  className="grid w-full gap-2 text-left"
+                  onClick={() => onNotificationClick(item)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
+                    <Badge variant={item.isRead ? 'outline' : 'warning'}>
+                      {item.isRead ? 'read' : 'new'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{item.message}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</p>
+                </button>
+              </CardContent>
+            </Card>
           ))}
         </div>
-      )}
+      ) : null}
     </section>
   )
 }

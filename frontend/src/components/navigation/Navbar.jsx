@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import cseduLogo from '@/assets/CSEDULOGO.png'
 import { useAuth } from '../../app/use-auth.js'
 import {
   fetchNotifications,
@@ -97,22 +99,36 @@ export default function Navbar() {
   return (
     <header className="topbar">
       <div className="brand-block">
-        <p className="brand-kicker">Digital Knowledge Platform</p>
-        <h1>Frontend Shell</h1>
+        <img src={cseduLogo} alt="CSEDU Logo" className="brand-logo" />
+        <div className="brand-copy">
+          <p className="brand-kicker">Digital Knowledge Platform</p>
+          <h1>CSEDU</h1>
+        </div>
       </div>
       <div className="topbar-actions">
-        <span className="role-pill">Role: {authState.role}</span>
-        <span className="user-pill">{authState.name || 'Anonymous'}</span>
+        <div className="topbar-identity" aria-label="Current account context">
+          <span className="identity-chip">
+            <span className="identity-chip-label">Role</span>
+            <strong className="identity-chip-value">{authState.role}</strong>
+          </span>
+          <span className="identity-chip">
+            <span className="identity-chip-label">User</span>
+            <strong className="identity-chip-value">{authState.name || 'Anonymous'}</strong>
+          </span>
+        </div>
+
+        <div className="topbar-controls">
         <div className="topbar-notifications">
-          <button
+          <Button
             type="button"
-            className="ghost-btn notification-btn"
+            variant="outline"
+            className="notification-btn"
             onClick={onToggleNotifications}
             aria-label="Open notifications"
           >
-            <span className="notification-bell" aria-hidden="true">🔔</span>
+            <span className="notification-bell" aria-hidden="true">Notifications</span>
             {unreadCount > 0 ? <span className="notification-count">{unreadCount}</span> : null}
-          </button>
+          </Button>
 
           {notificationsOpen ? (
             <div className="notification-dropdown" role="menu">
@@ -139,7 +155,7 @@ export default function Navbar() {
               )}
               <button
                 type="button"
-                className="ghost-btn notification-dropdown-link"
+                className="notification-dropdown-link"
                 onClick={onOpenNotificationsPage}
               >
                 View all notifications
@@ -147,9 +163,11 @@ export default function Navbar() {
             </div>
           ) : null}
         </div>
-        <button type="button" className="ghost-btn" onClick={onLogout}>
+
+        <Button type="button" variant="outline" onClick={onLogout}>
           Logout
-        </button>
+        </Button>
+        </div>
       </div>
     </header>
   )

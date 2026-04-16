@@ -2,14 +2,17 @@ import { createBrowserRouter } from 'react-router-dom'
 import { Navigate } from 'react-router-dom'
 import AdminDashboardPage from '../pages/AdminDashboardPage.jsx'
 import AdminRoleManagementPage from '../pages/AdminRoleManagementPage.jsx'
+import AllUploadsPage from '../pages/AllUploadsPage.jsx'
 import AppLayout from '../components/layout/AppLayout.jsx'
 import DashboardPage from '../pages/DashboardPage.jsx'
 import HomePage from '../pages/HomePage.jsx'
 import LibraryPage from '../pages/LibraryPage.jsx'
 import LoginPage from '../pages/LoginPage.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
+import NotificationsPage from '../pages/NotificationsPage.jsx'
 import RegisterPage from '../pages/RegisterPage.jsx'
 import RepositoryPage from '../pages/RepositoryPage.jsx'
+import ReviewQueuePage from '../pages/ReviewQueuePage.jsx'
 import RoutePage from '../pages/RoutePage.jsx'
 import MetadataFormPage from '../pages/MetadataFormPage.jsx'
 import SearchPage from '../pages/SearchPage.jsx'
@@ -43,6 +46,10 @@ export const appRouter = createBrowserRouter([
           {
             path: '/dashboard',
             element: <DashboardPage />,
+          },
+          {
+            path: '/notifications',
+            element: <NotificationsPage />,
           },
           {
             element: <RoleRoute allowedRoles={[ROLES.ADMIN]} />,
@@ -86,6 +93,24 @@ export const appRouter = createBrowserRouter([
           {
             path: '/repository',
             element: <RepositoryPage />,
+          },
+          {
+            element: <RoleRoute allowedRoles={ROUTE_ACCESS.allUploads} />,
+            children: [
+              {
+                path: '/all-uploads',
+                element: <AllUploadsPage />,
+              },
+            ],
+          },
+          {
+            element: <RoleRoute allowedRoles={ROUTE_ACCESS.reviewQueue} />,
+            children: [
+              {
+                path: '/review-queue',
+                element: <ReviewQueuePage />,
+              },
+            ],
           },
           {
             path: '/library',

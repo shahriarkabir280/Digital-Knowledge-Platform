@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/use-auth'
 import DragDropZone from '../components/common/DragDropZone'
 import UploadProgressBar from '../components/common/UploadProgressBar'
@@ -6,6 +7,7 @@ import { uploadDocument } from '../services/api/documents'
 import './UploadDocumentPage.css'
 
 export default function UploadDocumentPage() {
+  const navigate = useNavigate()
   const { authState } = useAuth()
   const [selectedFiles, setSelectedFiles] = useState([])
   const [uploadProgress, setUploadProgress] = useState({})
@@ -17,6 +19,7 @@ export default function UploadDocumentPage() {
   })
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
+  const [lastUploadedDocumentId, setLastUploadedDocumentId] = useState(null)
 
   const handleFilesSelected = (files) => {
     setSelectedFiles((prev) => [...prev, ...files])
@@ -60,6 +63,7 @@ export default function UploadDocumentPage() {
 
     setError(null)
     setSuccessMessage(null)
+    setLastUploadedDocumentId(null)
     setUploading(true)
 
     let successCount = 0
@@ -87,6 +91,11 @@ export default function UploadDocumentPage() {
           },
           authState.token
         )
+
+        const uploadedId = response?.data?.document?.id
+        if (uploadedId) {
+          setLastUploadedDocumentId(uploadedId)
+        }
 
         setUploadStatus((prev) => ({
           ...prev,
@@ -232,7 +241,18 @@ export default function UploadDocumentPage() {
         {successMessage && (
           <div className="alert alert-success">
             <span className="alert-icon">✓</span>
-            <p>{successMessage}</p>
+            <div>
+              <p>{successMessage}</p>
+              {lastUploadedDocumentId ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => navigate(`/submit-paper?documentId=${lastUploadedDocumentId}`)}
+                >
+                  Continue Metadata (Doc #{lastUploadedDocumentId})
+                </button>
+              ) : null}
+            </div>
           </div>
         )}
 

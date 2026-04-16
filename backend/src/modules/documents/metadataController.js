@@ -1,5 +1,6 @@
 const db = require("../../db");
 const { validateDocumentId, validateMetadataPayload, normalizeKeywords } = require("./metadataValidator");
+const { versionIncrementExpression } = require("./versionService");
 
 function hasOwnership(document, user) {
   return document.uploader_id === user.id || user.role === "ADMIN";
@@ -46,6 +47,7 @@ function formatDocument(document) {
     title: document.title,
     type: document.type,
     format: document.format,
+    version: document.version,
     state: document.state,
     accessTier: document.access_tier,
     uploaderId: document.uploader_id,
@@ -241,15 +243,26 @@ async function updateMetadata(req, res, next) {
 
       const documentUpdates = buildDocumentUpdates(payload);
       const metadataUpdates = buildMetadataUpdates(payload);
+      const hasDocumentUpdates = Object.keys(documentUpdates).length > 0;
+      const hasMetadataUpdates = Object.keys(metadataUpdates).length > 0;
 
-      if (Object.keys(documentUpdates).length > 0) {
+      if (!hasDocumentUpdates && !hasMetadataUpdates) {
+        throw {
+          statusCode: 400,
+          code: "NO_CHANGES",
+          message: "No changes found to update",
+        };
+      }
+
+      if (hasDocumentUpdates || hasMetadataUpdates) {
         await trx("documents").where({ id: documentId }).update({
           ...documentUpdates,
+          version: versionIncrementExpression(trx),
           updated_at: trx.fn.now(),
         });
       }
 
-      if (Object.keys(metadataUpdates).length > 0) {
+      if (hasMetadataUpdates) {
         await trx("metadata").where({ document_id: documentId }).update({
           ...metadataUpdates,
           updated_at: trx.fn.now(),

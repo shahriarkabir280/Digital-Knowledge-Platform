@@ -67,6 +67,114 @@ a {
   flex-wrap: wrap;
 }
 
+.topbar-notifications {
+  position: relative;
+}
+
+.notification-btn {
+  min-width: 44px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.notification-bell {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.notification-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #b4432d;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+
+.notification-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(360px, 92vw);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  padding: 10px;
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+}
+
+.notification-dropdown-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.notification-dropdown-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.notification-dropdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.notification-dropdown-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffdf9;
+}
+
+.notification-dropdown-item-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px;
+  display: grid;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.notification-dropdown-item-btn:hover,
+.notification-dropdown-item-btn:focus-visible {
+  background: #f6f0e8;
+  outline: none;
+  border-radius: 10px;
+}
+
+.notification-dropdown-item-title {
+  color: var(--ink);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.notification-dropdown-item-time {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.notification-dropdown-link {
+  justify-self: start;
+}
+
 .role-pill,
 .user-pill {
   border-radius: 999px;

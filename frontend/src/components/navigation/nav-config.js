@@ -12,6 +12,11 @@ export const navItems = [
     roles: ROUTE_ACCESS.dashboard,
   },
   {
+    to: '/upload-document',
+    label: 'Upload Document',
+    roles: ROUTE_ACCESS.uploadDocument,
+  },
+  {
     to: '/repository',
     label: 'Repository',
     roles: ROUTE_ACCESS.repository,
@@ -25,6 +30,16 @@ export const navItems = [
     to: '/search',
     label: 'Search',
     roles: ROUTE_ACCESS.search,
+  },
+  {
+    to: '/all-uploads',
+    label: 'All Uploads',
+    roles: ROUTE_ACCESS.allUploads,
+  },
+  {
+    to: '/review-queue',
+    label: 'Review Queue',
+    roles: ROUTE_ACCESS.reviewQueue,
   },
   {
     to: '/viewer/sample-doc',

@@ -7,6 +7,29 @@
 
 const uploadService = require('../../services/uploadService');
 const db = require('../../db');
+const fs = require('fs');
+const path = require('path');
+const uploadConfig = require('../../config/upload.config');
+const { validateDocumentId } = require('./metadataValidator');
+const { versionIncrementExpression } = require('./versionService');
+
+const PRIVILEGED_REPOSITORY_ROLES = new Set(['STAFF', 'LAB_MANAGER', 'REVIEWER', 'ADMIN']);
+
+function canAccessDocumentContent(document, user) {
+  if (!user) {
+    return false;
+  }
+
+  if (document.uploader_id === user.id) {
+    return true;
+  }
+
+  if (document.state === 'published') {
+    return true;
+  }
+
+  return PRIVILEGED_REPOSITORY_ROLES.has(user.role);
+}
 
 /**
  * Determine upload category from file extension
@@ -141,6 +164,7 @@ async function uploadFile(req, res, next) {
           title: document.title,
           type: document.type,
           format: document.format,
+          version: document.version,
           state: document.state,
           accessTier: document.access_tier,
           uploadedBy: userId,
@@ -164,6 +188,131 @@ async function uploadFile(req, res, next) {
       error: error.message || 'An error occurred during upload',
       code: 'UPLOAD_ERROR',
     });
+  }
+}
+
+/**
+ * PUT /api/documents/:id/file
+ * Replace existing file and increment document version.
+ */
+async function replaceFile(req, res, next) {
+  const documentIdResult = validateDocumentId(req.params.id);
+  if (!documentIdResult.ok) {
+    return next(documentIdResult.error);
+  }
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file provided',
+        code: 'NO_FILE',
+      });
+    }
+
+    const documentId = documentIdResult.data;
+    const userId = req.user?.id;
+
+    const existingDocument = await db('documents').where({ id: documentId }).first();
+    if (!existingDocument) {
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found',
+        code: 'DOCUMENT_NOT_FOUND',
+      });
+    }
+
+    if (existingDocument.uploader_id !== userId && req.user?.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only the uploader or admin can replace this file',
+        code: 'FORBIDDEN',
+      });
+    }
+
+    const validation = uploadService.validateUploadedFile(req.file, {
+      strictMimeValidation: true,
+    });
+
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: validation.errors[0] || 'File validation failed',
+        errors: validation.errors,
+        code: 'VALIDATION_FAILED',
+      });
+    }
+
+    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    const category = getCategoryFromExtension(ext);
+    const docType = category === 'documents' ? extractDocumentType(ext) : 'media';
+
+    const storeResult = await uploadService.storeUploadedFile(req.file, category);
+    if (!storeResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: storeResult.error || 'Failed to store replacement file',
+        code: 'STORAGE_ERROR',
+      });
+    }
+
+    const fileData = storeResult.data;
+    const previousVersion = existingDocument.version;
+    const oldPath = existingDocument.file_path;
+
+    let updatedDocument;
+    try {
+      const result = await db('documents')
+        .where({ id: documentId })
+        .update({
+          type: docType,
+          format: ext,
+          file_path: fileData.relativePath,
+          version: versionIncrementExpression(db),
+          updated_at: db.fn.now(),
+        })
+        .returning('*');
+
+      updatedDocument = Array.isArray(result) ? result[0] : result;
+    } catch (error) {
+      await uploadService.deleteUploadedFile(fileData.relativePath);
+      throw error;
+    }
+
+    if (oldPath && oldPath !== fileData.relativePath) {
+      const cleanup = await uploadService.deleteUploadedFile(oldPath);
+      if (!cleanup.success) {
+        console.warn('Failed to remove previous file version:', cleanup.error);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Document file replaced and version incremented',
+      data: {
+        document: {
+          id: updatedDocument.id,
+          title: updatedDocument.title,
+          type: updatedDocument.type,
+          format: updatedDocument.format,
+          version: updatedDocument.version,
+          previousVersion,
+          state: updatedDocument.state,
+          accessTier: updatedDocument.access_tier,
+          updatedAt: updatedDocument.updated_at,
+        },
+        file: {
+          originalFilename: fileData.originalFilename,
+          filename: fileData.filename,
+          path: fileData.relativePath,
+          size: fileData.size,
+          sizeFormatted: uploadService.formatFileSize(fileData.size),
+          mimetype: fileData.mimetype,
+        },
+      },
+    });
+  } catch (error) {
+    return next(error);
   }
 }
 
@@ -225,8 +374,7 @@ async function getFileInfo(req, res, next) {
       });
     }
 
-    // Check access (all authenticated users can view published files, others see only own)
-    if (document.state !== 'published' && document.uploader_id !== req.user?.id) {
+    if (!canAccessDocumentContent(document, req.user)) {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -330,8 +478,83 @@ async function deleteFile(req, res, next) {
   }
 }
 
+/**
+ * GET /api/repository/files/:documentId/content
+ * Stream raw file content (inline preview).
+ */
+async function streamFileContent(req, res, next) {
+  try {
+    const { documentId } = req.params;
+
+    const document = await db('documents').where({ id: documentId }).first();
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found',
+        code: 'NOT_FOUND',
+      });
+    }
+
+    if (!canAccessDocumentContent(document, req.user)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied',
+        code: 'FORBIDDEN',
+      });
+    }
+
+    const uploadBaseDir = path.resolve(uploadConfig.UPLOAD_BASE_DIR);
+    const fullPath = path.resolve(uploadBaseDir, document.file_path);
+    if (!fullPath.startsWith(uploadBaseDir)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid file path',
+        code: 'INVALID_PATH',
+      });
+    }
+
+    const fileInfo = await uploadService.getFileInfo(document.file_path);
+    if (!fileInfo.success || !fileInfo.data?.exists) {
+      return res.status(404).json({
+        success: false,
+        error: 'File content not found on disk',
+        code: 'FILE_NOT_FOUND',
+      });
+    }
+
+    const extension = String(document.format || '').toLowerCase();
+    const mimeTypeByExtension = {
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      txt: 'text/plain; charset=utf-8',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      webp: 'image/webp',
+      mp4: 'video/mp4',
+    };
+
+    const contentType = mimeTypeByExtension[extension] || 'application/octet-stream';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', fileInfo.data.size);
+    res.setHeader('Content-Disposition', `inline; filename="${path.basename(document.file_path)}"`);
+
+    const stream = fs.createReadStream(fullPath);
+    stream.on('error', (error) => next(error));
+    stream.pipe(res);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   uploadFile,
+  replaceFile,
   getFileInfo,
+  streamFileContent,
   deleteFile,
 };

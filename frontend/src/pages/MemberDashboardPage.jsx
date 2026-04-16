@@ -10,9 +10,16 @@ const roleLabels = {
 
 const dashboardCards = [
   {
+    title: 'Upload Document',
+    description:
+      'Upload your file first, then continue to metadata and submission state updates.',
+    to: '/upload-document',
+    roles: [ROLES.MEMBER, ROLES.CONTRIBUTOR],
+  },
+  {
     title: 'Submit Paper',
     description:
-      'Start a scholarly submission flow for papers and project artifacts.',
+      'Complete metadata fields and prepare your draft for review.',
     to: '/submit-paper',
     roles: [ROLES.MEMBER, ROLES.CONTRIBUTOR],
   },

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { useAuth } from '../app/use-auth.js'
-import { fetchMyUploads, saveDocumentMetadata } from '../services/api/documents.js'
+import { fetchMyUploads, saveDocumentMetadata, getDocumentMetadata } from '../services/api/documents.js'
 
 const languageOptions = ['English', 'Bangla', 'Arabic', 'Hindi', 'Other']
 
@@ -108,12 +108,40 @@ export default function MetadataFormPage() {
     const selected = documents.find((item) => String(item.id) === String(selectedDocumentId))
     if (!selected) return
 
+    // Load basic document info
     setForm((current) => ({
       ...current,
       title: current.title || selected.title || '',
       year: current.year || String(getCurrentYear()),
     }))
-  }, [documents, selectedDocumentId])
+
+    // Fetch existing metadata if available
+    const loadExistingMetadata = async () => {
+      try {
+        const result = await getDocumentMetadata(selectedDocumentId, authState.token)
+        if (result?.data?.metadata) {
+          const meta = result.data.metadata
+          // Prepopulate form with existing metadata
+          setForm((current) => ({
+            ...current,
+            title: meta.title || current.title || '',
+            author: meta.author || current.author || '',
+            abstract: meta.abstract || current.abstract || '',
+            keywords: Array.isArray(meta.keywords) ? meta.keywords.join(', ') : current.keywords || '',
+            language: meta.language || current.language || 'English',
+            year: meta.year ? String(meta.year) : current.year || String(getCurrentYear()),
+            department: meta.department || current.department || '',
+            accessTier: meta.accessTier || current.accessTier || 'REGISTERED',
+          }))
+        }
+      } catch (_error) {
+        // Metadata might not exist yet, which is OK
+        // Form will use default values
+      }
+    }
+
+    loadExistingMetadata()
+  }, [documents, selectedDocumentId, authState.token])
 
   const keywordList = useMemo(() => splitKeywords(form.keywords), [form.keywords])
 

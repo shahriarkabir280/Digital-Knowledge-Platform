@@ -193,6 +193,18 @@ export async function fetchAllUploads(filters = {}, authToken) {
 }
 
 /**
+ * Get document metadata
+ * @param {number|string} documentId - Document ID
+ * @param {string} authToken - JWT token
+ * @returns {Promise<Object>} Metadata response
+ */
+export async function getDocumentMetadata(documentId, authToken) {
+  return apiRequest(`/repository/${documentId}/metadata`, {
+    authToken,
+  })
+}
+
+/**
  * Create metadata for a document
  * @param {number|string} documentId - Document ID
  * @param {Object} payload - Metadata payload

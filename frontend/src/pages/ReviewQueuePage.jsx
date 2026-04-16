@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import StateTransitionDialog from '@/components/dialogs/StateTransitionDialog'
 import { useAuth } from '../app/use-auth.js'
 import {
   fetchDocumentAuditLogs,
@@ -25,6 +26,9 @@ export default function ReviewQueuePage() {
   const [expandedAudit, setExpandedAudit] = useState({})
   const [auditByDocument, setAuditByDocument] = useState({})
   const [auditLoadingByDocument, setAuditLoadingByDocument] = useState({})
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogAction, setDialogAction] = useState(null)
+  const [selectedDocumentForDialog, setSelectedDocumentForDialog] = useState(null)
 
   const loadQueue = async (nextType = type) => {
     try {
@@ -53,50 +57,51 @@ export default function ReviewQueuePage() {
     }
   }
 
-  const onPublish = async (documentId) => {
-    const note = window.prompt('Publish note (required):')
-    if (note === null) {
-      return
-    }
+  const onPublishClick = (documentId) => {
+    const document = items.find((item) => item.id === documentId)
+    setSelectedDocumentForDialog({ id: documentId, title: document?.title })
+    setDialogAction('publish')
+    setDialogOpen(true)
+  }
 
-    if (!note.trim()) {
-      setError('Publish reason is required')
-      return
-    }
+  const onRejectClick = (documentId) => {
+    const document = items.find((item) => item.id === documentId)
+    setSelectedDocumentForDialog({ id: documentId, title: document?.title })
+    setDialogAction('reject')
+    setDialogOpen(true)
+  }
+
+  const onDialogConfirm = async (note) => {
+    if (!selectedDocumentForDialog) return
+
+    const { id: documentId } = selectedDocumentForDialog
+    const targetState = dialogAction === 'publish' ? 'published' : 'draft'
 
     try {
-      setPublishingId(documentId)
+      if (dialogAction === 'publish') {
+        setPublishingId(documentId)
+      } else {
+        setRejectingId(documentId)
+      }
+
       setError('')
-      await patchDocumentState(documentId, 'published', authState.token, note)
+      setDialogOpen(false)
+      await patchDocumentState(documentId, targetState, authState.token, note)
       await loadQueue(type)
     } catch (err) {
-      setError(err.message || 'Failed to publish document')
+      setError(err.message || 'Failed to update document state')
     } finally {
       setPublishingId(null)
+      setRejectingId(null)
+      setDialogAction(null)
+      setSelectedDocumentForDialog(null)
     }
   }
 
-  const onReject = async (documentId) => {
-    const note = window.prompt('Reject reason (required):')
-    if (note === null) {
-      return
-    }
-
-    if (!note.trim()) {
-      setError('Reject reason is required')
-      return
-    }
-
-    try {
-      setRejectingId(documentId)
-      setError('')
-      await patchDocumentState(documentId, 'draft', authState.token, note)
-      await loadQueue(type)
-    } catch (err) {
-      setError(err.message || 'Failed to reject document')
-    } finally {
-      setRejectingId(null)
-    }
+  const onDialogCancel = () => {
+    setDialogOpen(false)
+    setDialogAction(null)
+    setSelectedDocumentForDialog(null)
   }
 
   const toggleMetadata = (documentId) => {
@@ -276,7 +281,7 @@ export default function ReviewQueuePage() {
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => onPublish(item.id)}
+                    onClick={() => onPublishClick(item.id)}
                     disabled={publishingId === item.id}
                   >
                     {publishingId === item.id ? 'Publishing...' : 'Publish'}
@@ -284,7 +289,7 @@ export default function ReviewQueuePage() {
                   <Button
                     type="button"
                     variant="destructive"
-                    onClick={() => onReject(item.id)}
+                    onClick={() => onRejectClick(item.id)}
                     disabled={rejectingId === item.id}
                   >
                     {rejectingId === item.id ? 'Rejecting...' : 'Reject to Draft'}
@@ -295,6 +300,15 @@ export default function ReviewQueuePage() {
           ))}
         </div>
       ) : null}
+
+      <StateTransitionDialog
+        isOpen={dialogOpen}
+        action={dialogAction}
+        documentTitle={selectedDocumentForDialog?.title}
+        onConfirm={onDialogConfirm}
+        onCancel={onDialogCancel}
+        isSubmitting={publishingId !== null || rejectingId !== null}
+      />
     </section>
   )
 }

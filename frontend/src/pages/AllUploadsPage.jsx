@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import StateTransitionDialog from '@/components/dialogs/StateTransitionDialog'
 import { useAuth } from '../app/use-auth.js'
 import {
   fetchDocumentAuditLogs,
@@ -32,6 +33,9 @@ export default function AllUploadsPage() {
   const [auditByDocument, setAuditByDocument] = useState({})
   const [auditLoadingByDocument, setAuditLoadingByDocument] = useState({})
   const [transitioning, setTransitioning] = useState({})
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogAction, setDialogAction] = useState(null)
+  const [selectedDocumentForDialog, setSelectedDocumentForDialog] = useState(null)
 
   const loadItems = async (nextFilters = filters) => {
     try {
@@ -77,25 +81,23 @@ export default function AllUploadsPage() {
     }
   }
 
-  const onTransition = async (documentId, targetState) => {
-    const key = `${documentId}:${targetState}`
+  const onTransitionClick = (documentId, targetState) => {
     const requiresNote = targetState === 'published' || targetState === 'draft'
 
-    let note = ''
-    if (requiresNote) {
-      const promptLabel =
-        targetState === 'published' ? 'Publish note (required):' : 'Reject reason (required):'
-      const provided = window.prompt(promptLabel)
-      if (provided === null) {
-        return
-      }
-
-      note = provided.trim()
-      if (!note) {
-        setError(targetState === 'published' ? 'Publish reason is required' : 'Reject reason is required')
-        return
-      }
+    if (!requiresNote) {
+      // For archive, proceed directly without dialog
+      onTransitionDirect(documentId, targetState)
+      return
     }
+
+    const document = items.find((item) => item.id === documentId)
+    setSelectedDocumentForDialog({ id: documentId, title: document?.title, targetState })
+    setDialogAction(targetState === 'published' ? 'publish' : 'reject')
+    setDialogOpen(true)
+  }
+
+  const onTransitionDirect = async (documentId, targetState) => {
+    const key = `${documentId}:${targetState}`
 
     try {
       setTransitioning((current) => ({
@@ -103,7 +105,7 @@ export default function AllUploadsPage() {
         [key]: true,
       }))
       setError('')
-      await patchDocumentState(documentId, targetState, authState.token, note)
+      await patchDocumentState(documentId, targetState, authState.token, '')
       await loadItems(filters)
     } catch (err) {
       setError(err.message || 'Failed to update document state')
@@ -114,6 +116,44 @@ export default function AllUploadsPage() {
         return next
       })
     }
+  }
+
+  const onDialogConfirm = async (note) => {
+    if (!selectedDocumentForDialog) return
+
+    const { id: documentId, targetState } = selectedDocumentForDialog
+    const key = `${documentId}:${targetState}`
+
+    try {
+      setTransitioning((current) => ({
+        ...current,
+        [key]: true,
+      }))
+      setError('')
+      setDialogOpen(false)
+      await patchDocumentState(documentId, targetState, authState.token, note)
+      await loadItems(filters)
+    } catch (err) {
+      setError(err.message || 'Failed to update document state')
+    } finally {
+      setTransitioning((current) => {
+        const next = { ...current }
+        delete next[key]
+        return next
+      })
+      setDialogAction(null)
+      setSelectedDocumentForDialog(null)
+    }
+  }
+
+  const onDialogCancel = () => {
+    setDialogOpen(false)
+    setDialogAction(null)
+    setSelectedDocumentForDialog(null)
+  }
+
+  const onTransition = async (documentId, targetState) => {
+    onTransitionClick(documentId, targetState)
   }
 
   const toggleMetadata = (documentId) => {
@@ -362,6 +402,15 @@ export default function AllUploadsPage() {
           ))}
         </div>
       ) : null}
+
+      <StateTransitionDialog
+        isOpen={dialogOpen}
+        action={dialogAction}
+        documentTitle={selectedDocumentForDialog?.title}
+        onConfirm={onDialogConfirm}
+        onCancel={onDialogCancel}
+        isSubmitting={Object.values(transitioning).some(Boolean)}
+      />
     </section>
   )
 }

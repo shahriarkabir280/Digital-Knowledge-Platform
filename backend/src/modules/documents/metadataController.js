@@ -254,10 +254,16 @@ async function updateMetadata(req, res, next) {
         };
       }
 
-      if (hasDocumentUpdates || hasMetadataUpdates) {
+      // Only increment version if document fields (title, accessTier) are being updated
+      if (hasDocumentUpdates) {
         await trx("documents").where({ id: documentId }).update({
           ...documentUpdates,
           version: versionIncrementExpression(trx),
+          updated_at: trx.fn.now(),
+        });
+      } else if (hasMetadataUpdates) {
+        // If only metadata is being updated, just update the timestamp without incrementing version
+        await trx("documents").where({ id: documentId }).update({
           updated_at: trx.fn.now(),
         });
       }
@@ -286,7 +292,50 @@ async function updateMetadata(req, res, next) {
   }
 }
 
+async function getMetadata(req, res, next) {
+  const documentIdResult = validateDocumentId(req.params.id);
+  if (!documentIdResult.ok) {
+    return next(documentIdResult.error);
+  }
+
+  try {
+    const documentId = documentIdResult.data;
+
+    const document = await db("documents").where({ id: documentId }).first();
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        code: "DOCUMENT_NOT_FOUND",
+        message: "Document not found",
+      });
+    }
+
+    const metadata = await db("metadata").where({ document_id: documentId }).first();
+
+    if (!metadata) {
+      return res.status(404).json({
+        success: false,
+        code: "METADATA_NOT_FOUND",
+        message: "Metadata does not exist for this document",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Metadata retrieved",
+      data: {
+        document: formatDocument(document),
+        metadata: formatMetadata(metadata),
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   createMetadata,
   updateMetadata,
+  getMetadata,
 };

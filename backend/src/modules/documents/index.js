@@ -63,6 +63,12 @@ router.put(
 router.post("/:id/metadata", metadataController.createMetadata);
 
 /**
+ * Get document metadata
+ * GET /api/repository/:id/metadata
+ */
+router.get("/:id/metadata", metadataController.getMetadata);
+
+/**
  * Update document metadata
  * PUT /api/repository/:id/metadata
  */

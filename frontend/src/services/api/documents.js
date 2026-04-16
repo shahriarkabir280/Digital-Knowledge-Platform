@@ -26,6 +26,7 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
     }
 
     const xhr = new XMLHttpRequest()
+    xhr.timeout = 120000
 
     // Track upload progress
     if (onProgress) {
@@ -65,6 +66,10 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
 
     xhr.addEventListener('abort', () => {
       reject(new Error('Upload cancelled'))
+    })
+
+    xhr.addEventListener('timeout', () => {
+      reject(new Error('Upload timed out. Please retry with a stable connection or smaller file.'))
     })
 
     xhr.open('POST', `${API_BASE_URL}/repository/upload`)
@@ -288,6 +293,13 @@ export async function patchDocumentState(documentId, state, authToken, note) {
  * @param {string} authToken - JWT token
  */
 export async function openDocumentInNewTab(documentId, authToken) {
+  // Open immediately from user gesture context so popup blockers don't block it.
+  const previewWindow = window.open('', '_blank')
+
+  if (previewWindow) {
+    previewWindow.document.write('<p style="font-family: sans-serif; padding: 12px;">Loading document preview...</p>')
+  }
+
   const response = await fetch(`${API_BASE_URL}/repository/files/${documentId}/content`, {
     method: 'GET',
     headers: {
@@ -296,6 +308,10 @@ export async function openDocumentInNewTab(documentId, authToken) {
   })
 
   if (!response.ok) {
+    if (previewWindow) {
+      previewWindow.close()
+    }
+
     let message = `Failed to open document (${response.status})`
     try {
       const data = await response.json()
@@ -308,7 +324,13 @@ export async function openDocumentInNewTab(documentId, authToken) {
 
   const blob = await response.blob()
   const blobUrl = URL.createObjectURL(blob)
-  window.open(blobUrl, '_blank', 'noopener,noreferrer')
+
+  if (previewWindow) {
+    previewWindow.location.href = blobUrl
+  } else {
+    // Fallback when popup creation is blocked.
+    window.location.assign(blobUrl)
+  }
 
   setTimeout(() => {
     URL.revokeObjectURL(blobUrl)

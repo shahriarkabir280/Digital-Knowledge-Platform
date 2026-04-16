@@ -12,8 +12,8 @@ export const navItems = [
     roles: ROUTE_ACCESS.dashboard,
   },
   {
-    to: '/upload-document',
-    label: 'Upload Document',
+    to: '/submit-paper',
+    label: 'Submission Wizard',
     roles: ROUTE_ACCESS.uploadDocument,
   },
   {

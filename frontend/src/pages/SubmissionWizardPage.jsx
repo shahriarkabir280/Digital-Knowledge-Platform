@@ -80,6 +80,7 @@ export default function SubmissionWizardPage() {
   const [form, setForm] = useState(() => createEmptyForm(authState.name || ''))
   const [selectedFile, setSelectedFile] = useState(null)
   const [pendingFileMeta, setPendingFileMeta] = useState(null)
+  const [pendingFileStatus, setPendingFileStatus] = useState('idle')
   const [uploadedDocument, setUploadedDocument] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -141,7 +142,8 @@ export default function SubmissionWizardPage() {
         }
 
         if (draft?.pendingFileMeta) {
-          setPendingFileMeta(draft.pendingFileMeta)
+          setPendingFileMeta(null)
+          setMessage('A previous upload was interrupted. Please reselect the file to continue.')
         }
 
         if (preferredDocumentId) {
@@ -180,7 +182,6 @@ export default function SubmissionWizardPage() {
         const draft = {
           currentStep,
           uploadedDocumentId: uploadedDocument?.id || null,
-          pendingFileMeta,
           form,
           savedAt: new Date().toISOString(),
         }
@@ -211,11 +212,15 @@ export default function SubmissionWizardPage() {
     setError('')
     setMessage('')
     setSelectedFile(file)
+    setPendingFileStatus('pending')
     setPendingFileMeta({
       name: file.name,
       size: file.size,
       type: file.type,
     })
+
+    // Start upload immediately after selecting a file to avoid a stuck "Pending" state.
+    uploadSelectedFile(file)
   }
 
   const handleFieldChange = (event) => {
@@ -228,20 +233,23 @@ export default function SubmissionWizardPage() {
     setError('')
   }
 
-  const uploadSelectedFile = async () => {
-    if (!selectedFile) {
+  const uploadSelectedFile = async (fileOverride = null) => {
+    const fileToUpload = fileOverride || selectedFile
+
+    if (!fileToUpload) {
       setError('Please choose a file to upload first.')
       return
     }
 
     try {
       setUploading(true)
+      setPendingFileStatus('uploading')
       setError('')
       setMessage('')
       setUploadProgress(0)
 
       const response = await uploadDocument(
-        selectedFile,
+        fileToUpload,
         {},
         (progress) => {
           setUploadProgress(progress.percent)
@@ -257,10 +265,12 @@ export default function SubmissionWizardPage() {
       setUploadedDocument(document)
       setSelectedFile(null)
       setPendingFileMeta(null)
+      setPendingFileStatus('idle')
       await loadDocumentContext(document.id, form)
       setCurrentStep(2)
       setMessage(`File uploaded successfully as document #${document.id}.`)
     } catch (uploadError) {
+      setPendingFileStatus('error')
       setError(uploadError.message || 'Failed to upload file.')
     } finally {
       setUploading(false)
@@ -354,12 +364,13 @@ export default function SubmissionWizardPage() {
       await saveDocumentMetadata(uploadedDocument.id, payload, authState.token)
       await patchDocumentState(uploadedDocument.id, 'review', authState.token)
       clearDraft()
-      setUploadedDocument((current) => ({
-        ...(current || {}),
-        state: 'review',
-      }))
-      setCurrentStep(4)
-      setMessage(`Document #${uploadedDocument.id} submitted for review.`)
+      navigate('/repository', {
+        replace: true,
+        state: {
+          submissionSuccess: true,
+          message: `Document #${uploadedDocument.id} submitted for review.`,
+        },
+      })
     } catch (submitError) {
       setError(submitError.message || 'Failed to submit the document for review.')
     } finally {
@@ -383,7 +394,9 @@ export default function SubmissionWizardPage() {
         <Card>
           <CardContent className="grid gap-2 p-4">
             <span className="text-xs uppercase tracking-widest text-muted-foreground">Progress</span>
-            <strong className="text-2xl">Step {currentStep} of {steps.length}</strong>
+            <strong className="text-2xl">
+              Step {currentStep} of {steps.length}
+            </strong>
             <div className="h-2 w-full rounded-full bg-muted" aria-hidden="true">
               <span
                 className="block h-full rounded-full bg-primary transition-all duration-300"
@@ -425,7 +438,9 @@ export default function SubmissionWizardPage() {
                 <Badge variant={active ? 'secondary' : complete ? 'success' : 'outline'}>
                   Step {step.id}
                 </Badge>
-                <span className="text-xs text-muted-foreground">{active ? 'Current' : complete ? 'Done' : 'Next'}</span>
+                <span className="text-xs text-muted-foreground">
+                  {active ? 'Current' : complete ? 'Done' : 'Next'}
+                </span>
               </div>
               <p className="mt-2 font-medium">{step.title}</p>
               <p className="mt-1 text-xs text-muted-foreground">{step.description}</p>
@@ -437,260 +452,335 @@ export default function SubmissionWizardPage() {
       {message ? <Alert variant="success">{message}</Alert> : null}
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className={currentStep === 1 ? 'ring-1 ring-primary/30' : ''}>
-          <CardHeader>
-            <CardTitle>Step 1: File Upload</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            {uploadedDocument?.id ? (
-              <div className="grid gap-2 rounded-md border border-border bg-muted/30 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <strong>Uploaded document #{uploadedDocument.id}</strong>
-                  <Badge variant="outline">{uploadedDocument.state || 'draft'}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {uploadedDocument.title || 'Untitled'}
-                  {uploadedDocument.format ? ` • ${uploadedDocument.format.toUpperCase()}` : ''}
-                  {uploadedDocument.accessTier ? ` • ${uploadedDocument.accessTier}` : ''}
-                </p>
-                <Button type="button" variant="outline" onClick={() => setUploadedDocument(null)}>
-                  Replace file
-                </Button>
-              </div>
-            ) : null}
-
-            {!uploadedDocument?.id ? (
-              <>
-                <DragDropZone onFilesSelected={handleFileSelected} disabled={uploading} />
-
-                {pendingFileMeta ? (
-                  <div className="grid gap-2 rounded-md border border-border p-3 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <strong className="truncate">{pendingFileMeta.name}</strong>
-                      <Badge variant="outline">Pending</Badge>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="rounded-2xl border border-border bg-card shadow-sm">
+          {currentStep === 1 ? (
+            <section className="p-4 sm:p-6">
+              <Card className="border-0 shadow-none">
+                <CardHeader className="px-0 pt-0">
+                  <CardTitle>Step 1: File Upload</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 px-0 pb-0">
+                  {uploadedDocument?.id ? (
+                    <div className="grid gap-2 rounded-md border border-border bg-muted/30 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <strong>Uploaded document #{uploadedDocument.id}</strong>
+                        <Badge variant="outline">{uploadedDocument.state || 'draft'}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {uploadedDocument.title || 'Untitled'}
+                        {uploadedDocument.format ? ` • ${uploadedDocument.format.toUpperCase()}` : ''}
+                        {uploadedDocument.accessTier ? ` • ${uploadedDocument.accessTier}` : ''}
+                      </p>
+                      <Button type="button" variant="outline" onClick={() => setUploadedDocument(null)}>
+                        Replace file
+                      </Button>
                     </div>
-                    <p className="text-muted-foreground">
-                      {formatFileSize(pendingFileMeta.size)}{pendingFileMeta.type ? ` • ${pendingFileMeta.type}` : ''}
+                  ) : null}
+
+                  {!uploadedDocument?.id ? (
+                    <>
+                      <DragDropZone onFilesSelected={handleFileSelected} disabled={uploading} />
+
+                      {pendingFileMeta ? (
+                        <div className="grid gap-2 rounded-md border border-border p-3 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <strong className="truncate">{pendingFileMeta.name}</strong>
+                            <Badge variant="outline">
+                              {pendingFileStatus === 'uploading'
+                                ? 'Uploading'
+                                : pendingFileStatus === 'error'
+                                  ? 'Failed'
+                                  : 'Pending'}
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground">
+                            {formatFileSize(pendingFileMeta.size)}{pendingFileMeta.type ? ` • ${pendingFileMeta.type}` : ''}
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {selectedFile ? (
+                        <UploadProgressBar
+                          progress={uploadProgress}
+                          status={pendingFileStatus === 'error' ? 'error' : uploading ? 'uploading' : 'idle'}
+                        />
+                      ) : null}
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" disabled={!selectedFile || uploading} onClick={uploadSelectedFile}>
+                          {uploading ? 'Uploading...' : pendingFileStatus === 'error' ? 'Retry Upload' : 'Upload File'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!selectedFile || uploading}
+                          onClick={() => {
+                            setSelectedFile(null)
+                            setPendingFileMeta(null)
+                            setPendingFileStatus('idle')
+                            setUploadProgress(0)
+                          }}
+                        >
+                          Clear Selection
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Uploaded files are saved immediately. The rest of the wizard is auto-saved as a draft.
+                      </p>
+                    </>
+                  ) : (
+                    <div className="grid gap-2 rounded-md border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+                      <p>The file upload step is complete. Continue to metadata review.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
+          ) : null}
+
+          {currentStep === 2 ? (
+            <section className="p-4 sm:p-6">
+              <Card className="border-0 shadow-none">
+                <CardHeader className="px-0 pt-0">
+                  <CardTitle>Step 2: Metadata</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 px-0 pb-0">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="title">Title *</Label>
+                    <Input id="title" name="title" value={form.title} onChange={handleFieldChange} placeholder="Enter the document title" />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="author">Author *</Label>
+                    <Input id="author" name="author" value={form.author} onChange={handleFieldChange} placeholder="Primary author or contributor" />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="abstract">Abstract *</Label>
+                    <textarea
+                      id="abstract"
+                      name="abstract"
+                      rows={8}
+                      value={form.abstract}
+                      onChange={handleFieldChange}
+                      placeholder="Write a short summary of the document"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="keywords">Keywords *</Label>
+                    <Input id="keywords" name="keywords" value={form.keywords} onChange={handleFieldChange} placeholder="digital library, archive, metadata" />
+                    <p className="text-xs text-muted-foreground">Separate keywords with commas.</p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="language">Language</Label>
+                      <Select id="language" name="language" value={form.language} onChange={handleFieldChange}>
+                        {languageOptions.map((language) => (
+                          <option key={language} value={language}>
+                            {language}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="year">Year</Label>
+                      <Input id="year" name="year" type="number" min="1900" max={getCurrentYear() + 1} value={form.year} onChange={handleFieldChange} />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="department">Department</Label>
+                    <Select id="department" name="department" value={form.department} onChange={handleFieldChange}>
+                      {departmentOptions.map((department) => (
+                        <option key={department} value={department}>
+                          {department}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button type="button" variant="outline" onClick={handlePrevious} disabled={currentStep === 1 || saving}>
+                      Back
+                    </Button>
+                    <Button type="button" onClick={handleNext} disabled={!canContinueFromMetadata || saving}>
+                      Save and Continue
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          ) : null}
+
+          {currentStep === 3 ? (
+            <section className="p-4 sm:p-6">
+              <Card className="border-0 shadow-none">
+                <CardHeader className="px-0 pt-0">
+                  <CardTitle>Step 3: Access Tier</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 px-0 pb-0">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="accessTier">Access Tier *</Label>
+                    <Select id="accessTier" name="accessTier" value={form.accessTier} onChange={handleFieldChange}>
+                      {accessTierOptions.map((tier) => (
+                        <option key={tier} value={tier}>
+                          {tier}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div className="rounded-md border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+                    <p className="font-medium text-foreground">Access guidance</p>
+                    <p className="mt-1">
+                      Choose who should be able to view the submission once it is published.
                     </p>
                   </div>
-                ) : null}
 
-                {selectedFile ? (
-                  <UploadProgressBar progress={uploadProgress} status={uploading ? 'uploading' : 'idle'} />
-                ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" onClick={handlePrevious} disabled={saving}>
+                      Back
+                    </Button>
+                    <Button type="button" onClick={handleNext} disabled={!canContinueFromTier || saving}>
+                      Review Submission
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          ) : null}
 
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" disabled={!selectedFile || uploading} onClick={uploadSelectedFile}>
-                    {uploading ? 'Uploading...' : 'Upload File'}
-                  </Button>
-                  <Button
+          {currentStep === 4 ? (
+            <section className="p-4 sm:p-6">
+              <Card className="border-0 shadow-none">
+                <CardHeader className="px-0 pt-0">
+                  <CardTitle>Step 4: Review</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 px-0 pb-0 text-sm">
+                  <div className="grid gap-1 rounded-md border border-border p-3">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Document</span>
+                    <strong>{uploadedDocument?.title || form.title || 'Untitled document'}</strong>
+                    <span className="text-muted-foreground">
+                      {uploadedDocument?.id ? `Document #${uploadedDocument.id}` : 'Upload not completed yet'}
+                    </span>
+                  </div>
+
+                  <div className="grid gap-1 rounded-md border border-border p-3">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Author</span>
+                    <strong>{form.author || 'Not set'}</strong>
+                  </div>
+
+                  <div className="grid gap-1 rounded-md border border-border p-3">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Abstract</span>
+                    <p className="text-muted-foreground">{form.abstract || 'No abstract provided yet.'}</p>
+                  </div>
+
+                  <div className="grid gap-1 rounded-md border border-border p-3">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Keywords</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {keywordList.length > 0 ? keywordList.map((keyword) => <Badge key={keyword} variant="secondary">{keyword}</Badge>) : <span className="text-muted-foreground">No keywords yet</span>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="grid gap-1 rounded-md border border-border p-3">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Language</span>
+                      <strong>{form.language}</strong>
+                    </div>
+                    <div className="grid gap-1 rounded-md border border-border p-3">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Year</span>
+                      <strong>{form.year}</strong>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-1 rounded-md border border-border p-3">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Department</span>
+                    <strong>{form.department}</strong>
+                  </div>
+
+                  <div className="grid gap-1 rounded-md border border-border p-3">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Access Tier</span>
+                    <strong>{form.accessTier}</strong>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button type="button" variant="outline" onClick={handlePrevious} disabled={saving}>
+                      Back
+                    </Button>
+                    <Button type="button" onClick={submitForReview} disabled={saving || !uploadedDocument?.id}>
+                      {saving ? 'Submitting...' : 'Submit for Review'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => navigate('/submit-paper')}
+                    >
+                      Start Over
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          ) : null}
+        </div>
+
+        <Card className="self-start">
+          <CardHeader>
+            <CardTitle>Wizard Snapshot</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="grid gap-2 rounded-md border border-border bg-muted/20 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs uppercase tracking-widest text-muted-foreground">Active step</span>
+                <Badge variant="secondary">{steps[currentStep - 1]?.title}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">Only one step is visible at a time, which keeps the flow focused and easier to scan on smaller screens.</p>
+            </div>
+
+            <div className="grid gap-2">
+              {steps.map((step) => {
+                const active = currentStep === step.id
+                const complete = currentStep > step.id
+                const accessible = isStepAccessible(step.id)
+
+                return (
+                  <button
+                    key={step.id}
                     type="button"
-                    variant="outline"
-                    disabled={!selectedFile || uploading}
-                    onClick={() => {
-                      setSelectedFile(null)
-                      setPendingFileMeta(null)
-                      setUploadProgress(0)
-                    }}
+                    onClick={() => goToStep(step.id)}
+                    disabled={!accessible}
+                    className={`grid gap-1 rounded-md border p-3 text-left transition-colors ${
+                      active
+                        ? 'border-primary bg-primary/5'
+                        : complete
+                          ? 'border-border bg-muted/40'
+                          : 'border-border bg-background'
+                    } ${accessible ? 'hover:border-primary/60' : 'cursor-not-allowed opacity-60'}`}
                   >
-                    Clear Selection
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Uploaded files are saved immediately. The rest of the wizard is auto-saved as a draft.
-                </p>
-              </>
-            ) : (
-              <div className="grid gap-2 rounded-md border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
-                <p>The file upload step is complete. Continue to metadata review.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className={currentStep === 2 ? 'ring-1 ring-primary/30' : ''}>
-          <CardHeader>
-            <CardTitle>Step 2: Metadata</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="title">Title *</Label>
-              <Input id="title" name="title" value={form.title} onChange={handleFieldChange} placeholder="Enter the document title" />
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{step.title}</span>
+                      <Badge variant={active ? 'secondary' : complete ? 'success' : 'outline'}>
+                        {active ? 'Now' : complete ? 'Done' : 'Locked'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{step.description}</p>
+                  </button>
+                )
+              })}
             </div>
 
-            <div className="grid gap-1.5">
-              <Label htmlFor="author">Author *</Label>
-              <Input id="author" name="author" value={form.author} onChange={handleFieldChange} placeholder="Primary author or contributor" />
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="abstract">Abstract *</Label>
-              <textarea
-                id="abstract"
-                name="abstract"
-                rows={6}
-                value={form.abstract}
-                onChange={handleFieldChange}
-                placeholder="Write a short summary of the document"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
-              />
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="keywords">Keywords *</Label>
-              <Input id="keywords" name="keywords" value={form.keywords} onChange={handleFieldChange} placeholder="digital library, archive, metadata" />
-              <p className="text-xs text-muted-foreground">Separate keywords with commas.</p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor="language">Language</Label>
-                <Select id="language" name="language" value={form.language} onChange={handleFieldChange}>
-                  {languageOptions.map((language) => (
-                    <option key={language} value={language}>
-                      {language}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="grid gap-1.5">
-                <Label htmlFor="year">Year</Label>
-                <Input id="year" name="year" type="number" min="1900" max={getCurrentYear() + 1} value={form.year} onChange={handleFieldChange} />
-              </div>
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="department">Department</Label>
-              <Select id="department" name="department" value={form.department} onChange={handleFieldChange}>
-                {departmentOptions.map((department) => (
-                  <option key={department} value={department}>
-                    {department}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" onClick={handlePrevious} disabled={currentStep === 1 || saving}>
-                Back
-              </Button>
-              <Button type="button" onClick={handleNext} disabled={!canContinueFromMetadata || saving}>
-                Save and Continue
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={currentStep === 3 ? 'ring-1 ring-primary/30' : ''}>
-          <CardHeader>
-            <CardTitle>Step 3: Access Tier</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="accessTier">Access Tier *</Label>
-              <Select id="accessTier" name="accessTier" value={form.accessTier} onChange={handleFieldChange}>
-                {accessTierOptions.map((tier) => (
-                  <option key={tier} value={tier}>
-                    {tier}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="rounded-md border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Access guidance</p>
-              <p className="mt-1">
-                Choose who should be able to view the submission once it is published.
+            <div className="rounded-md border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+              <p>
+                Draft status: {draftState}. {pendingFileMeta && !uploadedDocument?.id ? 'If upload was interrupted, reselect the file to continue. File content is never stored in local draft.' : 'Autosave stores wizard form state locally while you work.'}
               </p>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" onClick={handlePrevious} disabled={saving}>
-                Back
-              </Button>
-              <Button type="button" onClick={handleNext} disabled={!canContinueFromTier || saving}>
-                Review Submission
-              </Button>
-            </div>
           </CardContent>
         </Card>
-
-        <Card className={currentStep === 4 ? 'ring-1 ring-primary/30' : ''}>
-          <CardHeader>
-            <CardTitle>Step 4: Review</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 text-sm">
-            <div className="grid gap-1 rounded-md border border-border p-3">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Document</span>
-              <strong>{uploadedDocument?.title || form.title || 'Untitled document'}</strong>
-              <span className="text-muted-foreground">
-                {uploadedDocument?.id ? `Document #${uploadedDocument.id}` : 'Upload not completed yet'}
-              </span>
-            </div>
-
-            <div className="grid gap-1 rounded-md border border-border p-3">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Author</span>
-              <strong>{form.author || 'Not set'}</strong>
-            </div>
-
-            <div className="grid gap-1 rounded-md border border-border p-3">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Abstract</span>
-              <p className="text-muted-foreground">{form.abstract || 'No abstract provided yet.'}</p>
-            </div>
-
-            <div className="grid gap-1 rounded-md border border-border p-3">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Keywords</span>
-              <div className="flex flex-wrap gap-1.5">
-                {keywordList.length > 0 ? keywordList.map((keyword) => <Badge key={keyword} variant="secondary">{keyword}</Badge>) : <span className="text-muted-foreground">No keywords yet</span>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="grid gap-1 rounded-md border border-border p-3">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">Language</span>
-                <strong>{form.language}</strong>
-              </div>
-              <div className="grid gap-1 rounded-md border border-border p-3">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">Year</span>
-                <strong>{form.year}</strong>
-              </div>
-            </div>
-
-            <div className="grid gap-1 rounded-md border border-border p-3">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Department</span>
-              <strong>{form.department}</strong>
-            </div>
-
-            <div className="grid gap-1 rounded-md border border-border p-3">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Access Tier</span>
-              <strong>{form.accessTier}</strong>
-            </div>
-
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button type="button" variant="outline" onClick={handlePrevious} disabled={saving}>
-                Back
-              </Button>
-              <Button type="button" onClick={submitForReview} disabled={saving || !uploadedDocument?.id}>
-                {saving ? 'Submitting...' : 'Submit for Review'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/upload-document')}
-              >
-                Start Over
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="rounded-md border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
-        <p>
-          Draft status: {draftState}. {pendingFileMeta && !uploadedDocument?.id ? 'Your selected file name is saved locally, but the file itself must be reselected after refresh.' : 'Autosave stores the wizard state locally while you work.'}
-        </p>
       </div>
     </section>
   )

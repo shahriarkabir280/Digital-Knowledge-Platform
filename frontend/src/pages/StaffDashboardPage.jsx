@@ -6,9 +6,9 @@ import { ROLES } from '../app/rbac.js'
 
 const staffCards = [
   {
-    title: 'Upload Document',
-    description: 'Ingest documents and enrich them with required metadata fields.',
-    to: '/upload-document',
+    title: 'Submission Wizard',
+    description: 'Ingest documents, complete metadata, and send submissions into review.',
+    to: '/submit-paper',
     tone: 'teal',
   },
   {

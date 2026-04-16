@@ -18,7 +18,6 @@ import SearchPage from '../pages/SearchPage.jsx'
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import StudentProjectShowcasePage from '../pages/StudentProjectShowcasePage.jsx'
 import UnauthorizedPage from '../pages/UnauthorizedPage.jsx'
-import UploadDocumentPage from '../pages/UploadDocumentPage.jsx'
 import ViewerPage from '../pages/ViewerPage.jsx'
 import SubmissionWizardPage from '../pages/SubmissionWizardPage.jsx'
 import ProtectedRoute from '../routes/ProtectedRoute.jsx'
@@ -72,7 +71,7 @@ export const appRouter = createBrowserRouter([
           },
           {
             path: '/upload-document',
-            element: <UploadDocumentPage />,
+            element: <Navigate to="/submit-paper" replace />,
           },
           {
             path: '/submit-paper',

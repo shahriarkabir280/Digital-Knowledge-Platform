@@ -26,6 +26,7 @@ export const ROUTE_ACCESS = Object.freeze({
   library: ALL_AUTH_ROLES,
   search: ALL_AUTH_ROLES,
   viewer: ALL_AUTH_ROLES,
+  studentProjectShowcase: ALL_AUTH_ROLES,
   allUploads: [ROLES.STAFF, ROLES.LAB_MANAGER, ROLES.REVIEWER, ROLES.ADMIN],
   reviewQueue: [ROLES.STAFF, ROLES.LAB_MANAGER, ROLES.REVIEWER, ROLES.ADMIN],
   admin: [ROLES.ADMIN],

@@ -32,6 +32,11 @@ export const navItems = [
     roles: ROUTE_ACCESS.search,
   },
   {
+    to: '/student-projects',
+    label: 'Project Showcase',
+    roles: ROUTE_ACCESS.studentProjectShowcase,
+  },
+  {
     to: '/all-uploads',
     label: 'All Uploads',
     roles: ROUTE_ACCESS.allUploads,

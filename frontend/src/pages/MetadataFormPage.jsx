@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { Alert } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { useAuth } from '../app/use-auth.js'
 import { fetchMyUploads, saveDocumentMetadata } from '../services/api/documents.js'
-import './MetadataFormPage.css'
 
 const languageOptions = ['English', 'Bangla', 'Arabic', 'Hindi', 'Other']
 
@@ -63,9 +69,7 @@ export default function MetadataFormPage() {
         const result = await fetchMyUploads({}, authState.token)
         const uploads = result?.data?.items || []
 
-        if (!isMounted) {
-          return
-        }
+        if (!isMounted) return
 
         setDocuments(uploads)
 
@@ -86,14 +90,10 @@ export default function MetadataFormPage() {
           title: current.title || preferred.title || '',
         }))
       } catch (error) {
-        if (!isMounted) {
-          return
-        }
+        if (!isMounted) return
         setMessage(error.message || 'Failed to load your uploaded documents.')
       } finally {
-        if (isMounted) {
-          setLoadingDocs(false)
-        }
+        if (isMounted) setLoadingDocs(false)
       }
     }
 
@@ -106,9 +106,7 @@ export default function MetadataFormPage() {
 
   useEffect(() => {
     const selected = documents.find((item) => String(item.id) === String(selectedDocumentId))
-    if (!selected) {
-      return
-    }
+    if (!selected) return
 
     setForm((current) => ({
       ...current,
@@ -185,115 +183,132 @@ export default function MetadataFormPage() {
   }
 
   return (
-    <section className="page-block metadata-form-page">
-      <div className="metadata-hero">
-        <div>
+    <section className="mx-auto grid w-full max-w-6xl gap-4">
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
+        <div className="grid gap-2">
           <p className="brand-kicker">Repository Submission</p>
-          <h2>Metadata Form</h2>
-          <p>
+          <h2 className="text-2xl font-semibold tracking-tight">Metadata Form</h2>
+          <p className="text-sm text-muted-foreground">
             Capture the core descriptive fields for a document before it is
             published or reviewed.
           </p>
         </div>
 
-        <div className="metadata-progress-card">
-          <span className="metadata-progress-label">Form completeness</span>
-          <strong>{completion}%</strong>
-          <div className="metadata-progress-track" aria-hidden="true">
-            <span style={{ width: `${completion}%` }} />
-          </div>
-          <p>Basic metadata fields for the first submission step.</p>
-        </div>
+        <Card>
+          <CardContent className="grid gap-2 p-4">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Form completeness</span>
+            <strong className="text-2xl">{completion}%</strong>
+            <div className="h-2 w-full rounded-full bg-muted" aria-hidden="true">
+              <span
+                className="block h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${completion}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Basic metadata fields for the first submission step.</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <form className="metadata-form" onSubmit={handleSubmit}>
-        <div className="metadata-grid">
-          <div className="metadata-card metadata-card--form">
-            <h3>Basic Metadata</h3>
+      <form className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]" onSubmit={handleSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Metadata</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="documentId">Select Uploaded Document *</Label>
+              <Select
+                id="documentId"
+                name="documentId"
+                value={selectedDocumentId}
+                onChange={(event) => {
+                  setSelectedDocumentId(event.target.value)
+                  setMessage('')
+                }}
+                disabled={loadingDocs || documents.length === 0 || saving}
+              >
+                {documents.length === 0 ? (
+                  <option value="">No uploaded documents found</option>
+                ) : (
+                  documents.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      #{item.id} - {item.title} ({item.state})
+                    </option>
+                  ))
+                )}
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {loadingDocs
+                  ? 'Loading your uploaded documents...'
+                  : 'Metadata will be saved against the selected document ID.'}
+              </p>
+            </div>
 
-            <label htmlFor="documentId">Select Uploaded Document *</label>
-            <select
-              id="documentId"
-              name="documentId"
-              value={selectedDocumentId}
-              onChange={(event) => {
-                setSelectedDocumentId(event.target.value)
-                setMessage('')
-              }}
-              disabled={loadingDocs || documents.length === 0 || saving}
-            >
-              {documents.length === 0 ? (
-                <option value="">No uploaded documents found</option>
-              ) : (
-                documents.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    #{item.id} - {item.title} ({item.state})
-                  </option>
-                ))
-              )}
-            </select>
-            <p className="field-hint">
-              {loadingDocs
-                ? 'Loading your uploaded documents...'
-                : 'Metadata will be saved against the selected document ID.'}
-            </p>
+            <div className="grid gap-1.5">
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                name="title"
+                type="text"
+                value={form.title}
+                onChange={handleChange}
+                placeholder="Enter the document title"
+              />
+            </div>
 
-            <label htmlFor="title">Title *</label>
-            <input
-              id="title"
-              name="title"
-              type="text"
-              value={form.title}
-              onChange={handleChange}
-              placeholder="Enter the document title"
-            />
+            <div className="grid gap-1.5">
+              <Label htmlFor="author">Author *</Label>
+              <Input
+                id="author"
+                name="author"
+                type="text"
+                value={form.author}
+                onChange={handleChange}
+                placeholder="Primary author or contributor"
+              />
+            </div>
 
-            <label htmlFor="author">Author *</label>
-            <input
-              id="author"
-              name="author"
-              type="text"
-              value={form.author}
-              onChange={handleChange}
-              placeholder="Primary author or contributor"
-            />
+            <div className="grid gap-1.5">
+              <Label htmlFor="abstract">Abstract *</Label>
+              <textarea
+                id="abstract"
+                name="abstract"
+                rows={6}
+                value={form.abstract}
+                onChange={handleChange}
+                placeholder="Write a short summary of the document"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
+              />
+            </div>
 
-            <label htmlFor="abstract">Abstract *</label>
-            <textarea
-              id="abstract"
-              name="abstract"
-              rows={6}
-              value={form.abstract}
-              onChange={handleChange}
-              placeholder="Write a short summary of the document"
-            />
+            <div className="grid gap-1.5">
+              <Label htmlFor="keywords">Keywords *</Label>
+              <Input
+                id="keywords"
+                name="keywords"
+                type="text"
+                value={form.keywords}
+                onChange={handleChange}
+                placeholder="digital library, archive, metadata"
+              />
+              <p className="text-xs text-muted-foreground">Separate keywords with commas.</p>
+            </div>
 
-            <label htmlFor="keywords">Keywords *</label>
-            <input
-              id="keywords"
-              name="keywords"
-              type="text"
-              value={form.keywords}
-              onChange={handleChange}
-              placeholder="digital library, archive, metadata"
-            />
-            <p className="field-hint">Separate keywords with commas.</p>
-
-            <div className="two-column-fields">
-              <div>
-                <label htmlFor="language">Language</label>
-                <select id="language" name="language" value={form.language} onChange={handleChange}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="language">Language</Label>
+                <Select id="language" name="language" value={form.language} onChange={handleChange}>
                   {languageOptions.map((language) => (
                     <option key={language} value={language}>
                       {language}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
-              <div>
-                <label htmlFor="year">Year</label>
-                <input
+              <div className="grid gap-1.5">
+                <Label htmlFor="year">Year</Label>
+                <Input
                   id="year"
                   name="year"
                   type="number"
@@ -305,95 +320,106 @@ export default function MetadataFormPage() {
               </div>
             </div>
 
-            <label htmlFor="department">Department</label>
-            <select id="department" name="department" value={form.department} onChange={handleChange}>
-              {departmentOptions.map((department) => (
-                <option key={department} value={department}>
-                  {department}
-                </option>
-              ))}
-            </select>
+            <div className="grid gap-1.5">
+              <Label htmlFor="department">Department</Label>
+              <Select id="department" name="department" value={form.department} onChange={handleChange}>
+                {departmentOptions.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-            <label htmlFor="accessTier">Access Tier</label>
-            <select id="accessTier" name="accessTier" value={form.accessTier} onChange={handleChange}>
-              {accessTierOptions.map((tier) => (
-                <option key={tier} value={tier}>
-                  {tier}
-                </option>
-              ))}
-            </select>
+            <div className="grid gap-1.5">
+              <Label htmlFor="accessTier">Access Tier</Label>
+              <Select id="accessTier" name="accessTier" value={form.accessTier} onChange={handleChange}>
+                {accessTierOptions.map((tier) => (
+                  <option key={tier} value={tier}>
+                    {tier}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-            <div className="metadata-actions">
-              <button
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
                 type="submit"
-                className="primary-btn"
                 disabled={saving || loadingDocs || documents.length === 0}
               >
                 {saving ? 'Saving...' : 'Save Metadata'}
-              </button>
-              <p className="field-hint">
+              </Button>
+              <p className="text-xs text-muted-foreground">
                 This updates the selected document metadata in backend.
               </p>
             </div>
 
-            {message ? <p className="metadata-message">{message}</p> : null}
-          </div>
+            {message ? (
+              <Alert variant={message.startsWith('Metadata saved') ? 'success' : 'error'}>{message}</Alert>
+            ) : null}
+          </CardContent>
+        </Card>
 
-          <aside className="metadata-card metadata-card--summary">
-            <h3>Live Preview</h3>
-            <div className="summary-block">
-              <span>Linked document</span>
-              <strong>{selectedDocumentId ? `#${selectedDocumentId}` : 'No document selected'}</strong>
+        <Card>
+          <CardHeader>
+            <CardTitle>Live Preview</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 text-sm">
+            <div className="flex items-center justify-between gap-2 rounded-md border border-border p-2">
+              <span className="text-muted-foreground">Linked document</span>
+              <Badge variant="outline">{selectedDocumentId ? `#${selectedDocumentId}` : 'None'}</Badge>
             </div>
-            <div className="summary-block">
-              <span>Title</span>
+
+            <div className="grid gap-1 rounded-md border border-border p-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Title</span>
               <strong>{form.title || 'Untitled document'}</strong>
             </div>
-            <div className="summary-block">
-              <span>Author</span>
+
+            <div className="grid gap-1 rounded-md border border-border p-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Author</span>
               <strong>{form.author || 'No author set'}</strong>
             </div>
-            <div className="summary-block">
-              <span>Language</span>
-              <strong>{form.language}</strong>
-            </div>
-            <div className="summary-block">
-              <span>Year</span>
-              <strong>{form.year || '----'}</strong>
-            </div>
-            <div className="summary-block">
-              <span>Department</span>
-              <strong>{form.department}</strong>
-            </div>
-            <div className="summary-block">
-              <span>Access tier</span>
-              <strong>{form.accessTier}</strong>
-            </div>
 
-            <div className="summary-block summary-block--stacked">
-              <span>Abstract preview</span>
-              <p>{form.abstract || 'Your abstract will appear here.'}</p>
-            </div>
-
-            <div className="summary-block summary-block--stacked">
-              <span>Keywords</span>
-              <div className="keyword-chips">
-                {keywordList.length > 0 ? (
-                  keywordList.map((keyword) => <span key={keyword}>{keyword}</span>)
-                ) : (
-                  <span className="keyword-placeholder">No keywords yet</span>
-                )}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-1 rounded-md border border-border p-3">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">Language</span>
+                <strong>{form.language}</strong>
+              </div>
+              <div className="grid gap-1 rounded-md border border-border p-3">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">Year</span>
+                <strong>{form.year || '----'}</strong>
               </div>
             </div>
 
-            <div className="summary-note">
-              <p>
-                This page establishes the basic metadata layer. The next step can
-                connect it to the save endpoint and document upload flow.
-              </p>
+            <div className="grid gap-1 rounded-md border border-border p-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Department</span>
+              <strong>{form.department}</strong>
             </div>
-          </aside>
-        </div>
+
+            <div className="grid gap-1 rounded-md border border-border p-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Access Tier</span>
+              <strong>{form.accessTier}</strong>
+            </div>
+
+            <div className="grid gap-1 rounded-md border border-border p-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Abstract Preview</span>
+              <p className="text-muted-foreground">{form.abstract || 'Your abstract will appear here.'}</p>
+            </div>
+
+            <div className="grid gap-2 rounded-md border border-border p-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Keywords</span>
+              <div className="flex flex-wrap gap-1.5">
+                {keywordList.length > 0 ? (
+                  keywordList.map((keyword) => (
+                    <Badge key={keyword} variant="secondary">{keyword}</Badge>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground">No keywords yet</span>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </form>
     </section>
   )

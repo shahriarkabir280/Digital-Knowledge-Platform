@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import cseduLogo from '@/assets/CSEDULOGO.png'
 import { defaultRouteForRole } from '../app/rbac.js'
 import { useAuth } from '../app/use-auth.js'
 import { createDemoSession, loginRequest } from '../services/api/auth.js'
@@ -72,50 +78,67 @@ export default function LoginPage() {
   }
 
   return (
-    <section className="login-wrap">
-      <div className="login-card">
-        <p className="brand-kicker">Digital Knowledge Platform</p>
-        <h2>Login</h2>
-        <p className="helper-text">
-          Sign in with your account to continue.
-        </p>
-        <form onSubmit={onSubmit} className="login-form">
-          <label htmlFor="identifier">Email</label>
-          <input
-            id="identifier"
-            name="identifier"
-            autoComplete="email"
-            placeholder="tamim@example.com"
-            value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
-          />
+    <section className="mx-auto flex min-h-[100svh] w-full max-w-xl items-center px-4 py-10">
+      <Card className="w-full">
+        <CardHeader className="grid gap-3 p-8 pb-4">
+          <div className="auth-brand-block">
+            <img src={cseduLogo} alt="CSEDU Logo" className="auth-brand-logo" />
+            <div className="auth-brand-copy">
+              <p className="brand-kicker">Digital Knowledge Platform</p>
+              <p className="auth-brand-title">CSEDU</p>
+            </div>
+          </div>
+          <CardTitle className="text-4xl">Login</CardTitle>
+          <p className="text-base text-muted-foreground">Sign in with your account to continue.</p>
+        </CardHeader>
+        <CardContent className="p-8 pt-2">
+          <form onSubmit={onSubmit} className="grid gap-5">
+            <div className="grid gap-1.5">
+              <Label htmlFor="identifier" className="text-sm font-medium">Email</Label>
+              <Input
+                id="identifier"
+                name="identifier"
+                autoComplete="email"
+                placeholder="tamim@example.com"
+                className="h-12 text-base"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.target.value)}
+              />
+            </div>
 
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+            <div className="grid gap-1.5">
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Enter your password"
+                className="h-12 text-base"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </div>
 
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+            {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
 
-          <button type="submit" className="primary-btn" disabled={isSubmitting}>
-            {isSubmitting ? 'Signing in...' : 'Sign in'}
-          </button>
+            <Button type="submit" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? 'Signing in...' : 'Sign in'}
+            </Button>
 
-          <button type="button" className="ghost-btn" onClick={onDemoLogin}>
-            Demo Login
-          </button>
-        </form>
+            <Button type="button" size="lg" variant="outline" onClick={onDemoLogin}>
+              Demo Login
+            </Button>
+          </form>
 
-        <p className="auth-switch-text">
-          New here? <Link to="/register">Create an account</Link>
-        </p>
-      </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            New here?{' '}
+            <Link to="/register" className="font-medium text-foreground hover:underline">
+              Create an account
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </section>
   )
 }

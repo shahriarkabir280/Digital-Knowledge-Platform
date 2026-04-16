@@ -1,5 +1,11 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import cseduLogo from '@/assets/CSEDULOGO.png'
 import { useAuth } from '../app/use-auth.js'
 import { defaultRouteForRole } from '../app/rbac.js'
 import { registerRequest } from '../services/api/auth.js'
@@ -57,70 +63,93 @@ export default function RegisterPage() {
   }
 
   return (
-    <section className="login-wrap">
-      <div className="login-card">
-        <p className="brand-kicker">Digital Knowledge Platform</p>
-        <h2>Create account</h2>
-        <p className="helper-text">
-          Self-registration creates a Member account using your institutional
-          email.
-        </p>
+    <section className="mx-auto flex min-h-[100svh] w-full max-w-xl items-center px-4 py-10">
+      <Card className="w-full">
+        <CardHeader className="grid gap-3 p-8 pb-4">
+          <div className="auth-brand-block">
+            <img src={cseduLogo} alt="CSEDU Logo" className="auth-brand-logo" />
+            <div className="auth-brand-copy">
+              <p className="brand-kicker">Digital Knowledge Platform</p>
+              <p className="auth-brand-title">CSEDU</p>
+            </div>
+          </div>
+          <CardTitle className="text-4xl">Create Account</CardTitle>
+          <p className="text-base text-muted-foreground">
+            Self-registration creates a Member account using your institutional email.
+          </p>
+        </CardHeader>
+        <CardContent className="p-8 pt-2">
+          <form onSubmit={onSubmit} className="grid gap-5">
+            <div className="grid gap-1.5">
+              <Label htmlFor="name" className="text-sm font-medium">Full name</Label>
+              <Input
+                id="name"
+                name="name"
+                autoComplete="name"
+                placeholder="Tamim Dewan"
+                className="h-12 text-base"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
 
-        <form onSubmit={onSubmit} className="login-form">
-          <label htmlFor="name">Full name</label>
-          <input
-            id="name"
-            name="name"
-            autoComplete="name"
-            placeholder="Tamim Dewan"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
+            <div className="grid gap-1.5">
+              <Label htmlFor="email" className="text-sm font-medium">University email</Label>
+              <Input
+                id="email"
+                name="email"
+                autoComplete="email"
+                placeholder="tamim@cs.du.ac.bd"
+                className="h-12 text-base"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
 
-          <label htmlFor="email">University email</label>
-          <input
-            id="email"
-            name="email"
-            autoComplete="email"
-            placeholder="tamim@cs.du.ac.bd"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
+            <div className="grid gap-1.5">
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+                className="h-12 text-base"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </div>
 
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            placeholder="At least 8 characters"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+            <div className="grid gap-1.5">
+              <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm password</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Re-enter your password"
+                className="h-12 text-base"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+            </div>
 
-          <label htmlFor="confirmPassword">Confirm password</label>
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Re-enter your password"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-          />
+            {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
+            {successMessage ? <Alert variant="success">{successMessage}</Alert> : null}
 
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-          {successMessage ? <p className="form-success">{successMessage}</p> : null}
+            <Button type="submit" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating account...' : 'Create account'}
+            </Button>
+          </form>
 
-          <button type="submit" className="primary-btn" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating account...' : 'Create account'}
-          </button>
-        </form>
-
-        <p className="auth-switch-text">
-          Already have an account? <Link to="/login">Sign in</Link>
-        </p>
-      </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-foreground hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </section>
   )
 }

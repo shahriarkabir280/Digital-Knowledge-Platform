@@ -1,15 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 * {
   box-sizing: border-box;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 body {
   margin: 0;
   min-height: 100svh;
   color: var(--ink);
-  background:
-    radial-gradient(circle at top right, #f9e4bd 0, transparent 36%),
-    radial-gradient(circle at bottom left, #d8ede7 0, transparent 44%),
-    var(--canvas);
+  background: hsl(var(--background));
   font-family: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
 }
 
@@ -38,13 +44,58 @@ a {
   border-radius: var(--radius);
   background: var(--paper);
   box-shadow: var(--shadow);
-  padding: 18px 20px;
+  padding: 10px 20px;
   margin-bottom: 20px;
   display: flex;
   gap: 12px;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+
+.brand-copy {
+  display: grid;
+  gap: 1px;
+}
+
+.auth-brand-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-brand-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+
+.auth-brand-copy {
+  display: grid;
+  gap: 1px;
+}
+
+.auth-brand-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
 }
 
 .brand-kicker {
@@ -57,14 +108,50 @@ a {
 
 .topbar h1 {
   font-size: clamp(1.25rem, 3vw, 1.8rem);
-  margin-top: 4px;
+  margin-top: 0;
+  line-height: 1.1;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.topbar-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.identity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: hsl(var(--muted) / 0.35);
+  padding: 6px 12px;
+}
+
+.identity-chip-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.identity-chip-value {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .topbar-notifications {
@@ -72,28 +159,29 @@ a {
 }
 
 .notification-btn {
-  min-width: 44px;
-  min-height: 36px;
+  min-height: 40px;
+  min-width: 132px;
+  justify-content: space-between;
+  gap: 10px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   position: relative;
 }
 
 .notification-bell {
-  font-size: 1rem;
-  line-height: 1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .notification-count {
-  position: absolute;
-  top: -6px;
-  right: -6px;
+  position: static;
   min-width: 18px;
-  height: 18px;
+  height: 20px;
   border-radius: 999px;
-  background: #b4432d;
-  color: #fff;
+  border: 1px solid hsl(var(--destructive) / 0.3);
+  background: hsl(var(--destructive) / 0.12);
+  color: hsl(var(--destructive));
   font-size: 11px;
   font-weight: 700;
   display: inline-flex;
@@ -107,9 +195,9 @@ a {
   right: 0;
   top: calc(100% + 8px);
   width: min(360px, 92vw);
-  border: 1px solid var(--line);
+  border: 1px solid hsl(var(--border));
   border-radius: 12px;
-  background: var(--paper);
+  background: hsl(var(--card));
   box-shadow: var(--shadow);
   padding: 10px;
   z-index: 20;
@@ -137,9 +225,9 @@ a {
 }
 
 .notification-dropdown-item {
-  border: 1px solid var(--line);
+  border: 1px solid hsl(var(--border));
   border-radius: 10px;
-  background: #fffdf9;
+  background: hsl(var(--background));
 }
 
 .notification-dropdown-item-btn {
@@ -155,7 +243,7 @@ a {
 
 .notification-dropdown-item-btn:hover,
 .notification-dropdown-item-btn:focus-visible {
-  background: #f6f0e8;
+  background: hsl(var(--accent));
   outline: none;
   border-radius: 10px;
 }
@@ -173,24 +261,20 @@ a {
 
 .notification-dropdown-link {
   justify-self: start;
-}
-
-.role-pill,
-.user-pill {
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 13px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  padding: 8px 12px;
   font-weight: 600;
+  cursor: pointer;
 }
 
-.role-pill {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
-}
-
-.user-pill {
-  background: #f0ece3;
-  color: #3d434c;
+.notification-dropdown-link:hover,
+.notification-dropdown-link:focus-visible {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  outline: none;
 }
 
 .main-grid {

@@ -14,12 +14,12 @@ import RegisterPage from '../pages/RegisterPage.jsx'
 import RepositoryPage from '../pages/RepositoryPage.jsx'
 import ReviewQueuePage from '../pages/ReviewQueuePage.jsx'
 import RoutePage from '../pages/RoutePage.jsx'
-import MetadataFormPage from '../pages/MetadataFormPage.jsx'
 import SearchPage from '../pages/SearchPage.jsx'
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import UnauthorizedPage from '../pages/UnauthorizedPage.jsx'
 import UploadDocumentPage from '../pages/UploadDocumentPage.jsx'
 import ViewerPage from '../pages/ViewerPage.jsx'
+import SubmissionWizardPage from '../pages/SubmissionWizardPage.jsx'
 import ProtectedRoute from '../routes/ProtectedRoute.jsx'
 import RoleRoute from '../routes/RoleRoute.jsx'
 import { ROLES, ROUTE_ACCESS } from './rbac.js'
@@ -75,11 +75,11 @@ export const appRouter = createBrowserRouter([
           },
           {
             path: '/submit-paper',
-            element: <MetadataFormPage />,
+            element: <SubmissionWizardPage />,
           },
           {
             path: '/metadata-form',
-            element: <MetadataFormPage />,
+            element: <SubmissionWizardPage />,
           },
           {
             path: '/borrow-item',

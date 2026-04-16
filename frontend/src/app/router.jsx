@@ -17,6 +17,7 @@ import RoutePage from '../pages/RoutePage.jsx'
 import MetadataFormPage from '../pages/MetadataFormPage.jsx'
 import SearchPage from '../pages/SearchPage.jsx'
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
+import StudentProjectShowcasePage from '../pages/StudentProjectShowcasePage.jsx'
 import UnauthorizedPage from '../pages/UnauthorizedPage.jsx'
 import UploadDocumentPage from '../pages/UploadDocumentPage.jsx'
 import ViewerPage from '../pages/ViewerPage.jsx'
@@ -119,6 +120,10 @@ export const appRouter = createBrowserRouter([
           {
             path: '/search',
             element: <SearchPage />,
+          },
+          {
+            path: '/student-projects',
+            element: <StudentProjectShowcasePage />,
           },
           {
             path: '/viewer/:docId?',

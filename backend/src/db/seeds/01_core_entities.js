@@ -13,6 +13,8 @@ const ROLE = {
 const DEFAULT_PASSWORD_HASH = "$2b$10$2Yf4/5CWQwduz6r.4nXn0eS7hXgR8wX94m5N6ynwQyY0f7fD9U3x2";
 
 exports.seed = async function seed(knex) {
+  await knex("notifications").del();
+  await knex("document_state_logs").del();
   await knex("citations").del();
   await knex("loans").del();
   await knex("items").del();

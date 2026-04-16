@@ -16,10 +16,22 @@ const staffCards = [
     tone: 'sage',
   },
   {
+    title: 'Review Queue',
+    description: 'Process pending submissions currently waiting in review state.',
+    to: '/review-queue',
+    tone: 'ink',
+  },
+  {
+    title: 'All Uploads',
+    description: 'Inspect all submissions across users with operational filters.',
+    to: '/all-uploads',
+    tone: 'gold',
+  },
+  {
     title: 'Library & Search',
     description: 'Manage discovery access and run quality checks for catalog records.',
     to: '/library',
-    tone: 'ink',
+    tone: 'teal',
   },
 ]
 

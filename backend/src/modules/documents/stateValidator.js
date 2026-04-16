@@ -9,16 +9,23 @@ const DOCUMENT_STATES = Object.freeze({
 
 const lifecycleSchema = z.object({
   state: z.enum(Object.values(DOCUMENT_STATES)),
+  note: z.string().trim().max(1000).optional(),
 });
 
 const allowedTransitions = {
   [DOCUMENT_STATES.DRAFT]: [DOCUMENT_STATES.REVIEW],
-  [DOCUMENT_STATES.REVIEW]: [DOCUMENT_STATES.PUBLISHED],
+  [DOCUMENT_STATES.REVIEW]: [DOCUMENT_STATES.PUBLISHED, DOCUMENT_STATES.DRAFT],
   [DOCUMENT_STATES.PUBLISHED]: [DOCUMENT_STATES.ARCHIVED],
   [DOCUMENT_STATES.ARCHIVED]: [],
 };
 
 const rolePolicyByTargetState = {
+  [DOCUMENT_STATES.DRAFT]: [
+    "REVIEWER",
+    "STAFF",
+    "LAB_MANAGER",
+    "ADMIN",
+  ],
   [DOCUMENT_STATES.REVIEW]: [
     "CONTRIBUTOR",
     "STAFF",
@@ -108,6 +115,29 @@ function validateTransition(currentState, nextState) {
   return { ok: true };
 }
 
+function validateTransitionNote(currentState, nextState, note) {
+  const requiresNote =
+    currentState === DOCUMENT_STATES.REVIEW &&
+    (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.DRAFT);
+
+  if (!requiresNote) {
+    return { ok: true };
+  }
+
+  if (typeof note !== "string" || note.trim().length === 0) {
+    return {
+      ok: false,
+      error: {
+        statusCode: 400,
+        code: "TRANSITION_NOTE_REQUIRED",
+        message: "A review note is required when publishing or rejecting a document",
+      },
+    };
+  }
+
+  return { ok: true };
+}
+
 function canMoveToReview(document, user) {
   if (document.uploader_id === user.id) {
     return true;
@@ -153,5 +183,6 @@ module.exports = {
   validateDocumentId,
   validateStatePayload,
   validateTransition,
+  validateTransitionNote,
   validateRolePermission,
 };

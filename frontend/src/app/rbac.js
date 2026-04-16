@@ -20,10 +20,14 @@ export const ALL_AUTH_ROLES = [
 export const ROUTE_ACCESS = Object.freeze({
   home: ALL_AUTH_ROLES,
   dashboard: ALL_AUTH_ROLES,
+  notifications: ALL_AUTH_ROLES,
+  uploadDocument: ALL_AUTH_ROLES,
   repository: ALL_AUTH_ROLES,
   library: ALL_AUTH_ROLES,
   search: ALL_AUTH_ROLES,
   viewer: ALL_AUTH_ROLES,
+  allUploads: [ROLES.STAFF, ROLES.LAB_MANAGER, ROLES.REVIEWER, ROLES.ADMIN],
+  reviewQueue: [ROLES.STAFF, ROLES.LAB_MANAGER, ROLES.REVIEWER, ROLES.ADMIN],
   admin: [ROLES.ADMIN],
 })
 

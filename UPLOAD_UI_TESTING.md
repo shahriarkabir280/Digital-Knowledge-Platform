@@ -3,7 +3,7 @@
 ## Quick Start
 
 ### Prerequisites
-- Backend running: `http://localhost:3000`
+- Backend running: `http://localhost:3001`
 - Frontend running: `http://localhost:5174`
 - PostgreSQL: Running (Docker container)
 

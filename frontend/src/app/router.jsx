@@ -7,6 +7,12 @@ import AppLayout from '../components/layout/AppLayout.jsx'
 import DashboardPage from '../pages/DashboardPage.jsx'
 import HomePage from '../pages/HomePage.jsx'
 import LibraryPage from '../pages/LibraryPage.jsx'
+import LibraryBookmarksPage from '../pages/LibraryBookmarksPage.jsx'
+import LibraryProfilePage from '../pages/LibraryProfilePage.jsx'
+import LibraryResourceDetailsPage from '../pages/LibraryResourceDetailsPage.jsx'
+import LibrarySettingsPage from '../pages/LibrarySettingsPage.jsx'
+import LibraryUploadPage from '../pages/LibraryUploadPage.jsx'
+import LibraryAnalyticsPage from '../pages/LibraryAnalyticsPage.jsx'
 import LoginPage from '../pages/LoginPage.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
 import NotificationsPage from '../pages/NotificationsPage.jsx'
@@ -115,6 +121,43 @@ export const appRouter = createBrowserRouter([
           {
             path: '/library',
             element: <LibraryPage />,
+          },
+          {
+            path: '/library/resource/:resourceId',
+            element: <LibraryResourceDetailsPage />,
+          },
+          {
+            path: '/library/upload',
+            element: <LibraryUploadPage />,
+          },
+          {
+            path: '/library/bookmarks',
+            element: <LibraryBookmarksPage />,
+          },
+          {
+            path: '/library/profile',
+            element: <LibraryProfilePage />,
+          },
+          {
+            path: '/library/settings',
+            element: <LibrarySettingsPage />,
+          },
+          {
+            element: <RoleRoute allowedRoles={ROUTE_ACCESS.libraryAnalytics} />,
+            children: [
+              {
+                path: '/library/analytics',
+                element: <LibraryAnalyticsPage />,
+              },
+            ],
+          },
+          {
+            path: '/uploads',
+            element: <Navigate to="/library/upload" replace />,
+          },
+          {
+            path: '/bookmarks',
+            element: <Navigate to="/library/bookmarks" replace />,
           },
           {
             path: '/search',

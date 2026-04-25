@@ -150,7 +150,7 @@ cd backend
 npm run dev
 ```
 
-Note: Running `npm run dev` from repo root is not configured yet. Run commands from `frontend` and `backend` folders.
+Note: You can now run `npm run dev` from the repo root, or run `npm run dev` separately from `frontend` and `backend` folders.
 
 ## Database Setup (PostgreSQL + Docker)
 

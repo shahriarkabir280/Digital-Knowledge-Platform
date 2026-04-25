@@ -31,8 +31,21 @@ echo "Starting frontend dev server..."
 npm --prefix "$FRONTEND_DIR" run dev &
 FRONTEND_PID=$!
 
-wait -n "$BACKEND_PID" "$FRONTEND_PID"
-EXIT_CODE=$?
+EXIT_CODE=0
+
+while true; do
+  if ! kill -0 "$BACKEND_PID" >/dev/null 2>&1; then
+    wait "$BACKEND_PID" || EXIT_CODE=$?
+    break
+  fi
+
+  if ! kill -0 "$FRONTEND_PID" >/dev/null 2>&1; then
+    wait "$FRONTEND_PID" || EXIT_CODE=$?
+    break
+  fi
+
+  sleep 1
+done
 
 echo "One process exited; shutting down the other..."
 cleanup

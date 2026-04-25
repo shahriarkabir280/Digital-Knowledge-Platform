@@ -47,7 +47,7 @@ export async function loginRequest({ identifier, password }) {
 
     if (looksLikeNetworkFailure) {
       throw new Error(
-        'Cannot reach login API at http://localhost:3000/api/auth/login. Start backend server or use Demo Login.',
+        'Cannot reach login API at http://localhost:3001/api/auth/login. Start backend server or use Demo Login.',
       )
     }
 
@@ -84,7 +84,7 @@ export async function registerRequest({ name, email, password }) {
 
     if (looksLikeNetworkFailure) {
       throw new Error(
-        'Cannot reach registration API at http://localhost:3000/api/auth/register. Start backend server and try again.',
+        'Cannot reach registration API at http://localhost:3001/api/auth/register. Start backend server and try again.',
       )
     }
 

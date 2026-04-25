@@ -96,6 +96,8 @@ export default function Navbar() {
     navigate(target)
   }
 
+  const avatarLabel = (authState?.name || authState?.role || 'U').trim().charAt(0).toUpperCase()
+
   return (
     <header className="topbar">
       <div className="brand-block">
@@ -106,18 +108,17 @@ export default function Navbar() {
         </div>
       </div>
       <div className="topbar-actions">
-        <div className="topbar-identity" aria-label="Current account context">
-          <span className="identity-chip">
-            <span className="identity-chip-label">Role</span>
-            <strong className="identity-chip-value">{authState.role}</strong>
-          </span>
-          <span className="identity-chip">
-            <span className="identity-chip-label">User</span>
-            <strong className="identity-chip-value">{authState.name || 'Anonymous'}</strong>
-          </span>
-        </div>
-
         <div className="topbar-controls">
+        <button
+          type="button"
+          className="topbar-avatar-btn"
+          onClick={() => navigate('/library/profile')}
+          aria-label="Open profile"
+          title="Open profile"
+        >
+          <span className="topbar-avatar-initial" aria-hidden="true">{avatarLabel}</span>
+          <span className="sr-only">Open profile</span>
+        </button>
         <div className="topbar-notifications">
           <Button
             type="button"

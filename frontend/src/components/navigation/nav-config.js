@@ -10,13 +10,11 @@ export const navItems = [
   {
     to: '/submit-paper',
     label: 'Submission Wizard',
-    iconName: 'UploadCloud',
     roles: ROUTE_ACCESS.uploadDocument,
   },
   {
     to: '/repository',
     label: 'Repository',
-    iconName: 'BookOpen',
     roles: ROUTE_ACCESS.repository,
   },
   {
@@ -52,7 +50,6 @@ export const navItems = [
   {
     to: '/student-projects',
     label: 'Project Showcase',
-    iconName: 'Globe2',
     roles: ROUTE_ACCESS.studentProjectShowcase,
   },
   {
@@ -70,7 +67,6 @@ export const navItems = [
   {
     to: '/viewer/sample-doc',
     label: 'Viewer',
-    iconName: 'BookOpen',
     roles: ROUTE_ACCESS.viewer,
   },
   {

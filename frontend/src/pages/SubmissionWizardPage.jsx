@@ -131,7 +131,7 @@ export default function SubmissionWizardPage() {
         const rawDraft = window.localStorage.getItem(draftKey)
         const draft = rawDraft ? JSON.parse(rawDraft) : null
         const queryDocumentId = searchParams.get('documentId')
-        const preferredDocumentId = queryDocumentId || draft?.uploadedDocumentId || ''
+        const preferredDocumentId = queryDocumentId || ''
 
         if (draft?.form) {
           setForm((current) => ({
@@ -152,7 +152,13 @@ export default function SubmissionWizardPage() {
             setCurrentStep(Math.max(Number(draft?.currentStep || 2), 2))
           }
         } else if (isMounted) {
-          setCurrentStep(Number(draft?.currentStep || 1))
+          // Opening /submit-paper without a documentId should always start fresh file upload.
+          setUploadedDocument(null)
+          setSelectedFile(null)
+          setPendingFileMeta(null)
+          setPendingFileStatus('idle')
+          setUploadProgress(0)
+          setCurrentStep(1)
         }
       } catch (_error) {
         if (isMounted) {

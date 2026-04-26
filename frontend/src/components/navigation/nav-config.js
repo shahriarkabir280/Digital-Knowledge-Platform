@@ -2,10 +2,25 @@ import { ROUTE_ACCESS } from '../../app/rbac.js'
 
 export const navItems = [
   {
+    to: '/',
+    label: 'Home',
+    roles: ROUTE_ACCESS.home,
+  },
+  {
     to: '/dashboard',
     label: 'Dashboard',
     iconName: 'LayoutDashboard',
     roles: ROUTE_ACCESS.dashboard,
+  },
+  {
+    to: '/submit-paper',
+    label: 'Submission Wizard',
+    roles: ROUTE_ACCESS.uploadDocument,
+  },
+  {
+    to: '/repository',
+    label: 'Repository',
+    roles: ROUTE_ACCESS.repository,
   },
   {
     to: '/library',
@@ -38,6 +53,16 @@ export const navItems = [
     roles: ROUTE_ACCESS.librarySettings,
   },
   {
+    to: '/search',
+    label: 'Search',
+    roles: ROUTE_ACCESS.search,
+  },
+  {
+    to: '/student-projects',
+    label: 'Project Showcase',
+    roles: ROUTE_ACCESS.studentProjectShowcase,
+  },
+  {
     to: '/all-uploads',
     label: 'Global Records',
     iconName: 'Globe2',
@@ -48,6 +73,11 @@ export const navItems = [
     label: 'Review Lab',
     iconName: 'ClipboardCheck',
     roles: ROUTE_ACCESS.reviewQueue,
+  },
+  {
+    to: '/viewer/sample-doc',
+    label: 'Viewer',
+    roles: ROUTE_ACCESS.viewer,
   },
   {
     to: '/admin',

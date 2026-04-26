@@ -2,8 +2,11 @@ import { NavLink } from 'react-router-dom'
 import { 
   LayoutDashboard, 
   BookOpen, 
-  FileText,
-  Upload,
+  UploadCloud, 
+  Bookmark, 
+  BarChart3, 
+  Settings2, 
+  Globe2, 
   ClipboardCheck, 
   ShieldCheck
 } from 'lucide-react'
@@ -13,8 +16,11 @@ import { navItems } from './nav-config.js'
 const iconMap = {
   LayoutDashboard,
   BookOpen,
-  FileText,
-  Upload,
+  UploadCloud,
+  Bookmark,
+  BarChart3,
+  Settings2,
+  Globe2,
   ClipboardCheck,
   ShieldCheck
 }

@@ -5,7 +5,6 @@ import AdminRoleManagementPage from '../pages/AdminRoleManagementPage.jsx'
 import AllUploadsPage from '../pages/AllUploadsPage.jsx'
 import AppLayout from '../components/layout/AppLayout.jsx'
 import DashboardPage from '../pages/DashboardPage.jsx'
-import HomePage from '../pages/HomePage.jsx'
 import LibraryPage from '../pages/LibraryPage.jsx'
 import LibraryBookmarksPage from '../pages/LibraryBookmarksPage.jsx'
 import LibraryProfilePage from '../pages/LibraryProfilePage.jsx'
@@ -47,7 +46,7 @@ export const appRouter = createBrowserRouter([
         children: [
           {
             path: '/',
-            element: <HomePage />,
+            element: <Navigate to="/dashboard" replace />,
           },
           {
             path: '/dashboard',

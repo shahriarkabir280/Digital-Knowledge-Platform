@@ -345,20 +345,7 @@ export default function LibraryPage() {
       </section>
 
       <section className="library-dashboard">
-        <div className="library-panel">
-          <h3 className="library-panel-title">Personalized Recommendations</h3>
-          <div className="library-recommend-grid">
-            {RECOMMENDED.map((item) => (
-              <article key={item} className="library-recommend-card">
-                <p className="library-recommend-title">{item}</p>
-                <p className="library-recommend-meta">Based on your course activity</p>
-                <button type="button" className="library-btn library-btn-ghost">
-                  Open
-                </button>
-              </article>
-            ))}
-          </div>
-        </div>
+
 
         <div className="library-panel">
           <h3 className="library-panel-title">Recently Viewed</h3>

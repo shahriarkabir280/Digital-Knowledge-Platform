@@ -88,6 +88,43 @@
   gap: 8px;
 }
 
+.library-horizontal-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  padding-bottom: 12px; /* For scrollbar visibility */
+  scrollbar-width: thin;
+  scrollbar-color: #9cb3c5 #f1f5f9;
+}
+
+.library-horizontal-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.library-horizontal-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.library-horizontal-scroll::-webkit-scrollbar-thumb {
+  background-color: #9cb3c5;
+  border-radius: 4px;
+}
+
+.library-scroll-item {
+  flex: 0 0 auto;
+  width: 280px; /* Adjust width as needed */
+  display: flex;
+}
+
+.library-card-grid .library-card,
+.library-scroll-item .library-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
 .library-input,
 .library-select,
 .library-textarea {

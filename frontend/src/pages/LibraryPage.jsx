@@ -196,6 +196,10 @@ export default function LibraryPage() {
     return applyLibraryFilters(afterSearch, filters)
   }, [query, filters])
 
+  const recentlyViewedItems = useMemo(() => {
+    return RECENTLY_VIEWED.map(title => RESOURCE_ITEMS.find(item => item.title === title)).filter(Boolean);
+  }, []);
+
   const onFilterChange = (event) => {
     const { name, value } = event.target
     setFilters((current) => ({
@@ -349,24 +353,18 @@ export default function LibraryPage() {
 
         <div className="library-panel">
           <h3 className="library-panel-title">Recently Viewed</h3>
-          <ul className="library-mini-list library-mini-list-spaced">
-            {RECENTLY_VIEWED.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-          <div className="library-playlist">
-            {PLAYLIST_ITEMS.map((item) => (
-              <div key={item.id} className="library-playlist-item">
-                <div>
-                  <p className="library-playlist-title">{item.title}</p>
-                  <span className="library-playlist-progress">{item.progress}</span>
-                </div>
-                <button type="button" className="library-btn library-btn-primary">
-                  Continue
-                </button>
+          <div className="library-horizontal-scroll">
+            {recentlyViewedItems.map((item) => (
+              <div key={item.id} className="library-scroll-item">
+                <ResourceCard
+                  item={item}
+                  isBookmarked={bookmarks.includes(item.id)}
+                  onBookmarkToggle={onBookmarkToggle}
+                />
               </div>
             ))}
           </div>
+
         </div>
       </section>
 

@@ -58,7 +58,7 @@ export default function LibraryResourceDetailsPage() {
       <header className="library-panel">
         <p className="library-kicker">Resource Details</p>
         <h2 className="library-details-title">{resource.title}</h2>
-        <p className="library-details-meta">
+        <p className="library-details-meta" style={{ color: 'var(--muted)' }}>
           Uploaded by {resource.author} · {resource.department} · {resource.course} · Last updated{' '}
           {new Date(resource.updatedAt).toLocaleDateString()}
         </p>
@@ -228,10 +228,11 @@ export default function LibraryResourceDetailsPage() {
               <div className="library-form-field">
                 <label>Comment</label>
                 <textarea 
-                  className="library-textarea" 
+                  className="library-textarea submission-textarea" 
                   placeholder="Write your feedback here..."
                   value={userComment}
                   onChange={(e) => setUserComment(e.target.value)}
+                  rows={4}
                 />
               </div>
               <button 

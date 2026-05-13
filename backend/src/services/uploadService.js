@@ -1,39 +1,22 @@
 /**
  * Upload Service
- * Handles file uploads with validation, storage, and error handling
- * Provides safe file storage with size limits and type validation
- * 
+ * Handles file uploads to Supabase Storage with validation.
+ *
  * SRS Reference: FR-DKP-003, NFR-DKP-005
  */
 
-const fs = require('fs').promises;
 const path = require('path');
 const uploadConfig = require('../config/upload.config');
-const {
-  sanitizeFilename,
-  generateSafeFilename,
-  validateFilename,
-  getSafeUploadPath,
-} = require('../utils/filenameUtils');
+const supabaseStorage = require('./supabaseStorage');
+const { sanitizeFilename, generateSafeFilename, validateFilename } = require('../utils/filenameUtils');
+
+const BUCKET_NAME = 'documents';
 
 /**
- * Create upload directory if it doesn't exist
- * @param {string} dirPath - Directory path to create
- * @returns {Promise<void>}
- */
-async function ensureUploadDir(dirPath) {
-  try {
-    await fs.mkdir(dirPath, { recursive: true });
-  } catch (error) {
-    throw new Error(`Failed to create upload directory: ${error.message}`);
-  }
-}
-
-/**
- * Validate uploaded file before storing
- * @param {object} file - File object from multer or similar
- * @param {object} options - Validation options
- * @returns {object} {valid, errors[], warning[]}
+ * Validate uploaded file before storing.
+ * @param {object} file - File object from multer
+ * @param {object} options
+ * @returns {{ valid: boolean, errors: string[], warnings: string[] }}
  */
 function validateUploadedFile(file, options = {}) {
   const { strictMimeValidation = true } = options;
@@ -45,19 +28,16 @@ function validateUploadedFile(file, options = {}) {
     return { valid: false, errors, warnings };
   }
 
-  // Validate file exists and has required properties
   if (!file.originalname || !file.mimetype || file.size === undefined) {
     errors.push('Invalid file object: missing required properties');
     return { valid: false, errors, warnings };
   }
 
-  // Validate filename safety
   const filenameValidation = validateFilename(file.originalname);
   if (!filenameValidation.isValid) {
     errors.push(`Unsafe filename: ${filenameValidation.errors.join(', ')}`);
   }
 
-  // Validate file size
   if (file.size > uploadConfig.MAX_FILE_SIZE) {
     errors.push(
       `File size ${(file.size / 1024 / 1024).toFixed(2)}MB exceeds maximum allowed size of 500MB`
@@ -68,103 +48,63 @@ function validateUploadedFile(file, options = {}) {
     errors.push('File is empty');
   }
 
-  // Get file extension
   const ext = path.extname(file.originalname).toLowerCase().replace(/^\./, '');
 
-  // Validate file extension
   if (!uploadConfig.isAllowedExtension(ext)) {
     errors.push(
-      `File type .${ext} not allowed. Allowed types: ${uploadConfig
-        .getAllowedExtensions()
-        .join(', ')}`
+      `File type .${ext} not allowed. Allowed types: ${uploadConfig.getAllowedExtensions().join(', ')}`
     );
   }
 
-  // Validate MIME type (if strict validation enabled)
   if (strictMimeValidation && !uploadConfig.isAllowedMimeType(file.mimetype)) {
-    // If extension is allowed but MIME is not, it's a warning
-    // Some clients may send wrong MIME types
     if (uploadConfig.isAllowedExtension(ext)) {
       warnings.push(
         `MIME type ${file.mimetype} unusual for .${ext} file, but extension is allowed`
       );
     } else {
       errors.push(
-        `MIME type ${file.mimetype} not allowed. Expected: ${uploadConfig
-          .getAllowedMimeTypes()
-          .join(', ')}`
+        `MIME type ${file.mimetype} not allowed.`
       );
     }
   }
 
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
-  };
+  return { valid: errors.length === 0, errors, warnings };
 }
 
 /**
- * Store uploaded file to disk
- * @param {object} file - File object
- * @param {string} category - Upload category ('documents' or 'media')
- * @param {object} options - Storage options
- * @returns {Promise<object>} {success, data: {filename, path, relativePath, size}, error}
+ * Upload file buffer to Supabase Storage.
+ * @param {object} file - Multer file object (must have .buffer)
+ * @param {string} category - 'documents' or 'media'
+ * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
  */
-async function storeUploadedFile(file, category = 'documents', options = {}) {
-  const { customDir = null, useHashNaming = false } = options;
-
+async function storeUploadedFile(file, category = 'documents') {
   try {
-    // Determine upload directory
-    let uploadDir;
-    if (customDir) {
-      uploadDir = customDir;
-    } else if (category === 'media') {
-      uploadDir = path.join(uploadConfig.UPLOAD_BASE_DIR, uploadConfig.MEDIA_DIR);
-    } else {
-      uploadDir = path.join(uploadConfig.UPLOAD_BASE_DIR, uploadConfig.DOCUMENTS_DIR);
+    if (!file.buffer) {
+      throw new Error('File buffer is missing. Ensure multer memoryStorage is used.');
     }
 
-    // Ensure directory exists
-    await ensureUploadDir(uploadDir);
+    const { filename: safeFilename, originalFilename } = generateSafeFilename(file.originalname);
 
-    // Generate safe filename
-    const { filename: safeFilename, originalFilename } = generateSafeFilename(
-      file.originalname,
-      { hashBased: useHashNaming }
+    // Store under category subfolder: documents/filename.pdf or media/filename.mp4
+    const storagePath = `${category}/${safeFilename}`;
+
+    const result = await supabaseStorage.uploadFile(
+      file.buffer,
+      BUCKET_NAME,
+      storagePath,
+      { contentType: file.mimetype, upsert: false }
     );
-
-    // Get safe path (prevents directory traversal)
-    const pathValidation = getSafeUploadPath(uploadConfig.UPLOAD_BASE_DIR, category, safeFilename);
-    if (!pathValidation.safe) {
-      throw new Error(pathValidation.error);
-    }
-
-    const filePath = pathValidation.path;
-
-    // Write file to disk
-    if (!file.path) {
-      // If file.path not provided (not using multer disk storage), write from buffer
-      if (!file.buffer) {
-        throw new Error('File must have either path or buffer');
-      }
-      await fs.writeFile(filePath, file.buffer);
-    } else {
-      // Copy from temp location (if using multer memory storage)
-      await fs.copyFile(file.path, filePath);
-    }
-
-    // Get file info
-    const fileInfo = await fs.stat(filePath);
 
     return {
       success: true,
       data: {
         originalFilename,
         filename: safeFilename,
-        path: filePath,
-        relativePath: path.join(category, safeFilename),
-        size: fileInfo.size,
+        // relativePath is what gets stored in the DB documents.file_path column
+        relativePath: storagePath,
+        storagePath,
+        bucket: BUCKET_NAME,
+        size: file.size,
         mimetype: file.mimetype,
         uploadedAt: new Date(),
       },
@@ -178,141 +118,74 @@ async function storeUploadedFile(file, category = 'documents', options = {}) {
 }
 
 /**
- * Delete uploaded file
- * @param {string} relativePath - Relative path from upload directory
- * @returns {Promise<object>} {success, error}
+ * Delete file from Supabase Storage.
+ * @param {string} relativePath - Path stored in DB (e.g. 'documents/abc.pdf')
+ * @returns {Promise<{ success: boolean, error?: string }>}
  */
 async function deleteUploadedFile(relativePath) {
   try {
-    if (!relativePath) {
-      throw new Error('Relative path required');
-    }
-
-    // Validate path to prevent directory traversal
-    const fullPath = path.resolve(uploadConfig.UPLOAD_BASE_DIR, relativePath);
-    const uploadBaseDir = path.resolve(uploadConfig.UPLOAD_BASE_DIR);
-
-    if (!fullPath.startsWith(uploadBaseDir)) {
-      throw new Error('Invalid file path: attempted directory traversal');
-    }
-
-    // Check if file exists before deleting
-    try {
-      await fs.access(fullPath);
-    } catch {
-      return { success: true }; // File doesn't exist, consider it deleted
-    }
-
-    // Delete the file
-    await fs.unlink(fullPath);
-
+    if (!relativePath) throw new Error('Relative path required');
+    await supabaseStorage.deleteFile(BUCKET_NAME, relativePath);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error.message || 'Failed to delete file',
-    };
+    return { success: false, error: error.message };
   }
 }
 
 /**
- * Get file info
- * @param {string} relativePath - Relative path from upload directory
- * @returns {Promise<object>} {success, data, error}
+ * Get a short-lived signed URL for a private file (used for streaming/preview).
+ * @param {string} relativePath - Path stored in DB
+ * @param {number} expiresIn - Seconds until expiry (default 60)
+ * @returns {Promise<string>} Signed URL
+ */
+async function getSignedUrl(relativePath, expiresIn = 60) {
+  const client = supabaseStorage.getSupabaseClient();
+  const { data, error } = await client.storage
+    .from(BUCKET_NAME)
+    .createSignedUrl(relativePath, expiresIn);
+
+  if (error) throw new Error(`Failed to create signed URL: ${error.message}`);
+  return data.signedUrl;
+}
+
+/**
+ * Get file info (existence check via signed URL attempt).
+ * @param {string} relativePath
+ * @returns {Promise<{ success: boolean, data: object }>}
  */
 async function getFileInfo(relativePath) {
   try {
-    const fullPath = path.resolve(uploadConfig.UPLOAD_BASE_DIR, relativePath);
-    const uploadBaseDir = path.resolve(uploadConfig.UPLOAD_BASE_DIR);
-
-    if (!fullPath.startsWith(uploadBaseDir)) {
-      throw new Error('Invalid file path');
-    }
-
-    const stats = await fs.stat(fullPath);
-
+    const signedUrl = await getSignedUrl(relativePath, 10);
     return {
       success: true,
-      data: {
-        exists: true,
-        size: stats.size,
-        createdAt: stats.birthtime,
-        modifiedAt: stats.mtime,
-      },
+      data: { exists: true, signedUrl },
     };
-  } catch (error) {
+  } catch {
     return {
       success: false,
       data: { exists: false },
-      error: error.message,
     };
   }
 }
 
 /**
- * Get formatted file size
- * @param {number} bytes - Size in bytes
- * @returns {string} Formatted size (e.g., "2.5 MB")
+ * Format bytes to human-readable string.
  */
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 Bytes';
-
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
-/**
- * Clean up temporary uploads (older than specified hours)
- * @param {number} ageHours - Delete files older than this many hours (default: 24)
- * @returns {Promise<object>} {success, deletedCount, error}
- */
-async function cleanupTempDir(ageHours = 24) {
-  try {
-    const tempDir = path.join(uploadConfig.UPLOAD_BASE_DIR, uploadConfig.TEMP_DIR);
-    const ageMs = ageHours * 60 * 60 * 1000;
-    const now = Date.now();
-
-    const files = await fs.readdir(tempDir);
-    let deletedCount = 0;
-
-    for (const file of files) {
-      const filePath = path.join(tempDir, file);
-      const stats = await fs.stat(filePath);
-
-      if (now - stats.mtimeMs > ageMs) {
-        await fs.unlink(filePath);
-        deletedCount++;
-      }
-    }
-
-    return { success: true, deletedCount };
-  } catch (error) {
-    return {
-      success: false,
-      deletedCount: 0,
-      error: error.message,
-    };
-  }
-}
-
 module.exports = {
-  // Configuration and validation
   validateUploadedFile,
-  uploadConfig,
-
-  // File storage operations
-  ensureUploadDir,
   storeUploadedFile,
   deleteUploadedFile,
+  getSignedUrl,
   getFileInfo,
-
-  // Utilities
   formatFileSize,
-  cleanupTempDir,
-
-  // Re-export filename utilities
+  uploadConfig,
   ...require('../utils/filenameUtils'),
 };

@@ -7,9 +7,6 @@
 
 const uploadService = require('../../services/uploadService');
 const db = require('../../db');
-const fs = require('fs');
-const path = require('path');
-const uploadConfig = require('../../config/upload.config');
 const { validateDocumentId } = require('./metadataValidator');
 const { versionIncrementExpression } = require('./versionService');
 
@@ -480,7 +477,7 @@ async function deleteFile(req, res, next) {
 
 /**
  * GET /api/repository/files/:documentId/content
- * Stream raw file content (inline preview).
+ * Redirect to a short-lived signed Supabase Storage URL for inline preview.
  */
 async function streamFileContent(req, res, next) {
   try {
@@ -503,49 +500,8 @@ async function streamFileContent(req, res, next) {
       });
     }
 
-    const uploadBaseDir = path.resolve(uploadConfig.UPLOAD_BASE_DIR);
-    const fullPath = path.resolve(uploadBaseDir, document.file_path);
-    if (!fullPath.startsWith(uploadBaseDir)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid file path',
-        code: 'INVALID_PATH',
-      });
-    }
-
-    const fileInfo = await uploadService.getFileInfo(document.file_path);
-    if (!fileInfo.success || !fileInfo.data?.exists) {
-      return res.status(404).json({
-        success: false,
-        error: 'File content not found on disk',
-        code: 'FILE_NOT_FOUND',
-      });
-    }
-
-    const extension = String(document.format || '').toLowerCase();
-    const mimeTypeByExtension = {
-      pdf: 'application/pdf',
-      doc: 'application/msword',
-      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      ppt: 'application/vnd.ms-powerpoint',
-      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      txt: 'text/plain; charset=utf-8',
-      png: 'image/png',
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      webp: 'image/webp',
-      mp4: 'video/mp4',
-    };
-
-    const contentType = mimeTypeByExtension[extension] || 'application/octet-stream';
-
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Length', fileInfo.data.size);
-    res.setHeader('Content-Disposition', `inline; filename="${path.basename(document.file_path)}"`);
-
-    const stream = fs.createReadStream(fullPath);
-    stream.on('error', (error) => next(error));
-    stream.pipe(res);
+    const signedUrl = await uploadService.getSignedUrl(document.file_path, 120);
+    return res.redirect(302, signedUrl);
   } catch (error) {
     return next(error);
   }

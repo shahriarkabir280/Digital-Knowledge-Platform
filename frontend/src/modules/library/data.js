@@ -1,4 +1,7 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
+// Library demo/static data.
+// pdfUrl fields that previously pointed to local /uploads/... paths have been
+// removed — files are now stored in Supabase Storage and served via signed URLs
+// through the /api/repository/files/:id/content endpoint.
 
 export const FEATURED_RESOURCES = [
   {
@@ -8,7 +11,7 @@ export const FEATURED_RESOURCES = [
     department: 'CSE',
     course: 'CSE-412',
     type: 'PDF',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/DataMining_3rdEd_1776326444593_87fed002.pdf`,
+    pdfUrl: null,
     year: 2026,
     tags: ['distributed', 'consensus', 'lecture'],
     rating: 4.8,
@@ -29,7 +32,7 @@ export const FEATURED_RESOURCES = [
     department: 'CSE',
     course: 'CSE-405',
     type: 'PPT',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/Lab_05_1776303675377_cfbb2ea2.pdf`,
+    pdfUrl: null,
     year: 2025,
     tags: ['compiler', 'optimization', 'ir'],
     rating: 4.5,
@@ -39,8 +42,7 @@ export const FEATURED_RESOURCES = [
     version: '2.1',
     summary:
       'Deck focused on SSA, data-flow optimization, and backend register allocation strategies.',
-    preview:
-      'Slide thumbnails and section notes are exposed in the quick preview.',
+    preview: 'Slide thumbnails and section notes are exposed in the quick preview.',
     updatedAt: '2026-02-22T10:40:00.000Z',
   },
   {
@@ -50,7 +52,7 @@ export const FEATURED_RESOURCES = [
     department: 'Interdisciplinary',
     course: 'RES-101',
     type: 'PDF',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/test-document_1776271850875_6f187849.pdf`,
+    pdfUrl: null,
     year: 2024,
     tags: ['research', 'citation', 'templates'],
     rating: 4.7,
@@ -60,8 +62,7 @@ export const FEATURED_RESOURCES = [
     version: '4.0',
     summary:
       'Templates and checklists for proposals, literature review matrices, and ethics compliance.',
-    preview:
-      'Includes sample chapters and citation styles in the inline document frame.',
+    preview: 'Includes sample chapters and citation styles in the inline document frame.',
     updatedAt: '2026-01-07T07:15:00.000Z',
   },
   {
@@ -71,7 +72,7 @@ export const FEATURED_RESOURCES = [
     department: 'Mathematics',
     course: 'MTH-207',
     type: 'PDF',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/test-document_1776271850875_6f187849.pdf`,
+    pdfUrl: null,
     year: 2023,
     tags: ['numerical', 'midterm', 'archive'],
     rating: 4.1,
@@ -95,7 +96,7 @@ export const RESOURCE_ITEMS = [
     course: 'CSE-321',
     type: 'Project',
     youtubeId: 'Wk4tXd9aPzs',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/Lab_05_1776303675377_cfbb2ea2.pdf`,
+    pdfUrl: null,
     year: 2025,
     tags: ['react', 'frontend', 'web'],
     rating: 4.2,
@@ -105,7 +106,7 @@ export const RESOURCE_ITEMS = [
     version: '1.3',
     summary: 'Weekly problem set with solved examples and schema design critiques.',
     preview: 'Contains a one-page question sampler and marking rubric.',
-    readme: `# Modern Web Engineering Tutorial\n\n### 🚀 Accelerate your Frontend Journey\nThis comprehensive tutorial covers the transition from legacy frontend patterns to modern, high-performance React architectures using Vite and Oxc.\n\n## 🛠 Tech Stack\n- **Framework:** React 18 (Concurrent Mode)\n- **Build Tool:** Vite\n- **State:** Context API + Custom Hooks\n- **Styling:** CSS Modules\n\n## 📋 Topics Covered\n- **Atomic Component Design:** Structuring reusable UI units.\n- **Performance Budgeting:** Managing bundle size and render cycles.\n- **Modern Fetching:** Implementing stale-while-revalidate patterns.\n\n## 💻 How to Run\n1. **Environment Setup:** Ensure you have Node.js 18+ installed.\n2. **Installation:** \`npm install\`\n3. **Development:** \`npm run dev\`\n4. **Production Build:** \`npm run build\`\n\n## 📖 Resources Used\n- React DevTools\n- Lighthouse Performance Audits\n- Chrome Memory Profiler`,
+    readme: `# Modern Web Engineering Tutorial\n\n### 🚀 Accelerate your Frontend Journey\nThis comprehensive tutorial covers the transition from legacy frontend patterns to modern, high-performance React architectures using Vite and Oxc.\n\n## 🛠 Tech Stack\n- **Framework:** React 18 (Concurrent Mode)\n- **Build Tool:** Vite\n- **State:** Context API + Custom Hooks\n- **Styling:** CSS Modules\n\n## 📋 Topics Covered\n- **Atomic Component Design:** Structuring reusable UI units.\n- **Performance Budgeting:** Managing bundle size and render cycles.\n- **Modern Fetching:** Implementing stale-while-revalidate patterns.\n\n## 💻 How to Run\n1. **Environment Setup:** Ensure you have Node.js 18+ installed.\n2. **Installation:** \`npm install\`\n3. **Development:** \`npm run dev\`\n4. **Production Build:** \`npm run build\``,
     updatedAt: '2026-02-11T10:02:00.000Z',
   },
   {
@@ -116,7 +117,7 @@ export const RESOURCE_ITEMS = [
     course: 'CSE-371',
     type: 'Video',
     youtubeId: 'v9ejT8FO-7I',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/Sami_Ibrahim_GLEMATO_Paper_Elsevier_Version_1776301951019_dca9591d.pdf`,
+    pdfUrl: null,
     year: 2024,
     tags: ['design-patterns', 'clean-code', 'architecture'],
     rating: 4.4,
@@ -136,7 +137,7 @@ export const RESOURCE_ITEMS = [
     course: 'PHY-201',
     type: 'Video',
     youtubeId: 'ZwqLCX-TN8c',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/Hashing_1776965915293_3bc1270e.pdf`,
+    pdfUrl: null,
     year: 2026,
     tags: ['physics', 'lab-safety', 'tutorial'],
     rating: 4.6,
@@ -155,7 +156,7 @@ export const RESOURCE_ITEMS = [
     department: 'CSE',
     course: 'CSE-419',
     type: 'PPT',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/DataMining_3rdEd_1776326444593_87fed002.pdf`,
+    pdfUrl: null,
     year: 2025,
     tags: ['security', 'workshop', 'slides'],
     rating: 4.8,
@@ -194,7 +195,7 @@ export const RESOURCE_ITEMS = [
     department: 'Physics',
     course: 'PHY-402',
     type: 'PDF',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/DataMining_3rdEd_1776326444593_87fed002.pdf`,
+    pdfUrl: null,
     year: 2026,
     tags: ['quantum', 'computing', 'textbook'],
     rating: 4.9,
@@ -213,7 +214,7 @@ export const RESOURCE_ITEMS = [
     department: 'CSE',
     course: 'CSE-421',
     type: 'PPT',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/Lab_05_1776303675377_cfbb2ea2.pdf`,
+    pdfUrl: null,
     year: 2025,
     tags: ['cloud', 'aws', 'slides'],
     rating: 4.6,
@@ -252,7 +253,7 @@ export const RESOURCE_ITEMS = [
     department: 'CSE',
     course: 'CSE-311',
     type: 'PDF',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/test-document_1776271850875_6f187849.pdf`,
+    pdfUrl: null,
     year: 2026,
     tags: ['graphics', 'opengl', 'lab'],
     rating: 4.3,
@@ -274,7 +275,7 @@ export const RESOURCE_ITEMS = [
     publicationDate: '2026-01-15',
     journal: 'IEEE Transactions on Geoscience',
     doi: '10.1109/TGRS.2026.1234567',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/Sami_Ibrahim_GLEMATO_Paper_Elsevier_Version_1776301951019_dca9591d.pdf`,
+    pdfUrl: null,
     tags: ['deep learning', 'remote sensing', 'SSL'],
     rating: 4.9,
     reviews: 88,
@@ -290,7 +291,7 @@ export const RESOURCE_ITEMS = [
     department: 'CSE',
     course: 'Thesis-400',
     type: 'Thesis',
-    pdfUrl: `${BACKEND_URL}/uploads/documents/Sami_Ibrahim_GLEMATO_Paper_Elsevier_Version_1776301951019_dca9591d.pdf`,
+    pdfUrl: null,
     tags: ['blockchain', 'healthcare', 'security'],
     rating: 4.7,
     reviews: 14,
@@ -328,7 +329,7 @@ export const RESOURCE_ITEMS = [
     type: 'Project',
     githubUrl: 'https://github.com/example/analytics-dashboard',
     youtubeId: 'wYpCWwD1oz0',
-    readme: `# Cloud-Native Analytics Dashboard\n\n### 📊 Enterprise Data Visualization at Scale\nA professional-grade analytics engine designed for high-throughput microservices environments. Features real-time telemetry and predictive analytics overlays.\n\n## 🌟 Core Features\n- **Real-time Monitoring:** Live WebSocket integration with sub-50ms latency.\n- **Predictive Analytics:** Built-in ML models for trend forecasting.\n- **Responsive UI:** Adaptive layouts for mobile, tablet, and ultra-wide displays.\n- **Security:** RBAC (Role-Based Access Control) with OAuth2 integration.\n\n## 🏗 Architecture\n- **Frontend:** React + TypeScript + D3.js\n- **Backend:** Node.js Microservices\n- **Orchestration:** Kubernetes (Helm Charts included)\n- **Database:** TimescaleDB (PostgreSQL for Time-series)\n\n## 🚦 Getting Started\n1. **Prerequisites:** Install Docker Desktop and enable Kubernetes.\n2. **Cluster Setup:** \`helm install analytics-engine ./charts\`\n3. **Local Dev:** \`npm run dev\` inside the \`/client\` directory.\n\n## 📦 Deployment\n\`\`\`bash\n# Build containers\ndocker-compose build\n\n# Push to registry\ndocker-compose push\n\n# Deploy to production\nkubectl apply -f k8s/\n\`\`\``,
+    readme: `# Cloud-Native Analytics Dashboard\n\n### 📊 Enterprise Data Visualization at Scale\nA professional-grade analytics engine designed for high-throughput microservices environments.\n\n## 🌟 Core Features\n- **Real-time Monitoring:** Live WebSocket integration with sub-50ms latency.\n- **Predictive Analytics:** Built-in ML models for trend forecasting.\n- **Security:** RBAC with OAuth2 integration.\n\n## 🏗 Architecture\n- **Frontend:** React + TypeScript + D3.js\n- **Backend:** Node.js Microservices\n- **Orchestration:** Kubernetes (Helm Charts included)\n- **Database:** TimescaleDB`,
     tags: ['react', 'node', 'kubernetes'],
     rating: 4.9,
     reviews: 124,
@@ -347,8 +348,8 @@ export const RESOURCE_ITEMS = [
     course: 'PRJ-402',
     type: 'Project',
     githubUrl: 'https://github.com/example/auth-service',
-    youtubeId: null, // Only GitHub + README
-    readme: `# Distributed Auth Service\n\n### 🔐 Secure Identity Management for Microservices\nA gRPC-based authentication and authorization authority designed for high-availability distributed systems. Optimized for low-latency session verification.\n\n## 🛡 Security Specifications\n- **gRPC mTLS:** Mutual TLS for inter-service communication.\n- **JWT Rotation:** Short-lived tokens with secure refresh logic.\n- **Rate Limiting:** IP-based and user-based throttling using Redis.\n- **Argon2 Hashing:** Industry-standard password derivation.\n\n## ⚙️ Technical Specifications\n- **Language:** Go 1.21+\n- **Storage:** PostgreSQL (User data) + Redis (Session/Cache)\n- **Communication:** gRPC + Protobuf v3\n- **Observability:** Prometheus metrics + Jaeger tracing\n\n## 🛠 Quick Start\n1. **Configuration:** Copy \`config.example.yaml\` to \`config.yaml\` and update secrets.\n2. **Dependencies:** \`go mod download\`\n3. **Database Migration:** \`migrate -path ./migrations up\`\n4. **Run Server:** \`go run cmd/auth-server/main.go\`\n\n## 🧪 Running Tests\n\`\`\`bash\ngo test ./internal/... -v -race\n\`\`\``,
+    youtubeId: null,
+    readme: `# Distributed Auth Service\n\n### 🔐 Secure Identity Management for Microservices\nA gRPC-based authentication authority for high-availability distributed systems.\n\n## 🛡 Security Specifications\n- **gRPC mTLS:** Mutual TLS for inter-service communication.\n- **JWT Rotation:** Short-lived tokens with secure refresh logic.\n- **Argon2 Hashing:** Industry-standard password derivation.\n\n## ⚙️ Technical Specifications\n- **Language:** Go 1.21+\n- **Storage:** PostgreSQL + Redis\n- **Communication:** gRPC + Protobuf v3`,
     tags: ['go', 'grpc', 'redis'],
     rating: 4.8,
     reviews: 45,
@@ -366,9 +367,9 @@ export const RESOURCE_ITEMS = [
     department: 'Physics',
     course: 'PRJ-403',
     type: 'Project',
-    githubUrl: null, // Only Video + README
+    githubUrl: null,
     youtubeId: 'tLsi2DeUsak',
-    readme: `# Interactive Physics Simulation\n\nA real-time particle simulation demonstrating fluid dynamics and collision detection.\n\n## Technical Implementation\n- Canvas API\n- Verlet integration\n- Spatial partitioning for O(n log n) collisions\n\n## Controls\n- Drag mouse to interact\n- Space to reset`,
+    readme: `# Interactive Physics Simulation\n\nA real-time particle simulation demonstrating fluid dynamics and collision detection.\n\n## Technical Implementation\n- Canvas API\n- Verlet integration\n- Spatial partitioning for O(n log n) collisions`,
     tags: ['javascript', 'simulation', 'physics'],
     rating: 4.7,
     reviews: 32,

@@ -348,7 +348,7 @@ export default function LibraryPage() {
         </form>
       </section>
 
-      <section className="library-dashboard">
+      <section className="library-dashboard" style={{ gridTemplateColumns: '1fr' }}>
 
 
         <div className="library-panel">

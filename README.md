@@ -22,7 +22,7 @@ A modern Digital Knowledge Platform for creating, organizing, and sharing academ
 - Node.js 20+ (LTS recommended)
 - npm 10+
 - Git
-- Docker Desktop (for local PostgreSQL)
+- Supabase account (https://supabase.com)
 
 Check versions:
 
@@ -99,31 +99,26 @@ cd backend
 cp .env.example .env
 ```
 
-3. Install dependencies:
+3. Get Supabase connection string:
+   - Go to https://supabase.com/dashboard
+   - Select your project
+   - Go to Settings → Database
+   - Copy the connection string under "JDBC" or "PostgreSQL"
+   - Paste into `backend/.env` as `DATABASE_URL`
+
+4. Install dependencies:
 
 ```bash
 npm install
 ```
 
-4. Run database migration (first time or after schema changes):
-
-```bash
-npm run db:migrate
-```
-
-5. (Optional) Seed local development data:
-
-```bash
-npm run db:seed
-```
-
-6. Run backend in development mode:
+5. Run backend in development mode:
 
 ```bash
 npm run dev
 ```
 
-7. Verify backend is running:
+6. Verify backend is running:
 
 ```text
 http://localhost:3000/health
@@ -152,38 +147,13 @@ npm run dev
 
 Note: You can now run `npm run dev` from the repo root, or run `npm run dev` separately from `frontend` and `backend` folders.
 
-## Database Setup (PostgreSQL + Docker)
+## Database Setup (Supabase)
 
-1. Start PostgreSQL service:
-
-```bash
-docker compose up -d db
-```
-
-2. Verify service status:
-
-```bash
-docker compose ps
-```
-
-3. Run backend DB smoke check:
-
-```bash
-cd backend
-npm run db:smoke
-```
-
-4. Roll back latest migration (if needed):
-
-```bash
-npm run db:rollback
-```
-
-5. Re-apply migrations:
-
-```bash
-npm run db:migrate
-```
+1. Create a Supabase project at https://supabase.com
+2. Go to Project Settings → Database
+3. Copy the connection string (PostgreSQL URI)
+4. Paste it into `backend/.env` as `DATABASE_URL`
+5. The backend will automatically connect on startup
 
 ## Useful Commands (Frontend)
 
@@ -212,11 +182,11 @@ npm install
 ## Current Status
 
 - Frontend scaffold is ready and runnable.
-- Backend API is runnable with PostgreSQL connectivity.
-- Core database migrations and seed flow are in place.
+- Backend API is runnable with Supabase connectivity.
+- Core database functionality is in place.
 
 ## Local Run and Deploy Note
 
 - Local development currently runs with two terminals (`frontend` and `backend`) using `npm run dev`.
-- PostgreSQL local service is available through `docker-compose.yml`.
-- A Docker scaffold path is prepared at `docker/compose/nginx/monitoring` for future deployment work.
+- Database is managed by Supabase - no local Docker services needed.
+- Simple, clean setup focused on Supabase.

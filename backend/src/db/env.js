@@ -2,12 +2,10 @@ const { z } = require("zod");
 
 const envSchema = z.object({
   BACKEND_PORT: z.coerce.number().int().positive().default(3000),
-  DB_HOST: z.string().min(1),
-  DB_PORT: z.coerce.number().int().positive().default(5432),
-  DB_NAME: z.string().min(1),
-  DB_USER: z.string().min(1),
-  DB_PASSWORD: z.string().min(1),
-  DB_SSL: z.enum(["true", "false"]).optional().default("false"),
+  DATABASE_URL: z.string(),
+  SUPABASE_URL: z.string().optional(),
+  SUPABASE_ANON_KEY: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 });
 
 function parseEnv(source = process.env) {
@@ -24,19 +22,42 @@ function parseEnv(source = process.env) {
   return result.data;
 }
 
+/**
+ * Parse PostgreSQL connection string (URI format)
+ * Format: postgresql://user:password@host:port/database?options
+ */
+function parseConnectionString(connectionString) {
+  try {
+    const url = new URL(connectionString);
+    // Supabase direct connections always require SSL; also honour ?sslmode=require
+    const isSupabase = url.hostname.includes("supabase.co") || url.hostname.includes("supabase.com");
+    const sslRequired = isSupabase || url.searchParams.get("sslmode") === "require";
+    return {
+      host: url.hostname,
+      port: url.port ? parseInt(url.port, 10) : 5432,
+      database: url.pathname.slice(1).split("?")[0], // strip any query params from db name
+      user: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password),
+      ssl: sslRequired ? { rejectUnauthorized: false } : false,
+    };
+  } catch (error) {
+    throw new Error(`Invalid DATABASE_URL format: ${error.message}`);
+  }
+}
+
 function createConfig(source = process.env) {
   const env = parseEnv(source);
 
+  if (!env.DATABASE_URL) {
+    throw new Error("DATABASE_URL environment variable is required and must point to your Supabase database");
+  }
+
+  console.log("📡 Using Supabase database via DATABASE_URL");
+  const connection = parseConnectionString(env.DATABASE_URL);
+
   return {
     client: "pg",
-    connection: {
-      host: env.DB_HOST,
-      port: env.DB_PORT,
-      database: env.DB_NAME,
-      user: env.DB_USER,
-      password: env.DB_PASSWORD,
-      ssl: env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
-    },
+    connection,
     migrations: {
       directory: "./src/db/migrations",
       extension: "js",
@@ -52,7 +73,19 @@ function createConfig(source = process.env) {
   };
 }
 
+function getSupabaseConfig(source = process.env) {
+  const env = parseEnv(source);
+
+  return {
+    url: env.SUPABASE_URL || "",
+    anonKey: env.SUPABASE_ANON_KEY || "",
+    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY || "",
+  };
+}
+
 module.exports = {
   parseEnv,
   createConfig,
+  parseConnectionString,
+  getSupabaseConfig,
 };

@@ -1,30 +1,22 @@
 # Backend Setup
 
-This backend uses PostgreSQL with Knex for query access and migrations.
+This backend uses Supabase (PostgreSQL) with Knex for query access.
 
 ## Prerequisites
 
 - Node.js 20+
 - npm 10+
-- Docker and Docker Compose
+- Supabase account (https://supabase.com)
 
-## Local Database
+## Supabase Setup
 
-Start PostgreSQL:
+1. Create a new project in Supabase
+2. Get your database connection string from: Project Settings → Database
+3. Copy it to `backend/.env` as `DATABASE_URL`
 
-```bash
-docker compose up -d db
+Example:
 ```
-
-The default database settings come from `backend/.env.example`:
-
-```text
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=dkp
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_SSL=false
+DATABASE_URL=postgresql://postgres:your_password@db.your_project.supabase.co:5432/postgres
 ```
 
 ## Install Dependencies
@@ -32,15 +24,6 @@ DB_SSL=false
 ```bash
 cd backend
 npm install
-```
-
-## Migration Commands
-
-```bash
-npm run db:migrate
-npm run db:rollback
-npm run db:seed
-npm run db:smoke
 ```
 
 ## Run the Backend

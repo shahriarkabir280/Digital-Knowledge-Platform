@@ -1,34 +1,51 @@
 :root {
-  --canvas: #ffffff;
-  --paper: #ffffff;
-  --ink: #09090b;
-  --muted: #71717a;
-  --line: #e4e4e7;
-  --accent: #18181b;
-  --accent-soft: #f4f4f5;
-  --accent-strong: #09090b;
-  --warning: #a16207;
-  --radius: 14px;
-  --shadow: 0 18px 45px -28px rgba(9, 9, 11, 0.25);
+  /* ── Brand palette ─────────────────────────────────────────────────── */
+  --brand-50:  #eef7f8;
+  --brand-100: #d4ecee;
+  --brand-200: #a9d9dd;
+  --brand-300: #72bfc6;
+  --brand-400: #3ea0aa;
+  --brand-500: #1e8a96;   /* primary */
+  --brand-600: #176e79;
+  --brand-700: #135660;
+  --brand-800: #0f4049;
+  --brand-900: #0b2e35;
 
-  /* shadcn-style semantic tokens (HSL values only) */
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 240 10% 3.9%;
+  /* ── Surface tokens ────────────────────────────────────────────────── */
+  --canvas:        #f8fafc;
+  --paper:         #ffffff;
+  --ink:           #0d1b2a;
+  --muted:         #64748b;
+  --line:          #e2e8f0;
+  --accent:        #1e8a96;
+  --accent-bg:     #eef7f8;
+  --accent-soft:   #d4ecee;
+  --accent-strong: #135660;
+  --accent-border: #72bfc6;
+  --warning:       #b45309;
+  --radius:        14px;
+  --shadow:        0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -2px rgba(0,0,0,.05);
+  --shadow-md:     0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.05);
+  --shadow-lg:     0 20px 25px -5px rgba(0,0,0,.08), 0 8px 10px -6px rgba(0,0,0,.04);
+
+  /* ── shadcn / Tailwind semantic tokens (HSL) ───────────────────────── */
+  --background:            210 40% 98%;
+  --foreground:            215 28% 10%;
+  --card:                  0 0% 100%;
+  --card-foreground:       215 28% 10%;
+  --popover:               0 0% 100%;
+  --popover-foreground:    215 28% 10%;
+  --primary:               187 67% 35%;   /* brand-500 in HSL */
+  --primary-foreground:    0 0% 100%;
+  --secondary:             210 40% 96%;
+  --secondary-foreground:  215 28% 10%;
+  --muted:                 210 40% 96%;
+  --muted-foreground:      215 16% 47%;
+  --accent:                187 67% 35%;
+  --accent-foreground:     0 0% 100%;
+  --destructive:           0 84% 60%;
+  --destructive-foreground:0 0% 100%;
+  --border:                214 32% 91%;
+  --input:                 214 32% 91%;
+  --ring:                  187 67% 35%;
 }

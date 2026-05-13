@@ -171,47 +171,33 @@ export default function StudentProjectShowcasePage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-border">
-        <button
-          onClick={() => setActiveTab('browse')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            activeTab === 'browse'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Browse Projects
-        </button>
-        <button
-          onClick={() => setActiveTab('myprojects')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            activeTab === 'myprojects'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          My Projects
-        </button>
-        <button
-          onClick={() => setActiveTab('submit')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            activeTab === 'submit'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Submit Project
-        </button>
-        <button
-          onClick={() => setActiveTab('achievements')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            activeTab === 'achievements'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Achievements
-        </button>
+      <div className="flex flex-wrap gap-1 border-b border-border pb-0">
+        {[
+          { id: 'browse',       label: 'Browse Projects' },
+          { id: 'myprojects',   label: 'My Projects' },
+          { id: 'submit',       label: 'Submit Project' },
+          { id: 'achievements', label: 'Achievements' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '10px 16px',
+              fontSize: '.875rem',
+              fontWeight: activeTab === tab.id ? 700 : 500,
+              color: activeTab === tab.id ? 'var(--accent-strong)' : 'var(--muted)',
+              borderBottom: activeTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
+              cursor: 'pointer',
+              transition: 'color .12s',
+              marginBottom: '-1px',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Browse Projects Tab */}
@@ -388,7 +374,7 @@ export default function StudentProjectShowcasePage() {
                   placeholder="Describe your project, its goals, and achievements..."
                   rows={6}
                   required
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
+                  className="submission-textarea"
                 />
               </div>
 
@@ -547,7 +533,7 @@ export default function StudentProjectShowcasePage() {
                   onChange={(e) => setReviewText(e.target.value)}
                   placeholder="Share constructive feedback on this project..."
                   rows={4}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="submission-textarea"
                 />
               </div>
 

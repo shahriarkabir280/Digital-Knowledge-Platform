@@ -458,7 +458,7 @@ export default function SubmissionWizardPage() {
       {message ? <Alert variant="success">{message}</Alert> : null}
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="rounded-2xl border border-border bg-card shadow-sm">
           {currentStep === 1 ? (
             <section className="p-4 sm:p-6">
@@ -571,7 +571,7 @@ export default function SubmissionWizardPage() {
                       value={form.abstract}
                       onChange={handleFieldChange}
                       placeholder="Write a short summary of the document"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
+                      className="submission-textarea w-full"
                     />
                   </div>
 

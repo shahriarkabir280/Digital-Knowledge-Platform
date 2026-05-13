@@ -1,65 +1,65 @@
 .drag-drop-zone {
-  border: 2px dashed var(--line);
-  border-radius: var(--radius);
-  background: var(--paper);
-  padding: 48px 24px;
+  border: 2px dashed hsl(var(--border));
+  border-radius: 14px;
+  background: #fafcff;
+  padding: clamp(24px, 5vw, 48px) 20px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: border-color .2s ease, background .2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 240px;
+  min-height: 180px;
 }
 
 .drag-drop-zone:hover:not(.disabled) {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--accent-bg);
 }
 
 .drag-drop-zone.dragging {
   border-color: var(--accent);
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 2px var(--accent);
+  background: var(--accent-bg);
+  box-shadow: inset 0 0 0 2px var(--accent-soft);
 }
 
 .drag-drop-zone.disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  background: var(--canvas);
+  background: hsl(var(--muted));
 }
 
 .drag-drop-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .drag-drop-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   color: var(--accent);
   flex-shrink: 0;
 }
 
-.drag-drop-zone.disabled .drag-drop-icon {
-  color: var(--muted);
-}
-
-.drag-drop-text {
-  margin: 0;
-}
+.drag-drop-zone.disabled .drag-drop-icon { color: var(--muted); }
 
 .drag-drop-title {
-  font-size: 16px;
+  font-size: .95rem;
   font-weight: 600;
   color: var(--ink);
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
 }
 
 .drag-drop-hint {
-  font-size: 13px;
+  font-size: .8rem;
   color: var(--muted);
   margin: 0;
+}
+
+@media (max-width: 640px) {
+  .drag-drop-zone { min-height: 140px; padding: 20px 16px; }
+  .drag-drop-icon { width: 32px; height: 32px; }
+  .drag-drop-title { font-size: .875rem; }
 }

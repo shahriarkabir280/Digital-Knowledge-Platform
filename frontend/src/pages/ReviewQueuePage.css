@@ -1,0 +1,96 @@
+.review-queue-page { max-width: 980px; }
+
+.review-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.review-filters select { min-width: 180px; }
+
+.review-list { display: grid; gap: 10px; }
+
+.review-card {
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: #fff;
+  padding: 16px 18px;
+  display: grid;
+  gap: 10px;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+
+.review-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 4px 16px rgba(30,138,150,.08);
+}
+
+.review-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-card-head h3 { font-size: 1rem; color: var(--ink); font-weight: 600; }
+
+.title-link-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.title-link-btn:hover,
+.title-link-btn:focus-visible { text-decoration: underline; }
+
+.review-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: .875rem;
+}
+
+.review-time { color: var(--muted); font-size: .85rem; }
+
+.review-metadata {
+  border-top: 1px solid hsl(var(--border));
+  padding-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.review-metadata p { margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
+.review-metadata strong { color: var(--ink); }
+
+.review-actions {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-audit {
+  border-top: 1px dashed hsl(var(--border));
+  padding-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.review-audit p { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.45; }
+.review-audit p strong { color: var(--ink); }
+.review-audit-empty { font-style: italic; }
+
+@media (max-width: 640px) {
+  .review-filters { flex-direction: column; align-items: stretch; }
+  .review-filters select, .review-filters button { width: 100%; }
+  .review-card-head { flex-direction: column; align-items: flex-start; }
+}

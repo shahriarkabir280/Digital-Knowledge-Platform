@@ -14,7 +14,7 @@ services:
     build: ./frontend
     container_name: dkp-frontend
     ports:
-      - "80:80"
+      - "8089:80"
     depends_on:
       - backend
     restart: always

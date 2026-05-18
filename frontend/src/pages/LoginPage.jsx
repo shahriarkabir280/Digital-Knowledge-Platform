@@ -167,7 +167,7 @@ export default function LoginPage() {
             </div>
 
             <Button type="button" variant="outline" size="lg" onClick={onDemoLogin} style={{ height: '44px', fontSize: '.95rem' }}>
-              Continue with Demo Account
+              ASHRAFUL LOGIN
             </Button>
           </form>
 

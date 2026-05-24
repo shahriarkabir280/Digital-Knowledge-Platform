@@ -17,6 +17,8 @@ export const ALL_AUTH_ROLES = [
   ROLES.REVIEWER,
 ]
 
+export const LIBRARIAN_ROLES = [ROLES.STAFF, ROLES.LAB_MANAGER, ROLES.ADMIN]
+
 export const ROUTE_ACCESS = Object.freeze({
   home: ALL_AUTH_ROLES,
   dashboard: ALL_AUTH_ROLES,
@@ -29,6 +31,18 @@ export const ROUTE_ACCESS = Object.freeze({
   librarySettings: ALL_AUTH_ROLES,
   libraryProfile: ALL_AUTH_ROLES,
   libraryAnalytics: [ROLES.ADMIN, ROLES.STAFF, ROLES.LAB_MANAGER],
+  librarianHub: LIBRARIAN_ROLES,
+  libraryCatalogSearch: LIBRARIAN_ROLES,
+  libraryCirculation: LIBRARIAN_ROLES,
+  libraryDueTracking: LIBRARIAN_ROLES,
+  libraryFines: LIBRARIAN_ROLES,
+  libraryHolds: LIBRARIAN_ROLES,
+  libraryWishlist: LIBRARIAN_ROLES,
+  libraryHistory: LIBRARIAN_ROLES,
+  libraryScan: LIBRARIAN_ROLES,
+  libraryCatalogCrud: LIBRARIAN_ROLES,
+  libraryBulkImport: LIBRARIAN_ROLES,
+  libraryReports: LIBRARIAN_ROLES,
   search: ALL_AUTH_ROLES,
   viewer: ALL_AUTH_ROLES,
   studentProjectShowcase: ALL_AUTH_ROLES,

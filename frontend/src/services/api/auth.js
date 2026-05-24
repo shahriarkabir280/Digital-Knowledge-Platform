@@ -93,11 +93,12 @@ export async function registerRequest({ name, email, password }) {
 }
 
 export function createDemoSession(identifier) {
+  const inferredRole = inferRoleFromIdentifier(identifier || '')
   return {
     token: `demo-token-${Date.now()}`,
     user: {
-      name: identifier || 'Demo User',
-      role: inferRoleFromIdentifier(identifier || ''),
+      name: 'Guest',
+      role: inferredRole,
     },
     expiresAt: null,
   }

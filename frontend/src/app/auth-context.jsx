@@ -7,12 +7,32 @@ import {
   saveAuthSession,
 } from './auth-session.js'
 
+function isSessionExpired(expiresAt) {
+  if (!expiresAt) return false
+
+  const now = Date.now()
+
+  if (typeof expiresAt === 'number') {
+    const msValue = expiresAt < 1e12 ? expiresAt * 1000 : expiresAt
+    return msValue <= now
+  }
+
+  const parsed = Date.parse(expiresAt)
+  if (Number.isNaN(parsed)) return false
+
+  return parsed <= now
+}
+
 export function AuthProvider({ children }) {
   const [authState, setAuthState] = useState(() => {
     const stored = loadAuthSession()
     const token = stored?.token || ''
 
-    if (!stored || !token) {
+    if (!stored || !token || isSessionExpired(stored.expiresAt)) {
+      if (stored && isSessionExpired(stored.expiresAt)) {
+        clearAuthSession()
+      }
+
       return {
         isAuthenticated: false,
         role: ROLES.GUEST,

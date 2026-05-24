@@ -35,6 +35,12 @@ const staffCards = [
     to: '/library',
     tone: 'teal',
   },
+  {
+    title: 'Librarian Hub',
+    description: 'Run catalog, circulation, due tracking, and reporting workflows.',
+    to: '/library/librarian',
+    tone: 'ink',
+  },
 ]
 
 export default function StaffDashboardPage() {

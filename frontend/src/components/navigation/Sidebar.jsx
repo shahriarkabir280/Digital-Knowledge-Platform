@@ -14,6 +14,16 @@ import {
   GraduationCap,
   Eye,
   FilePlus,
+  ClipboardList,
+  Repeat,
+  Clock,
+  DollarSign,
+  BookmarkCheck,
+  Heart,
+  History,
+  ScanLine,
+  FolderPlus,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { useAuth } from '../../app/use-auth.js'
 import { navItems } from './nav-config.js'
@@ -33,6 +43,16 @@ const iconMap = {
   GraduationCap,
   Eye,
   FilePlus,
+  ClipboardList,
+  Repeat,
+  Clock,
+  DollarSign,
+  BookmarkCheck,
+  Heart,
+  History,
+  ScanLine,
+  FolderPlus,
+  FileSpreadsheet,
 }
 
 // Fallback icons for items without an iconName

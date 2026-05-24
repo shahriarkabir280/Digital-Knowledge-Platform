@@ -12,6 +12,18 @@ import LibraryResourceDetailsPage from '../pages/LibraryResourceDetailsPage.jsx'
 import LibrarySettingsPage from '../pages/LibrarySettingsPage.jsx'
 import LibraryUploadPage from '../pages/LibraryUploadPage.jsx'
 import LibraryAnalyticsPage from '../pages/LibraryAnalyticsPage.jsx'
+import LibraryLibrarianDashboardPage from '../pages/LibraryLibrarianDashboardPage.jsx'
+import LibraryCatalogSearchPage from '../pages/LibraryCatalogSearchPage.jsx'
+import LibraryCirculationPage from '../pages/LibraryCirculationPage.jsx'
+import LibraryDueTrackingPage from '../pages/LibraryDueTrackingPage.jsx'
+import LibraryFineManagementPage from '../pages/LibraryFineManagementPage.jsx'
+import LibraryHoldRequestsPage from '../pages/LibraryHoldRequestsPage.jsx'
+import LibraryWishlistPage from '../pages/LibraryWishlistPage.jsx'
+import LibraryBorrowingHistoryPage from '../pages/LibraryBorrowingHistoryPage.jsx'
+import LibraryScanPage from '../pages/LibraryScanPage.jsx'
+import LibraryCatalogCrudPage from '../pages/LibraryCatalogCrudPage.jsx'
+import LibraryBulkImportPage from '../pages/LibraryBulkImportPage.jsx'
+import LibraryReportsPage from '../pages/LibraryReportsPage.jsx'
 import LoginPage from '../pages/LoginPage.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
 import NotificationsPage from '../pages/NotificationsPage.jsx'
@@ -147,6 +159,59 @@ export const appRouter = createBrowserRouter([
               {
                 path: '/library/analytics',
                 element: <LibraryAnalyticsPage />,
+              },
+            ],
+          },
+          {
+            element: <RoleRoute allowedRoles={ROUTE_ACCESS.librarianHub} />,
+            children: [
+              {
+                path: '/library/librarian',
+                element: <LibraryLibrarianDashboardPage />,
+              },
+              {
+                path: '/library/catalog',
+                element: <LibraryCatalogSearchPage />,
+              },
+              {
+                path: '/library/circulation',
+                element: <LibraryCirculationPage />,
+              },
+              {
+                path: '/library/due-tracking',
+                element: <LibraryDueTrackingPage />,
+              },
+              {
+                path: '/library/fines',
+                element: <LibraryFineManagementPage />,
+              },
+              {
+                path: '/library/holds',
+                element: <LibraryHoldRequestsPage />,
+              },
+              {
+                path: '/library/wishlist',
+                element: <LibraryWishlistPage />,
+              },
+              {
+                path: '/library/history',
+                element: <LibraryBorrowingHistoryPage />,
+              },
+              {
+                path: '/library/scan',
+                element: <LibraryScanPage />,
+              },
+              {
+                path: '/library/catalog-crud',
+                element: <LibraryCatalogCrudPage />,
+              },
+              {
+                path: '/library/bulk-import',
+                element: <LibraryBulkImportPage />,
+              },
+              {
+                path: '/library/reports',
+                element: <LibraryReportsPage />,
               },
             ],
           },

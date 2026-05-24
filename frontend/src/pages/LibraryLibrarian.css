@@ -1,0 +1,136 @@
+.librarian-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.librarian-card {
+  border: 1px solid #dbe6ee;
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+  display: grid;
+  gap: 8px;
+}
+
+.librarian-card h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  color: #1d3445;
+}
+
+.librarian-card p {
+  margin: 0;
+  color: #546b7c;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.librarian-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.librarian-pill.is-available { background: #e8f7ee; color: #1a6c3a; }
+.librarian-pill.is-checked-out { background: #fff4d6; color: #8b5a00; }
+.librarian-pill.is-overdue { background: #ffe4e3; color: #9b1c1c; }
+.librarian-pill.is-on-hold { background: #e6efff; color: #1b4a9b; }
+.librarian-pill.is-returned { background: #eef2f7; color: #4f5d6b; }
+.librarian-pill.is-queued { background: #ede9fe; color: #5b21b6; }
+.librarian-pill.is-due-soon { background: #fff4d6; color: #8b5a00; }
+.librarian-pill.is-scheduled { background: #eef2f7; color: #4f5d6b; }
+.librarian-pill.is-unpaid { background: #ffe4e3; color: #9b1c1c; }
+.librarian-pill.is-paid { background: #e8f7ee; color: #1a6c3a; }
+.librarian-pill.is-waived { background: #eef2f7; color: #4f5d6b; }
+.librarian-pill.is-fulfilled { background: #e8f7ee; color: #1a6c3a; }
+.librarian-pill.is-cancelled { background: #eef2f7; color: #4f5d6b; }
+.librarian-pill.is-watching { background: #ede9fe; color: #5b21b6; }
+.librarian-pill.is-notified { background: #e6efff; color: #1b4a9b; }
+.librarian-pill.is-removed { background: #eef2f7; color: #4f5d6b; }
+
+.librarian-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.librarian-table th,
+.librarian-table td {
+  border-bottom: 1px solid #e3ecf3;
+  padding: 10px 8px;
+  text-align: left;
+  color: #2a3d4e;
+}
+
+.librarian-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #567188;
+}
+
+.librarian-table tr:last-child td {
+  border-bottom: none;
+}
+
+.librarian-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.librarian-form-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.librarian-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.librarian-summary-tile {
+  border: 1px solid #dbe6ee;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fbff;
+}
+
+.librarian-summary-tile strong {
+  display: block;
+  font-size: 1rem;
+  color: #1d3445;
+}
+
+.librarian-summary-tile span {
+  font-size: 0.75rem;
+  color: #5b7282;
+}
+
+.librarian-inline-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.librarian-help {
+  font-size: 0.8rem;
+  color: #607183;
+}
+
+.librarian-empty {
+  text-align: center;
+  padding: 24px;
+  color: #6b7f92;
+  font-size: 0.9rem;
+}

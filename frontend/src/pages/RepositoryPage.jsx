@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,8 @@ import {
 } from '../services/api/documents.js'
 
 export default function RepositoryPage() {
-  const { authState } = useAuth()
+  const { authState, logout } = useAuth()
+  const navigate = useNavigate()
   const [status, setStatus] = useState('loading')
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
@@ -24,7 +25,32 @@ export default function RepositoryPage() {
     type: '',
   })
 
+  const resolveRepositoryAccessError = () => {
+    if (!authState.token) {
+      return 'Sign in to view your uploads.'
+    }
+
+    if (authState.token.startsWith('demo-token-')) {
+      return 'Repository access is unavailable for demo accounts.'
+    }
+
+    return ''
+  }
+
+  const isAuthTokenError = (err) => {
+    const message = String(err?.message || '').toLowerCase()
+    return message.includes('invalid or expired') || message.includes('jwt')
+  }
+
   const loadItems = async (nextFilters = filters) => {
+    const accessError = resolveRepositoryAccessError()
+    if (accessError) {
+      setStatus('error')
+      setError(accessError)
+      setItems([])
+      return
+    }
+
     try {
       setStatus('loading')
       setError('')
@@ -33,6 +59,11 @@ export default function RepositoryPage() {
       setItems(uploads)
       setStatus(uploads.length ? 'success' : 'empty')
     } catch (err) {
+      if (isAuthTokenError(err)) {
+        logout()
+        navigate('/login', { replace: true })
+        return
+      }
       setStatus('error')
       setError(err.message || 'Request failed')
     }
@@ -40,7 +71,7 @@ export default function RepositoryPage() {
 
   useEffect(() => {
     loadItems()
-  }, [])
+  }, [authState.token])
 
   const onFilterChange = (event) => {
     const { name, value } = event.target
@@ -64,20 +95,42 @@ export default function RepositoryPage() {
   }
 
   const onOpenDocument = async (documentId) => {
+    const accessError = resolveRepositoryAccessError()
+    if (accessError) {
+      setError(accessError)
+      return
+    }
+
     try {
       setError('')
       await openDocumentInNewTab(documentId, authState.token)
     } catch (err) {
+      if (isAuthTokenError(err)) {
+        logout()
+        navigate('/login', { replace: true })
+        return
+      }
       setError(err.message || 'Failed to open document')
     }
   }
 
   const onSubmitForReview = async (documentId) => {
+    const accessError = resolveRepositoryAccessError()
+    if (accessError) {
+      setError(accessError)
+      return
+    }
+
     try {
       setError('')
       await patchDocumentState(documentId, 'review', authState.token)
       await loadItems(filters)
     } catch (err) {
+      if (isAuthTokenError(err)) {
+        logout()
+        navigate('/login', { replace: true })
+        return
+      }
       setError(err.message || 'Failed to move document to review')
     }
   }

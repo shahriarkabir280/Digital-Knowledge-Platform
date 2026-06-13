@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [authState, setAuthState] = useState(() => {
     const stored = loadAuthSession()
     const token = stored?.token || ''
+    const refreshToken = stored?.refreshToken || ''
 
     if (!stored || !token) {
       return {
@@ -18,6 +19,7 @@ export function AuthProvider({ children }) {
         role: ROLES.GUEST,
         name: '',
         token: '',
+        refreshToken: '',
         expiresAt: null,
       }
     }
@@ -27,16 +29,18 @@ export function AuthProvider({ children }) {
       role: normalizeRole(stored.role),
       name: stored.name || '',
       token,
+      refreshToken,
       expiresAt: stored.expiresAt || null,
     }
   })
 
-  const login = ({ role, name, token, expiresAt = null }) => {
+  const login = ({ role, name, token, refreshToken = '', expiresAt = null }) => {
     const next = {
       isAuthenticated: true,
       role: normalizeRole(role),
       name: name || 'Platform User',
       token,
+      refreshToken,
       expiresAt,
     }
     setAuthState(next)

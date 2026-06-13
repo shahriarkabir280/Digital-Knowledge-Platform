@@ -24,12 +24,6 @@ export const navItems = [
     roles: ROUTE_ACCESS.library,
   },
   {
-    to: '/library/upload',
-    label: 'Upload Assets',
-    iconName: 'UploadCloud',
-    roles: ROUTE_ACCESS.libraryUpload,
-  },
-  {
     to: '/library/bookmarks',
     label: 'My Favorites',
     iconName: 'Bookmark',

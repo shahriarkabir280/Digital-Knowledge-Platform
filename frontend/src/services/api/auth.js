@@ -55,6 +55,7 @@ export async function loginRequest({ identifier, password }) {
   }
 
   const token = extractToken(payload)
+  const refreshToken = payload?.refreshToken || payload?.data?.refreshToken || ''
   if (!token) {
     throw new Error('Login succeeded but token was not returned by API.')
   }
@@ -64,6 +65,7 @@ export async function loginRequest({ identifier, password }) {
 
   return {
     token,
+    refreshToken,
     user,
     expiresAt,
   }

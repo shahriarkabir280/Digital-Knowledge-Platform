@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+import { loadAuthSession, saveAuthSession } from '../../app/auth-session.js'
 
 async function parseResponseBody(response) {
   const contentType = response.headers.get('content-type') || ''
@@ -55,6 +56,49 @@ export async function apiRequest(path, options = {}) {
   })
 
   const parsedBody = await parseResponseBody(response)
+
+  // If unauthorized, try to refresh the token once using stored refreshToken
+  if (response.status === 401) {
+    const stored = loadAuthSession()
+    const refreshToken = stored?.refreshToken || ''
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        })
+
+        if (refreshRes.ok) {
+          const refreshed = await refreshRes.json()
+          const newToken = refreshed?.accessToken || refreshed?.token || ''
+          const newRefresh = refreshed?.refreshToken || ''
+          if (newToken) {
+            const nextSession = { ...(stored || {}), token: newToken, refreshToken: newRefresh }
+            saveAuthSession(nextSession)
+
+            // retry original request with new token
+            const retryResp = await fetch(`${API_BASE_URL}${path}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                ...(newToken ? { Authorization: `Bearer ${newToken}` } : {}),
+                ...(headers || {}),
+              },
+              ...restOptions,
+            })
+
+            const retryBody = await parseResponseBody(retryResp)
+            if (!retryResp.ok) {
+              throw new Error(extractErrorMessage(retryBody, retryResp.status))
+            }
+            return retryBody
+          }
+        }
+      } catch (err) {
+        // fallthrough to throw original error below
+      }
+    }
+  }
 
   if (!response.ok) {
     throw new Error(extractErrorMessage(parsedBody, response.status))

@@ -39,7 +39,7 @@ export default function LoginPage() {
     try {
       setIsSubmitting(true)
       const session = await loginRequest({ identifier: identifier.trim(), password })
-      login({ role: session.user.role, name: session.user.name, token: session.token, expiresAt: session.expiresAt })
+      login({ role: session.user.role, name: session.user.name, token: session.token, refreshToken: session.refreshToken, expiresAt: session.expiresAt })
       navigate(from || defaultRouteForRole(session.user.role), { replace: true })
     } catch (error) {
       setErrorMessage(error.message || 'Login failed. Please try again.')
@@ -50,7 +50,7 @@ export default function LoginPage() {
 
   const onDemoLogin = () => {
     const session = createDemoSession(identifier.trim())
-    login({ role: session.user.role, name: session.user.name, token: session.token, expiresAt: session.expiresAt })
+    login({ role: session.user.role, name: session.user.name, token: session.token, refreshToken: session.refreshToken, expiresAt: session.expiresAt })
     navigate(from || defaultRouteForRole(session.user.role), { replace: true })
   }
 

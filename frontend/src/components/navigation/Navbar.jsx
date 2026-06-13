@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, LogOut, User } from 'lucide-react'
+import { Bell, LogOut, User, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import cseduLogo from '@/assets/CSEDULOGO.png'
 import { useAuth } from '../../app/use-auth.js'
+import { useLayout } from '../../app/layout-context.jsx'
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -24,6 +25,7 @@ function resolveNotificationRoute(notification, role) {
 
 export default function Navbar() {
   const { authState, logout } = useAuth()
+  const { toggleMobileMenu } = useLayout()
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -84,11 +86,21 @@ export default function Navbar() {
 
   return (
     <header className="topbar">
+      {/* Mobile Hamburger toggle */}
+      <button
+        type="button"
+        className="hamburger-btn"
+        onClick={toggleMobileMenu}
+        aria-label="Toggle navigation menu"
+      >
+        <Menu size={20} strokeWidth={2} />
+      </button>
+
       {/* Brand */}
       <div className="brand-block">
         <img src={cseduLogo} alt="CSEDU Logo" className="brand-logo" />
         <div className="brand-copy">
-          <p className="brand-kicker">Digital Knowledge Platform</p>
+          <p className="brand-kicker brand-tagline">Digital Knowledge Platform</p>
           <h1>CSEDU</h1>
         </div>
       </div>
@@ -180,6 +192,7 @@ export default function Navbar() {
             onClick={onLogout}
             aria-label="Logout"
             title="Logout"
+            className="logout-btn-mobile"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -199,7 +212,7 @@ export default function Navbar() {
             onMouseLeave={e => { e.currentTarget.style.background = 'hsl(var(--card))'; e.currentTarget.style.color = 'var(--ink)'; e.currentTarget.style.borderColor = 'hsl(var(--border))' }}
           >
             <LogOut size={15} strokeWidth={2} />
-            <span>Logout</span>
+            <span className="logout-btn-text">Logout</span>
           </button>
         </div>
       </div>

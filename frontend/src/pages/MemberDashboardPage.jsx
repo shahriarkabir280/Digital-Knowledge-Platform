@@ -42,26 +42,33 @@ export default function MemberDashboardPage() {
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-4">
-      <header className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-[1fr_320px] md:items-start">
+      <header className="dashboard-hero dashboard-hero--member grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-[1fr_320px] md:items-start">
         <div className="grid gap-2">
           <p className="brand-kicker">Member Dashboard</p>
-          <h2 className="text-2xl font-semibold tracking-tight">Research and access workspace</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Research workspace</h2>
           <p className="text-sm text-muted-foreground">
-            Continue submission, borrowing, and discovery tasks based on your
-            current account role.
+            Continue submission, borrowing, and discovery tasks based on your role.
           </p>
+          <div className="landing-hero-actions">
+            <Link to="/submit-paper" className="landing-hero-primary">
+              Start a submission
+            </Link>
+            <Link to="/search" className="landing-hero-secondary">
+              Search repository
+            </Link>
+          </div>
         </div>
 
-        <div className="grid gap-2 text-sm">
-          <div className="rounded-md border border-border bg-muted/30 p-3">
+        <div className="dashboard-hero-meta grid gap-2 text-sm">
+          <div className="dashboard-meta-card rounded-md border border-border bg-muted/30 p-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Current role</p>
             <strong>{roleLabels[authState.role] || authState.role}</strong>
           </div>
-          <div className="rounded-md border border-border bg-muted/30 p-3">
+          <div className="dashboard-meta-card rounded-md border border-border bg-muted/30 p-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Signed in as</p>
             <strong>{authState.name || 'Anonymous'}</strong>
           </div>
-          <div className="rounded-md border border-border bg-muted/30 p-3">
+          <div className="dashboard-meta-card rounded-md border border-border bg-muted/30 p-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Quick actions</p>
             <strong>{visibleCards.length}</strong>
           </div>
@@ -75,11 +82,12 @@ export default function MemberDashboardPage() {
             to={card.to}
             className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <Card className="h-full transition-colors hover:bg-muted/40">
+            <Card className="dashboard-card dashboard-card--teal h-full transition-colors hover:bg-muted/40">
               <CardContent className="grid gap-3 pt-6">
-                <Badge variant="secondary" className="w-fit">Member Action</Badge>
+                <Badge variant="secondary" className="dashboard-card-label w-fit">Member Action</Badge>
                 <h3 className="text-lg font-semibold leading-none tracking-tight">{card.title}</h3>
                 <p className="text-sm text-muted-foreground">{card.description}</p>
+                <span className="dashboard-card-footer">Open task</span>
               </CardContent>
             </Card>
           </Link>

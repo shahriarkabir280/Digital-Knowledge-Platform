@@ -3,14 +3,31 @@ import { Card, CardContent } from '@/components/ui/card'
 
 export default function HomePage() {
   return (
-    <section className="mx-auto grid w-full max-w-5xl gap-4">
-      <div className="grid gap-2 rounded-lg border border-border bg-card p-5">
-        <p className="brand-kicker">Home</p>
-        <h2 className="text-2xl font-semibold tracking-tight">Welcome to Digital Knowledge Platform</h2>
-        <p className="text-sm text-muted-foreground">
-        Entry screen for role-aware workflows. Use the quick links below to move
-        through dashboard, search, and document viewer flows.
-        </p>
+    <section className="landing-page mx-auto w-full max-w-5xl">
+      <div className="landing-hero">
+        <div className="landing-hero-copy">
+          <p className="brand-kicker">Home</p>
+          <h2>Digital Knowledge Platform</h2>
+          <p className="text-sm text-muted-foreground">
+            Role-aware entry point for dashboards, search, and document viewing.
+          </p>
+          <div className="landing-hero-actions">
+            <Link to="/dashboard" className="landing-hero-primary">
+              Open dashboard
+            </Link>
+            <Link to="/search" className="landing-hero-secondary">
+              Search resources
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid gap-2 rounded-lg border border-border bg-card p-5 shadow-sm">
+          <p className="brand-kicker">Quick access</p>
+          <h3 className="text-lg font-semibold tracking-tight">Move into the core flows</h3>
+          <p className="text-sm text-muted-foreground">
+            Jump straight into the most common tasks without digging through menus.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">

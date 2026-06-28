@@ -19,7 +19,7 @@ const dashboardCards = [
     roles: [ROLES.MEMBER, ROLES.CONTRIBUTOR],
   },
   {
-    title: 'Borrow Item',
+    title: 'orrow Item',
     description:
       'Request available physical resources through circulation workflow.',
     to: '/borrow-item',

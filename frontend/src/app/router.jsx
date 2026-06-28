@@ -90,7 +90,7 @@ export const appRouter = createBrowserRouter([
             path: '/borrow-item',
             element: (
               <RoutePage
-                title="Borrow Item"
+                title="Borrow tem"
                 description="Open the circulation workflow for requesting an available library item."
               />
             ),

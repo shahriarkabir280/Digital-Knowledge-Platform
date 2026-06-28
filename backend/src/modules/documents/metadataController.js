@@ -1,9 +1,10 @@
 const db = require("../../db");
 const { validateDocumentId, validateMetadataPayload, normalizeKeywords } = require("./metadataValidator");
 const { versionIncrementExpression } = require("./versionService");
+const { sameDocumentOwner } = require("./ownership");
 
 function hasOwnership(document, user) {
-  return document.uploader_id === user.id || user.role === "ADMIN";
+  return sameDocumentOwner(document, user) || user.role === "ADMIN";
 }
 
 function serializeKeywords(value) {

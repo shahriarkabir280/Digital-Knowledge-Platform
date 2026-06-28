@@ -1,4 +1,5 @@
 const { z } = require("zod");
+const { sameDocumentOwner } = require("./ownership");
 
 const DOCUMENT_STATES = Object.freeze({
   DRAFT: "draft",
@@ -139,7 +140,7 @@ function validateTransitionNote(currentState, nextState, note) {
 }
 
 function canMoveToReview(document, user) {
-  if (document.uploader_id === user.id) {
+  if (sameDocumentOwner(document, user)) {
     return true;
   }
 

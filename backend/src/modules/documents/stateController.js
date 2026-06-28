@@ -6,6 +6,7 @@ const {
   validateTransitionNote,
   validateRolePermission,
 } = require("./stateValidator");
+const { sameDocumentOwner } = require("./ownership");
 
 const STAFF_NOTIFICATION_ROLES = ["STAFF", "LAB_MANAGER", "REVIEWER", "ADMIN"];
 
@@ -211,7 +212,7 @@ async function getDocumentAuditLogs(req, res, next) {
     }
 
     const isPrivileged = STAFF_NOTIFICATION_ROLES.includes(req.user.role);
-    const isOwner = document.uploader_id === req.user.id;
+    const isOwner = sameDocumentOwner(document, req.user);
 
     if (!isPrivileged && !isOwner) {
       return next({

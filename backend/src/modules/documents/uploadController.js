@@ -9,6 +9,7 @@ const uploadService = require('../../services/uploadService');
 const db = require('../../db');
 const { validateDocumentId } = require('./metadataValidator');
 const { versionIncrementExpression } = require('./versionService');
+const { sameDocumentOwner } = require('./ownership');
 
 const PRIVILEGED_REPOSITORY_ROLES = new Set(['STAFF', 'LAB_MANAGER', 'REVIEWER', 'ADMIN']);
 
@@ -17,7 +18,7 @@ function canAccessDocumentContent(document, user) {
     return false;
   }
 
-  if (document.uploader_id === user.id) {
+  if (sameDocumentOwner(document, user)) {
     return true;
   }
 
@@ -219,7 +220,7 @@ async function replaceFile(req, res, next) {
       });
     }
 
-    if (existingDocument.uploader_id !== userId && req.user?.role !== 'ADMIN') {
+    if (!sameDocumentOwner(existingDocument, { id: userId }) && req.user?.role !== 'ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Only the uploader or admin can replace this file',

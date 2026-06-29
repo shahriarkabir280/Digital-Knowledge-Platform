@@ -15,8 +15,18 @@ import {
   Code, 
   Image as ImageIcon,
   CheckCircle,
-  Plus
+  Plus,
+  Link as LinkIcon,
+  BookOpen as BookIcon,
+  Globe
 } from 'lucide-react'
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { useAuth } from '../app/use-auth.js'
 
 // Custom GitHub icon to replace missing brand icon in lucide-react
 function Github({ size = 16, ...props }) {
@@ -38,15 +48,8 @@ function Github({ size = 16, ...props }) {
     </svg>
   )
 }
-import { Alert } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { useAuth } from '../app/use-auth.js'
 
-// Pre-seeded high-quality academic projects
+// Pre-seeded high-quality academic projects with learning resources
 const DEFAULT_PROJECTS = [
   {
     id: 'proj-1',
@@ -74,6 +77,11 @@ const DEFAULT_PROJECTS = [
     comments: [
       { id: 'c-1', user: 'Dr. Shamim Kaiser', text: 'Excellent integration of deep learning with edge devices. Have you considered the latency on large-scale fields?', date: '2026-06-15T09:30:00Z' },
       { id: 'c-2', user: 'Tahmid Rahman', text: 'Thank you, sir! Yes, we implemented frame-skipping and local caching which keeps the processing time under 150ms per frame.', date: '2026-06-15T10:15:00Z' }
+    ],
+    learningResources: [
+      { id: 'lr-1', title: 'Official PyTorch Leaf Disease Classification Guide', url: 'https://pytorch.org/tutorials/', type: 'Documentation' },
+      { id: 'lr-2', title: 'OpenCV Image Processing & Edge Detection', url: 'https://docs.opencv.org/', type: 'Tutorial' },
+      { id: 'lr-3', title: 'FastAPI Tutorial: Deploying ML Models in Production', url: 'https://fastapi.tiangolo.com/tutorial/', type: 'Course' }
     ]
   },
   {
@@ -100,6 +108,11 @@ const DEFAULT_PROJECTS = [
     demoUrl: 'https://verify-credentials.farefin.com',
     comments: [
       { id: 'c-3', user: 'Prof. Dr. Upal Mahbub', text: 'How do you handle gas fee optimizations for bulk certificate issuances?', date: '2025-12-01T11:00:00Z' }
+    ],
+    learningResources: [
+      { id: 'lr-4', title: 'Solidity Smart Contract Documentation', url: 'https://docs.soliditylang.org/', type: 'Documentation' },
+      { id: 'lr-5', title: 'Web3.js Introduction & Integration Examples', url: 'https://web3js.readthedocs.io/', type: 'Tutorial' },
+      { id: 'lr-6', title: 'Ethereum Developer Portal & Tutorials', url: 'https://ethereum.org/en/developers/', type: 'Course' }
     ]
   },
   {
@@ -124,7 +137,12 @@ const DEFAULT_PROJECTS = [
       'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=600&q=80'
     ],
     demoUrl: null,
-    comments: []
+    comments: [],
+    learningResources: [
+      { id: 'lr-7', title: 'eBPF Core Concepts & Developer Reference', url: 'https://ebpf.io/what-is-ebpf/', type: 'Documentation' },
+      { id: 'lr-8', title: 'Zero Trust Architecture Reference Guide (NIST)', url: 'https://www.nist.gov/publications/zero-trust-architecture', type: 'Documentation' },
+      { id: 'lr-9', title: 'Scikit-Learn Machine Learning Tutorials', url: 'https://scikit-learn.org/stable/tutorial/', type: 'Course' }
+    ]
   },
   {
     id: 'proj-4',
@@ -146,7 +164,11 @@ const DEFAULT_PROJECTS = [
     },
     screenshots: [],
     demoUrl: 'https://med-segmenter.farefin.com',
-    comments: []
+    comments: [],
+    learningResources: [
+      { id: 'lr-10', title: 'MONAI Framework for Deep Learning in Healthcare', url: 'https://monai.io/', type: 'Documentation' },
+      { id: 'lr-11', title: '3D U-Net Medical Segmentation Research Paper', url: 'https://arxiv.org/abs/1606.06650', type: 'Article' }
+    ]
   },
   {
     id: 'proj-5',
@@ -170,7 +192,11 @@ const DEFAULT_PROJECTS = [
       'https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&w=600&q=80'
     ],
     demoUrl: null,
-    comments: []
+    comments: [],
+    learningResources: [
+      { id: 'lr-12', title: 'LoRaWAN Specifications & Technical Overview', url: 'https://lora-alliance.org/', type: 'Documentation' },
+      { id: 'lr-13', title: 'React Native Basics & Platform Setup', url: 'https://reactnative.dev/docs/getting-started', type: 'Tutorial' }
+    ]
   },
   {
     id: 'proj-6',
@@ -192,7 +218,11 @@ const DEFAULT_PROJECTS = [
     },
     screenshots: [],
     demoUrl: 'https://educollab-demo.farefin.com',
-    comments: []
+    comments: [],
+    learningResources: [
+      { id: 'lr-14', title: 'Yjs Shared Editing Framework Documentation', url: 'https://docs.yjs.dev/', type: 'Documentation' },
+      { id: 'lr-15', title: 'WebRTC Protocols & Group Audio Rooms Guide', url: 'https://webrtc.org/', type: 'Tutorial' }
+    ]
   }
 ]
 
@@ -210,6 +240,11 @@ export default function StudentProjectShowcasePage() {
   const [filterCategory, setFilterCategory] = useState('all')
   const [commentText, setCommentText] = useState('')
   const [showSubmitModal, setShowSubmitModal] = useState(false)
+
+  // Technical resource sharing state
+  const [newResourceTitle, setNewResourceTitle] = useState('')
+  const [newResourceUrl, setNewResourceUrl] = useState('')
+  const [newResourceType, setNewResourceType] = useState('Documentation')
 
   // Submit form state
   const [newProject, setNewProject] = useState({
@@ -294,6 +329,39 @@ export default function StudentProjectShowcasePage() {
     setCommentText('')
   }
 
+  // Share a technical resource
+  const handleAddResource = (e) => {
+    e.preventDefault()
+    if (!newResourceTitle.trim() || !newResourceUrl.trim() || !selectedProjectId) return
+
+    let formattedUrl = newResourceUrl.trim()
+    if (!/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = `https://${formattedUrl}`
+    }
+
+    const newResource = {
+      id: `lr-${Date.now()}`,
+      title: newResourceTitle.trim(),
+      url: formattedUrl,
+      type: newResourceType
+    }
+
+    setProjects(prev => prev.map(proj => {
+      if (proj.id === selectedProjectId) {
+        return {
+          ...proj,
+          learningResources: [...(proj.learningResources || []), newResource]
+        }
+      }
+      return proj
+    }))
+
+    setNewResourceTitle('')
+    setNewResourceUrl('')
+    setNewResourceType('Documentation')
+    alert('Technical resource shared and preserved successfully!')
+  }
+
   const handleFormChange = (e) => {
     const { name, value } = e.target
     setNewProject(prev => ({ ...prev, [name]: value }))
@@ -326,7 +394,8 @@ export default function StudentProjectShowcasePage() {
       },
       screenshots: [],
       demoUrl: newProject.demoUrl.trim() || null,
-      comments: []
+      comments: [],
+      learningResources: []
     }
 
     setProjects(prev => [createdProject, ...prev])
@@ -632,7 +701,7 @@ export default function StudentProjectShowcasePage() {
           {/* Details Layout */}
           <div className="grid gap-6 md:grid-cols-[1fr_320px]">
             
-            {/* Left Column: Content, Tech, Gallery, Discussion */}
+            {/* Left Column: Content, Tech, Resources, Gallery, Discussion */}
             <div className="grid gap-6">
               
               {/* Main Info */}
@@ -678,6 +747,96 @@ export default function StudentProjectShowcasePage() {
                       </Badge>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Technical & Learning Resources */}
+              <Card className="border-border shadow-sm">
+                <CardHeader className="p-5 pb-2 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <BookIcon size={16} className="text-accent" /> Learning & Technical Resources
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-5 pt-0 grid gap-5">
+                  
+                  {/* Resources List */}
+                  <div className="grid gap-2.5">
+                    {(!selectedProject.learningResources || selectedProject.learningResources.length === 0) ? (
+                      <p className="text-xs text-muted-foreground italic">No learning resources shared yet.</p>
+                    ) : (
+                      selectedProject.learningResources.map(r => (
+                        <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/15 border border-border/50 hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded bg-accent/10 text-accent flex items-center justify-center flex-shrink-0">
+                              <LinkIcon size={14} />
+                            </div>
+                            <div className="grid gap-0.5 min-w-0">
+                              <h4 className="text-xs font-bold text-foreground truncate">{r.title}</h4>
+                              <p className="text-[10px] text-muted-foreground truncate">{r.url}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge variant="outline" className="text-[9px] py-0 px-1.5 uppercase font-semibold">
+                              {r.type}
+                            </Badge>
+                            <Button asChild size="icon" variant="ghost" className="w-7 h-7">
+                              <a href={r.url} target="_blank" rel="noopener noreferrer" title="Visit Resource">
+                                <ExternalLink size={12} />
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Share Resource Form */}
+                  <form onSubmit={handleAddResource} className="grid gap-3.5 border-t border-muted/65 pt-4">
+                    <h4 className="text-xs font-bold text-foreground">Share a Project Learning Resource</h4>
+                    <div className="grid sm:grid-cols-[1fr_1fr_130px] gap-3">
+                      <div className="grid gap-1">
+                        <Label htmlFor="res-title" className="text-[10px] font-semibold text-muted-foreground uppercase">Resource Title</Label>
+                        <Input 
+                          id="res-title" 
+                          placeholder="e.g. Official PyTorch Docs" 
+                          value={newResourceTitle}
+                          onChange={e => setNewResourceTitle(e.target.value)}
+                          required
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label htmlFor="res-url" className="text-[10px] font-semibold text-muted-foreground uppercase">URL / Link</Label>
+                        <Input 
+                          id="res-url" 
+                          placeholder="e.g. pytorch.org/tutorials" 
+                          value={newResourceUrl}
+                          onChange={e => setNewResourceUrl(e.target.value)}
+                          required
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label htmlFor="res-type" className="text-[10px] font-semibold text-muted-foreground uppercase">Resource Type</Label>
+                        <select 
+                          id="res-type" 
+                          value={newResourceType} 
+                          onChange={e => setNewResourceType(e.target.value)}
+                          className="h-8 rounded-md border border-input bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        >
+                          <option value="Documentation">Documentation</option>
+                          <option value="Tutorial">Tutorial</option>
+                          <option value="Course">Course</option>
+                          <option value="Video">Video</option>
+                          <option value="Article">Article</option>
+                        </select>
+                      </div>
+                    </div>
+                    <Button type="submit" size="sm" className="w-fit ml-auto text-xs gap-1 h-8">
+                      <Plus size={12} /> Share Resource
+                    </Button>
+                  </form>
+
                 </CardContent>
               </Card>
 

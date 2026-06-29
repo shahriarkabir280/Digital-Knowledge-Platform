@@ -18,7 +18,9 @@ import {
   Plus,
   Link as LinkIcon,
   BookOpen as BookIcon,
-  Globe
+  Globe,
+  CornerDownRight,
+  Reply
 } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -49,7 +51,7 @@ function Github({ size = 16, ...props }) {
   )
 }
 
-// Pre-seeded high-quality academic projects with learning resources
+// Pre-seeded high-quality academic projects with threaded Q&A
 const DEFAULT_PROJECTS = [
   {
     id: 'proj-1',
@@ -75,8 +77,20 @@ const DEFAULT_PROJECTS = [
     ],
     demoUrl: 'https://crop-detect-demo.farefin.com',
     comments: [
-      { id: 'c-1', user: 'Dr. Shamim Kaiser', text: 'Excellent integration of deep learning with edge devices. Have you considered the latency on large-scale fields?', date: '2026-06-15T09:30:00Z' },
-      { id: 'c-2', user: 'Tahmid Rahman', text: 'Thank you, sir! Yes, we implemented frame-skipping and local caching which keeps the processing time under 150ms per frame.', date: '2026-06-15T10:15:00Z' }
+      { 
+        id: 'c-1', 
+        user: 'Dr. Shamim Kaiser', 
+        text: 'Excellent integration of deep learning with edge devices. Have you considered the latency on large-scale fields?', 
+        date: '2026-06-15T09:30:00Z',
+        replies: [
+          {
+            id: 'r-1',
+            user: 'Tahmid Rahman',
+            text: 'Thank you, sir! Yes, we implemented frame-skipping and local caching which keeps the processing latency under 150ms per frame.',
+            date: '2026-06-15T10:15:00Z'
+          }
+        ]
+      }
     ],
     learningResources: [
       { id: 'lr-1', title: 'Official PyTorch Leaf Disease Classification Guide', url: 'https://pytorch.org/tutorials/', type: 'Documentation' },
@@ -107,7 +121,20 @@ const DEFAULT_PROJECTS = [
     ],
     demoUrl: 'https://verify-credentials.farefin.com',
     comments: [
-      { id: 'c-3', user: 'Prof. Dr. Upal Mahbub', text: 'How do you handle gas fee optimizations for bulk certificate issuances?', date: '2025-12-01T11:00:00Z' }
+      { 
+        id: 'c-3', 
+        user: 'Prof. Dr. Upal Mahbub', 
+        text: 'How do you handle gas fee optimizations for bulk certificate issuances?', 
+        date: '2025-12-01T11:00:00Z',
+        replies: [
+          {
+            id: 'r-2',
+            user: 'Shahriar Kabir',
+            text: 'We are using ERC-1155 batch minting techniques and considering Layer 2 scaling solutions like Arbitrum to reduce costs by 90%.',
+            date: '2025-12-01T11:45:00Z'
+          }
+        ]
+      }
     ],
     learningResources: [
       { id: 'lr-4', title: 'Solidity Smart Contract Documentation', url: 'https://docs.soliditylang.org/', type: 'Documentation' },
@@ -241,6 +268,10 @@ export default function StudentProjectShowcasePage() {
   const [commentText, setCommentText] = useState('')
   const [showSubmitModal, setShowSubmitModal] = useState(false)
 
+  // Threaded Q&A reply states
+  const [replyingToId, setReplyingToId] = useState(null)
+  const [replyText, setReplyText] = useState('')
+
   // Technical resource sharing state
   const [newResourceTitle, setNewResourceTitle] = useState('')
   const [newResourceUrl, setNewResourceUrl] = useState('')
@@ -314,7 +345,8 @@ export default function StudentProjectShowcasePage() {
       id: `comment-${Date.now()}`,
       user: authState.name || 'Anonymous User',
       text: commentText.trim(),
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      replies: []
     }
 
     setProjects(prev => prev.map(proj => {
@@ -327,6 +359,40 @@ export default function StudentProjectShowcasePage() {
       return proj
     }))
     setCommentText('')
+  }
+
+  // Handle submitting a nested reply to a comment thread
+  const handleAddReply = (e, commentId) => {
+    e.preventDefault()
+    if (!replyText.trim() || !selectedProjectId) return
+
+    const newReply = {
+      id: `reply-${Date.now()}`,
+      user: authState.name || 'Anonymous User',
+      text: replyText.trim(),
+      date: new Date().toISOString()
+    }
+
+    setProjects(prev => prev.map(proj => {
+      if (proj.id === selectedProjectId) {
+        return {
+          ...proj,
+          comments: (proj.comments || []).map(comm => {
+            if (comm.id === commentId) {
+              return {
+                ...comm,
+                replies: [...(comm.replies || []), newReply]
+              }
+            }
+            return comm
+          })
+        }
+      }
+      return proj
+    }))
+
+    setReplyText('')
+    setReplyingToId(null)
   }
 
   // Share a technical resource
@@ -860,53 +926,120 @@ export default function StudentProjectShowcasePage() {
                 </Card>
               )}
 
-              {/* Comments & Discussion */}
+              {/* Comments & Discussion (Threaded Q&A) */}
               <Card className="border-border shadow-sm">
                 <CardHeader className="p-5 pb-2">
                   <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                    <MessageSquare size={16} className="text-accent" /> Comments & Discussion
+                    <MessageSquare size={16} className="text-accent" /> Q&A Discussion Board
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-5 pt-0 grid gap-6">
                   
-                  {/* Comments List */}
-                  <div className="grid gap-4">
+                  {/* Threads List */}
+                  <div className="grid gap-6">
                     {(!selectedProject.comments || selectedProject.comments.length === 0) ? (
-                      <p className="text-xs text-muted-foreground italic">No comments posted yet. Be the first to share feedback!</p>
+                      <p className="text-xs text-muted-foreground italic">No questions asked yet. Ask a question to start a discussion thread!</p>
                     ) : (
-                      selectedProject.comments.map(c => (
-                        <div key={c.id} className="flex gap-3 p-3.5 rounded-lg bg-muted/20 border border-border/60">
-                          <div className="w-8 h-8 rounded-full bg-accent-bg text-accent-strong flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            {c.user.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="grid gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-foreground">{c.user}</span>
-                              <span className="text-[10px] text-muted-foreground">{new Date(c.date).toLocaleDateString()}</span>
+                      selectedProject.comments.map(comm => (
+                        <div key={comm.id} className="grid gap-3 p-4 rounded-lg bg-muted/20 border border-border/75">
+                          
+                          {/* Parent Question */}
+                          <div className="flex gap-3">
+                            <div className="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                              {comm.user.charAt(0).toUpperCase()}
                             </div>
-                            <p className="text-xs text-foreground leading-normal">{c.text}</p>
+                            <div className="grid gap-1 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-foreground">{comm.user}</span>
+                                <span className="text-[10px] text-muted-foreground">{new Date(comm.date).toLocaleString()}</span>
+                              </div>
+                              <p className="text-xs text-foreground leading-normal font-semibold">{comm.text}</p>
+                              
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  setReplyingToId(replyingToId === comm.id ? null : comm.id)
+                                  setReplyText('')
+                                }}
+                                className="flex items-center gap-1 text-[10px] text-accent hover:underline w-fit mt-1.5 font-bold"
+                              >
+                                <Reply size={12} /> Reply to Thread
+                              </button>
+                            </div>
                           </div>
+
+                          {/* Nested Answers/Replies */}
+                          {comm.replies && comm.replies.length > 0 && (
+                            <div className="pl-8 border-l border-muted-foreground/35 ml-4 mt-1 grid gap-3">
+                              {comm.replies.map(rep => (
+                                <div key={rep.id} className="flex gap-2.5">
+                                  <div className="w-6 h-6 rounded-full bg-muted-foreground/20 text-foreground flex items-center justify-center font-bold text-[10px] flex-shrink-0">
+                                    {rep.user.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="grid gap-0.5 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-[11px] font-bold text-foreground">{rep.user}</span>
+                                      <span className="text-[9px] text-muted-foreground">{new Date(rep.date).toLocaleString()}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground leading-normal">{rep.text}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Reply Input Form (Conditional) */}
+                          {replyingToId === comm.id && (
+                            <form onSubmit={(e) => handleAddReply(e, comm.id)} className="pl-8 ml-4 mt-2 grid gap-2">
+                              <div className="flex gap-2 items-start">
+                                <CornerDownRight size={16} className="text-muted-foreground mt-2 flex-shrink-0" />
+                                <textarea
+                                  value={replyText}
+                                  onChange={e => setReplyText(e.target.value)}
+                                  placeholder="Write your reply..."
+                                  rows={2}
+                                  required
+                                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                />
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <Button 
+                                  type="button" 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-[11px] h-7"
+                                  onClick={() => setReplyingToId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button type="submit" size="sm" className="text-[11px] h-7 px-3">
+                                  Post Reply
+                                </Button>
+                              </div>
+                            </form>
+                          )}
+
                         </div>
                       ))
                     )}
                   </div>
 
-                  {/* Add Comment Form */}
+                  {/* Add New Question Thread Form */}
                   <form onSubmit={handleAddComment} className="grid gap-3 border-t border-muted/60 pt-4">
                     <div className="grid gap-1.5">
-                      <Label htmlFor="comment" className="text-xs font-semibold text-muted-foreground">Post a Review / Question</Label>
+                      <Label htmlFor="comment" className="text-xs font-semibold text-muted-foreground">Ask a New Question / Start Thread</Label>
                       <textarea
                         id="comment"
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
-                        placeholder="Provide constructive feedback, suggest enhancements, or ask questions..."
+                        placeholder="Ask a question about the project implementation, design decisions, or results..."
                         rows={3}
                         required
                         className="w-full rounded-md border border-input bg-muted/10 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       />
                     </div>
                     <Button type="submit" size="sm" className="w-fit gap-1 ml-auto text-xs">
-                      Submit Comment
+                      Post Question
                     </Button>
                   </form>
 

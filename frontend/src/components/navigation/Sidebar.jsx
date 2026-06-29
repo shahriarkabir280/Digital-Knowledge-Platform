@@ -12,7 +12,6 @@ import {
   FolderOpen,
   Search,
   GraduationCap,
-  Eye,
   FilePlus,
   X,
   ChevronLeft,
@@ -36,7 +35,6 @@ const iconMap = {
   FolderOpen,
   Search,
   GraduationCap,
-  Eye,
   FilePlus,
 }
 
@@ -46,7 +44,6 @@ const fallbackIcons = {
   '/repository':        FolderOpen,
   '/search':            Search,
   '/student-projects':  GraduationCap,
-  '/viewer/sample-doc': Eye,
 }
 
 export default function Sidebar() {

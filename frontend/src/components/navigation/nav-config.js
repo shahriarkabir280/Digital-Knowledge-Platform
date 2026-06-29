@@ -58,11 +58,7 @@ export const navItems = [
     iconName: 'ClipboardCheck',
     roles: ROUTE_ACCESS.reviewQueue,
   },
-  {
-    to: '/viewer/sample-doc',
-    label: 'Viewer',
-    roles: ROUTE_ACCESS.viewer,
-  },
+
   {
     to: '/admin',
     label: 'System Admin',

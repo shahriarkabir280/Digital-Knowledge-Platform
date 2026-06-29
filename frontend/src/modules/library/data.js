@@ -11,7 +11,8 @@ export const FEATURED_RESOURCES = [
     department: 'CSE',
     course: 'CSE-412',
     type: 'PDF',
-    pdfUrl: null,
+    // Sample public PDF — opens in the in-app PDF viewer
+    pdfUrl: 'https://www.africau.edu/images/default/sample.pdf',
     year: 2026,
     tags: ['distributed', 'consensus', 'lecture'],
     rating: 4.8,
@@ -33,12 +34,14 @@ export const FEATURED_RESOURCES = [
     course: 'CSE-405',
     type: 'PPT',
     pdfUrl: null,
+    // Sample PPTX — rendered via Microsoft Office Online viewer (iframe)
+    pptUrl: 'https://file-examples.com/wp-content/storage/2017/08/file_example_PPT_1MB.ppt',
     year: 2025,
     tags: ['compiler', 'optimization', 'ir'],
     rating: 4.5,
     reviews: 31,
     downloads: 832,
-    access: 'restricted',
+    access: 'public',
     version: '2.1',
     summary:
       'Deck focused on SSA, data-flow optimization, and backend register allocation strategies.',
@@ -52,7 +55,8 @@ export const FEATURED_RESOURCES = [
     department: 'Interdisciplinary',
     course: 'RES-101',
     type: 'PDF',
-    pdfUrl: null,
+    // Academic paper PDF (arXiv preprint) — opens in in-app viewer
+    pdfUrl: 'https://arxiv.org/pdf/2206.04615',
     year: 2024,
     tags: ['research', 'citation', 'templates'],
     rating: 4.7,
@@ -72,7 +76,8 @@ export const FEATURED_RESOURCES = [
     department: 'Mathematics',
     course: 'MTH-207',
     type: 'PDF',
-    pdfUrl: null,
+    // Sample W3C specification PDF — opens in in-app viewer
+    pdfUrl: 'https://www.w3.org/WAI/WCAG21/Techniques/pdf/sample.pdf',
     year: 2023,
     tags: ['numerical', 'midterm', 'archive'],
     rating: 4.1,
@@ -157,6 +162,8 @@ export const RESOURCE_ITEMS = [
     course: 'CSE-419',
     type: 'PPT',
     pdfUrl: null,
+    // Sample PPTX opened via Microsoft Office Online viewer
+    pptUrl: 'https://file-examples.com/wp-content/storage/2017/08/file_example_PPT_1MB.ppt',
     year: 2025,
     tags: ['security', 'workshop', 'slides'],
     rating: 4.8,
@@ -195,7 +202,8 @@ export const RESOURCE_ITEMS = [
     department: 'Physics',
     course: 'PHY-402',
     type: 'PDF',
-    pdfUrl: null,
+    // Real Quantum Computing survey paper from arXiv
+    pdfUrl: 'https://arxiv.org/pdf/2201.09477',
     year: 2026,
     tags: ['quantum', 'computing', 'textbook'],
     rating: 4.9,
@@ -215,6 +223,8 @@ export const RESOURCE_ITEMS = [
     course: 'CSE-421',
     type: 'PPT',
     pdfUrl: null,
+    // Sample PPTX opened via Microsoft Office Online viewer
+    pptUrl: 'https://file-examples.com/wp-content/storage/2017/08/file_example_PPT_1MB.ppt',
     year: 2025,
     tags: ['cloud', 'aws', 'slides'],
     rating: 4.6,
@@ -233,7 +243,7 @@ export const RESOURCE_ITEMS = [
     department: 'CSE',
     course: 'CSE-201',
     type: 'Video',
-    youtubeId: '0IAPZzHo2TM',
+    youtubeId: '8hly31xKli0',  // CS50x Algorithms Lecture (verified valid)
     pdfUrl: null,
     year: 2024,
     tags: ['dsa', 'algorithms', 'series', 'lecture'],
@@ -253,7 +263,8 @@ export const RESOURCE_ITEMS = [
     department: 'CSE',
     course: 'CSE-311',
     type: 'PDF',
-    pdfUrl: null,
+    // Sample PDF — opens in in-app viewer
+    pdfUrl: 'https://www.orimi.com/pdf-test.pdf',
     year: 2026,
     tags: ['graphics', 'opengl', 'lab'],
     rating: 4.3,

@@ -1,675 +1,773 @@
-import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { Document, Page, pdfjs } from 'react-pdf'
-import workerSrc from 'pdfjs-dist/build/pdf.worker.min?url'
-import ResourceCard from '../modules/library/components/ResourceCard.jsx'
-import {
-  CATEGORIES,
-  FEATURED_RESOURCES,
-  RECENTLY_VIEWED,
-  RECOMMENDED,
-  RESOURCE_ITEMS,
-} from '../modules/library/data.js'
-import {
-  DEFAULT_FILTERS,
-  applyLibraryFilters,
-  collectFilterOptions,
-  searchResources,
-} from '../modules/library/filters.js'
-import './LibrarySection.css'
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc
-
-const renderStars = (rating) => {
-  return (
-    <div className="library-rating-stars" style={{ fontSize: '0.8rem', gap: '2px' }}>
-      {[1, 2, 3, 4, 5].map((star) => (
-        <span key={star} className={star <= Math.round(rating) ? 'library-star-filled' : 'library-star-empty'}>
-          ★
-        </span>
-      ))}
-    </div>
-  )
-}
-
-const QUICK_STATS = [
-  { id: 'stat-1', label: 'Total Assets', value: '12,490', delta: '+14.2%' },
-  { id: 'stat-2', label: 'Active Courses', value: '182', delta: '+6.3%' },
-  { id: 'stat-3', label: 'Weekly Uploads', value: '214', delta: '+9.8%' },
-]
-
-const MULTIMEDIA_ITEMS = [
-  {
-    id: 'media-1',
-    title: 'MIT 6.824: Distributed Systems Lecture',
-    type: 'Video Lecture',
-    duration: '1:18:24',
-    youtubeId: 'cQP8WApzIQQ',
-    resourceId: 'res-009',
-    tags: ['distributed', 'MIT', 'consensus'],
-  },
-  {
-    id: 'media-2',
-    title: 'Advanced Laboratory Techniques Demo',
-    type: 'Lab Demo',
-    duration: '4:19',
-    youtubeId: 'ZwqLCX-TN8c',
-    resourceId: 'res-007',
-    tags: ['physics', 'lab-safety'],
-  },
-  {
-    id: 'media-3',
-    title: 'Modern Web Engineering Tutorial',
-    type: 'Tutorial',
-    duration: '18:43',
-    youtubeId: 'Wk4tXd9aPzs',
-    resourceId: 'res-005',
-    tags: ['react', 'frontend'],
-  },
-  {
-    id: 'media-4',
-    title: 'Software Design Patterns Deep Dive',
-    type: 'Expert Guide',
-    duration: '42:15',
-    youtubeId: 'v9ejT8FO-7I',
-    resourceId: 'res-006',
-    tags: ['design-patterns', 'clean-code'],
-  },
-]
-
-const PLAYLIST_ITEMS = [
-  { id: 'pl-1', title: 'Continue: CSE-425 Lab Series', progress: '4 of 10 sessions' },
-  { id: 'pl-2', title: 'Continue: UI Engineering Sprint', progress: '2 of 6 modules' },
-]
-
-const FACULTY_SPOTLIGHT = [
-  {
-    id: 'fac-1',
-    name: 'Dr. Ayesha Rahman',
-    focus: 'Human Centered Computing',
-    officeHours: 'Sun-Tue 2:00-4:00 PM',
-  },
-  {
-    id: 'fac-2',
-    name: 'Prof. Mahmud Karim',
-    focus: 'Networks and Systems',
-    officeHours: 'Mon-Thu 10:00-12:00 PM',
-  },
-]
-
-const COURSE_STRUCTURE = [
-  {
-    id: 'course-1',
-    title: 'CSE-412 Distributed Systems',
-    weeks: ['Week 1-2: Foundations', 'Week 3-5: Consistency', 'Week 6-8: Replication'],
-  },
-  {
-    id: 'course-2',
-    title: 'CSE-371 Human Computer Interaction',
-    weeks: ['Week 1-2: Research Methods', 'Week 3-5: Prototyping', 'Week 6-8: Evaluation'],
-  },
-]
-
-const ADMIN_ITEMS = [
-  { id: 'admin-1', label: 'Midterm Notice', tag: 'urgent', summary: 'Midterm schedule updated for Week 6.' },
-  { id: 'admin-2', label: 'Academic Calendar', tag: 'holiday', summary: 'Semester break: May 18-25.' },
-  { id: 'admin-3', label: 'Guidelines', tag: 'policy', summary: 'Updated submission policy for thesis.' },
-]
-
-const TECH_RESOURCES = [
-  {
-    id: 'tech-1',
-    resourceId: 'res-020',
-    title: 'Cloud-Native Analytics Dashboard',
-    tags: ['react', 'node', 'kubernetes'],
-    meta: 'v1.4.0 Stable',
-    snippet: 'helm install analytics ./charts',
-  },
-  {
-    id: 'tech-2',
-    resourceId: 'res-009',
-    title: 'Distributed Systems Core',
-    tags: ['go', 'grpc', 'redis'],
-    meta: 'v0.9.2 Beta',
-    snippet: 'go run main.go --config config.yaml',
-  },
-]
-
-const DATASETS = [
-  {
-    id: 'data-1',
-    title: 'Student Engagement Logs',
-    size: '2.1 GB',
-    format: 'CSV',
-    description: 'Anonymized engagement events for learning analytics.',
-  },
-  {
-    id: 'data-2',
-    title: 'IoT Lab Sensor Archive',
-    size: '880 MB',
-    format: 'JSON',
-    description: 'Environmental telemetry data with timestamps.',
-  },
-]
-
-
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { 
+  Search, 
+  BookOpen, 
+  FileText, 
+  Presentation, 
+  GraduationCap, 
+  Database, 
+  Download, 
+  Bookmark, 
+  Plus, 
+  X, 
+  ExternalLink, 
+  Star, 
+  Filter, 
+  Quote, 
+  PlayCircle,
+  Book,
+  Sparkles,
+  Link2,
+  Upload,
+  CloudUpload,
+  CheckCircle2,
+  AlertCircle,
+  Loader2
+} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { useAuth } from '../app/use-auth.js'
+import { RESOURCE_ITEMS } from '../modules/library/data.js'
+import { uploadDocument } from '../services/api/documents.js'
 
 export default function LibraryPage() {
-  const [searchParams] = useSearchParams()
-  const [query, setQuery] = useState(searchParams.get('query') || '')
-  const [pendingQuery, setPendingQuery] = useState(searchParams.get('query') || '')
-  const [filters, setFilters] = useState(DEFAULT_FILTERS)
-  const [bookmarks, setBookmarks] = useState(['res-001', 'res-008'])
-  const [academicCategory, setAcademicCategory] = useState('All')
-  const [hoveredMediaId, setHoveredMediaId] = useState(null)
+  const { authState } = useAuth()
+  
+  const [resources, setResources] = useState(() => {
+    const saved = localStorage.getItem('dkp_academic_resources')
+    return saved ? JSON.parse(saved) : RESOURCE_ITEMS
+  })
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('All')
+  const [filterDepartment, setFilterDepartment] = useState('All')
+  const [filterCourse, setFilterCourse] = useState('All')
+  const [sortBy, setSortBy] = useState('downloads')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [bookmarks, setBookmarks] = useState(() => {
+    const saved = localStorage.getItem('dkp_bookmarked_resources')
+    return saved ? JSON.parse(saved) : ['res-001', 'res-008']
+  })
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [newResource, setNewResource] = useState({
+    title: '', author: '', department: 'CSE', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '',
+  })
+  // Upload-specific state
+  const [uploadMode, setUploadMode] = useState('url') // 'url' | 'file'
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [isDragOver, setIsDragOver] = useState(false)
+  const fileInputRef = useRef(null)
 
-  const ACADEMIC_CATEGORIES = ['All', 'Textbooks', 'Lecture Slides', 'Online Resources', 'Lecture Series']
+  useEffect(() => {
+    localStorage.setItem('dkp_academic_resources', JSON.stringify(resources))
+  }, [resources])
+  useEffect(() => {
+    localStorage.setItem('dkp_bookmarked_resources', JSON.stringify(bookmarks))
+  }, [bookmarks])
 
-  const options = useMemo(() => collectFilterOptions(RESOURCE_ITEMS), [])
+  const getResourceType = (item) => {
+    const tags = (item.tags || []).map(t => t.toLowerCase())
+    const type = String(item.type || '').toLowerCase()
+    if (type === 'paper') return 'Research Paper'
+    if (type === 'thesis') return 'Thesis'
+    if (type === 'dataset') return 'Dataset'
+    if (type === 'ppt' || tags.includes('slides')) return 'Lecture Slides'
+    if (tags.includes('lab') || tags.includes('manual')) return 'Lab Manual'
+    if (tags.includes('textbook') || tags.includes('book')) return 'Textbook'
+    return 'Lecture Notes'
+  }
 
-  const filteredResources = useMemo(() => {
-    let base = searchResources(RESOURCE_ITEMS, query)
-    base = applyLibraryFilters(base, filters)
-
-    // Filter out items already shown in Multimedia or Featured to avoid duplication
-    const mediaResourceIds = MULTIMEDIA_ITEMS.map(m => m.resourceId)
-    const featuredIds = FEATURED_RESOURCES.map(f => f.id)
-
-    // For general listing, we definitely exclude these specific sections to keep them separate
-    const uniqueBase = base.filter(item => !featuredIds.includes(item.id) && !mediaResourceIds.includes(item.id))
-
-    if (academicCategory !== 'All') {
-      // Academic Resources section should only show non-media resources to stay separate
-      return uniqueBase.filter(item => {
-        if (academicCategory === 'Textbooks') return item.type === 'PDF' || item.tags.includes('textbook')
-        if (academicCategory === 'Lecture Slides') return item.type === 'PPT' || item.tags.includes('slides')
-        if (academicCategory === 'Online Resources') return item.type === 'Video' || item.tags.includes('online')
-        if (academicCategory === 'Lecture Series') return item.tags.includes('lecture') || item.tags.includes('series')
-        return true
-      })
+  const getTypeBadgeStyles = (type) => {
+    switch (type) {
+      case 'Textbook': return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+      case 'Lecture Slides': return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+      case 'Lab Manual': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+      case 'Research Paper': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+      case 'Thesis': return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
+      case 'Dataset': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+      default: return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
     }
-    return uniqueBase
-  }, [query, filters, academicCategory])
+  }
 
-  const filteredFeatured = useMemo(() => {
-    const afterSearch = searchResources(FEATURED_RESOURCES, query)
-    return applyLibraryFilters(afterSearch, filters)
-  }, [query, filters])
+  const departments = useMemo(() => {
+    const deps = new Set(resources.map(r => r.department).filter(Boolean))
+    return ['All', ...Array.from(deps)]
+  }, [resources])
 
-  const recentlyViewedItems = useMemo(() => {
-    return RECENTLY_VIEWED.map(title => RESOURCE_ITEMS.find(item => item.title === title)).filter(Boolean);
-  }, []);
+  const courses = useMemo(() => {
+    const crs = new Set(resources.map(r => r.course).filter(c => c && c.includes('-')))
+    return ['All', ...Array.from(crs)]
+  }, [resources])
 
-  const onFilterChange = (event) => {
-    const { name, value } = event.target
-    setFilters((current) => ({
-      ...current,
-      [name]: value,
+  const toggleBookmark = (id) => {
+    setBookmarks(prev => prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id])
+  }
+
+  const copyCitation = (resource) => {
+    const year = resource.year || new Date(resource.updatedAt || Date.now()).getFullYear()
+    const citation = `${resource.author || 'Anonymous'}. (${year}). ${resource.title}. Department of ${resource.department || 'CSE'}, Institutional Repository.`
+    navigator.clipboard.writeText(citation)
+    alert('Citation copied to clipboard in APA format!')
+  }
+
+  const resetModal = useCallback(() => {
+    setShowUploadModal(false)
+    setNewResource({ title: '', author: '', department: 'CSE', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '' })
+    setUploadMode('url')
+    setSelectedFile(null)
+    setUploadProgress(0)
+    setIsUploading(false)
+    setUploadError('')
+    setIsDragOver(false)
+  }, [])
+
+  const handleFileSelect = (file) => {
+    if (!file) return
+    // Infer resource type from file extension
+    const ext = file.name.split('.').pop().toLowerCase()
+    const typeMap = { pdf: 'PDF', ppt: 'PPT', pptx: 'PPT', doc: 'PDF', docx: 'PDF', csv: 'Dataset', zip: 'Dataset' }
+    const inferredType = typeMap[ext] || 'PDF'
+    setSelectedFile(file)
+    setUploadError('')
+    setNewResource(p => ({
+      ...p,
+      type: inferredType,
+      title: p.title || file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
     }))
   }
 
-  const onSearchSubmit = (event) => {
-    event.preventDefault()
-    setQuery(pendingQuery)
-  }
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFileSelect(file)
+  }, [])
 
-  const onBookmarkToggle = (resourceId) => {
-    setBookmarks((current) => {
-      if (current.includes(resourceId)) {
-        return current.filter((item) => item !== resourceId)
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault()
+    setUploadError('')
+    if (!newResource.title.trim() || !newResource.author.trim() || !newResource.course.trim()) {
+      setUploadError('Please fill in Title, Author, and Course Code.')
+      return
+    }
+    if (uploadMode === 'file' && !selectedFile) {
+      setUploadError('Please select a file to upload.')
+      return
+    }
+
+    let resolvedPdfUrl = uploadMode === 'url' ? newResource.linkUrl.trim() : null
+
+    // --- File upload path ---
+    if (uploadMode === 'file' && selectedFile) {
+      if (!authState?.token) {
+        setUploadError('You must be logged in to upload files.')
+        return
       }
-      return [...current, resourceId]
-    })
+      setIsUploading(true)
+      setUploadProgress(0)
+      try {
+        const result = await uploadDocument(
+          selectedFile,
+          { title: newResource.title.trim(), description: newResource.summary.trim() },
+          ({ percent }) => setUploadProgress(percent),
+          authState.token
+        )
+        // Build streaming content URL from the returned document ID
+        const docId = result?.data?.document?.id
+        if (docId) {
+          const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+          resolvedPdfUrl = `${apiBase}/repository/files/${docId}/content`
+        }
+      } catch (err) {
+        setUploadError(err.message || 'Upload failed. Please try again.')
+        setIsUploading(false)
+        return
+      }
+      setIsUploading(false)
+    }
+
+    const created = {
+      id: `res-${Date.now()}`,
+      title: newResource.title.trim(),
+      author: newResource.author.trim(),
+      department: newResource.department,
+      course: newResource.course.trim().toUpperCase(),
+      type: newResource.type,
+      year: new Date().getFullYear(),
+      tags: newResource.tags.split(',').map(t => t.trim()).filter(Boolean),
+      rating: 5.0, reviews: 0, downloads: 0, access: 'public',
+      summary: newResource.summary.trim(),
+      pdfUrl: ['PDF', 'PPT'].includes(newResource.type) ? resolvedPdfUrl : null,
+      pptUrl: newResource.type === 'PPT' ? resolvedPdfUrl : null,
+      githubUrl: ['Dataset', 'Project'].includes(newResource.type) ? resolvedPdfUrl : null,
+      updatedAt: new Date().toISOString()
+    }
+    setResources(prev => [created, ...prev])
+    resetModal()
   }
 
-  const onResetFilters = () => {
-    setFilters(DEFAULT_FILTERS)
-    setQuery('')
-    setPendingQuery('')
-  }
+  const filteredResources = useMemo(() => {
+    return resources.filter(item => {
+      const type = getResourceType(item)
+      const matchesSearch = 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.author || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.course || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.tags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      const matchesTab = 
+        selectedCategory === 'All' ||
+        (selectedCategory === 'Textbooks' && type === 'Textbook') ||
+        (selectedCategory === 'Slides' && type === 'Lecture Slides') ||
+        (selectedCategory === 'Manuals' && type === 'Lab Manual') ||
+        (selectedCategory === 'Papers' && (type === 'Research Paper' || type === 'Thesis')) ||
+        (selectedCategory === 'Datasets' && type === 'Dataset')
+      const matchesDept = filterDepartment === 'All' || item.department === filterDepartment
+      const matchesCourse = filterCourse === 'All' || item.course === filterCourse
+      return matchesSearch && matchesTab && matchesDept && matchesCourse
+    }).sort((a, b) => {
+      if (sortBy === 'downloads') return (b.downloads || 0) - (a.downloads || 0)
+      if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0)
+      if (sortBy === 'recent') return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
+      return 0
+    })
+  }, [resources, searchQuery, selectedCategory, filterDepartment, filterCourse, sortBy])
 
   return (
-    <section className="library-page">
-      <header className="library-hero">
-        <div className="library-hero-layout">
+    <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2">
+      
+      {/* Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-accent/20 p-6 md:p-8 text-white shadow-lg border border-slate-800">
+        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+          <GraduationCap size={200} />
+        </div>
+        <div className="relative grid gap-4 max-w-2xl">
           <div>
-            <p className="library-kicker">Digital Knowledge Platform</p>
-            <h2>Academic Resources for fast academic discovery and resource management</h2>
-            <p>
-              Discover, preview, and organize university resources with role-aware actions for students,
-              faculty, and administrators.
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent uppercase tracking-wider bg-accent/15 px-2.5 py-1 rounded-full mb-3">
+              <Sparkles size={12} className="text-accent" /> Institutional Repository
+            </span>
+            <h2 className="text-3xl font-extrabold tracking-tight">Academic Resources</h2>
+            <p className="text-sm text-slate-300 mt-2 leading-relaxed">
+              Explore, bookmark, and contribute course textbooks, lecture slides, lab manuals, and research papers verified by CSEDU faculty.
             </p>
-            <div className="library-hero-stats">
-              {QUICK_STATS.map((item) => (
-                <div key={item.id} className="library-hero-stat">
-                  <strong>{item.value}</strong>
-                  <span>
-                    {item.label} · {item.delta}
-                  </span>
-                </div>
-              ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-slate-700/50 pt-4 mt-2">
+            <div>
+              <p className="text-xl font-bold text-white">{resources.length}+</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Total Assets</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold text-white">{courses.length - 1}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Active Courses</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold text-white">{bookmarks.length}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Bookmarked</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold text-white">4.8 ★</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Avg Rating</p>
             </div>
           </div>
         </div>
-      </header>
-
-      <section className="library-topbar">
-        <form className="library-topbar-search" onSubmit={onSearchSubmit}>
-          <div className="library-search-row">
-            <input
-              className="library-input"
-              placeholder="Search across all resources, courses, and people"
-              value={pendingQuery}
-              onChange={(event) => setPendingQuery(event.target.value)}
-            />
-            <button type="submit" className="library-btn library-btn-primary">
-              Search
-            </button>
-          </div>
-          <div className="library-filter-grid">
-            <select
-              className="library-select"
-              name="category"
-              value={filters.category}
-              onChange={onFilterChange}
-            >
-              <option value="">All Categories</option>
-              {CATEGORIES.map((item) => (
-                <option key={item.id} value={item.label}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="library-select"
-              name="course"
-              value={filters.course}
-              onChange={onFilterChange}
-            >
-              <option value="">All Courses</option>
-              {options.courses.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="library-select"
-              name="department"
-              value={filters.department}
-              onChange={onFilterChange}
-            >
-              <option value="">All Departments</option>
-              {options.departments.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <select className="library-select" name="type" value={filters.type} onChange={onFilterChange}>
-              <option value="">All File Types</option>
-              {options.fileTypes.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <select className="library-select" name="year" value={filters.year} onChange={onFilterChange}>
-              <option value="">All Years</option>
-              {options.years.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <input
-              className="library-input"
-              name="tags"
-              value={filters.tags}
-              onChange={onFilterChange}
-              placeholder="Tags: ai, archive"
-            />
-          </div>
-          <div className="library-topbar-filter-actions">
-            <div className="library-chip-row">
-              <span className="library-chip">AI Suggestions</span>
-              <span className="library-chip">Course Filters</span>
-              <span className="library-chip">Role Based</span>
-            </div>
-            <button type="button" className="library-btn library-btn-ghost" onClick={onResetFilters}>
-              Reset Filters
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section className="library-dashboard" style={{ gridTemplateColumns: '1fr' }}>
-
-
-        <div className="library-panel">
-          <h3 className="library-panel-title">Recently Viewed</h3>
-          <div className="library-horizontal-scroll">
-            {recentlyViewedItems.map((item) => (
-              <div key={item.id} className="library-scroll-item">
-                <ResourceCard
-                  item={item}
-                  isBookmarked={bookmarks.includes(item.id)}
-                  onBookmarkToggle={onBookmarkToggle}
-                />
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </section>
-
-      <div className="library-main-grid">
-        <div className="library-main-content">
-          <section className="library-panel">
-            <h3 className="library-panel-title">Featured Resources</h3>
-            <div className="library-featured-track">
-              {filteredFeatured.map((item) => (
-                <article key={item.id} className="library-featured-card">
-                  <h4>{item.title}</h4>
-                  <p className="library-featured-meta">
-                    {item.author} · {item.department}
-                  </p>
-                  <p>{item.summary}</p>
-                  <Link className="library-inline-link" to={`/library/resource/${item.id}`}>
-                    Open Details
-                  </Link>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="library-panel">
-            <div className="library-list-toolbar" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '16px' }}>
-              <h3 className="library-panel-title">Academic Resources</h3>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div className="library-toggle">
-                  {ACADEMIC_CATEGORIES.map(cat => (
-                    <button
-                      key={cat}
-                      className={academicCategory === cat ? 'is-active' : ''}
-                      onClick={() => setAcademicCategory(cat)}
-                      style={{ fontSize: '0.75rem', padding: '6px 12px' }}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="library-card-grid">
-              {filteredResources.slice(0, 8).map((item) => (
-                <ResourceCard
-                  key={item.id}
-                  item={item}
-                  onBookmarkToggle={onBookmarkToggle}
-                  bookmarked={bookmarks.includes(item.id)}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="library-panel">
-            <h3 className="library-panel-title">Multimedia Learning Resources</h3>
-            <div className="library-media-grid">
-              {MULTIMEDIA_ITEMS.map((item) => (
-                <article
-                  key={item.id}
-                  className="library-media-card"
-                  onMouseEnter={() => setHoveredMediaId(item.id)}
-                  onMouseLeave={() => setHoveredMediaId(null)}
-                >
-                  <div className="library-media-thumb">
-                    {hoveredMediaId === item.id ? (
-                      <iframe
-                        src={`https://www.youtube.com/embed/${item.youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${item.youtubeId}`}
-                        style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
-                        allow="autoplay"
-                        title={item.title}
-                      />
-                    ) : (
-                      <img
-                        src={`https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`}
-                        alt={item.title}
-                        loading="lazy"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }}
-                      />
-                    )}
-
-                    <Link
-                      to={`/library/resource/${item.resourceId || 'res-004'}`}
-                      className="library-media-thumb-link"
-                    />
-
-                    <Link
-                      to={`/library/resource/${item.resourceId || 'res-004'}`}
-                      className="library-media-play-btn"
-                    >
-                      <span style={{ marginLeft: '4px', fontSize: '1.2rem' }}>▶</span>
-                    </Link>
-                    <div className="library-media-overlay" style={{ zIndex: 6 }}>
-                      <span className="library-media-duration">{item.duration}</span>
-                    </div>
-                  </div>
-                  <div className="library-media-body">
-                    <span className="library-media-type-tag">{item.type}</span>
-                    <Link to={`/library/resource/${item.resourceId || 'res-004'}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <h4>{item.title}</h4>
-                    </Link>
-                    <div className="library-chip-row">
-                      {item.tags.map((tag) => (
-                        <span key={tag} className="library-chip">#{tag}</span>
-                      ))}
-                    </div>
-                    <div className="library-media-footer">
-                      {renderStars(4.5)}
-                      <div className="library-media-actions">
-                        <button className="library-btn library-btn-ghost" style={{ padding: '4px 8px' }}>Save</button>
-                        <Link
-                          to={`/library/resource/${item.resourceId || 'res-004'}`}
-                          className="library-btn library-btn-primary"
-                          style={{ padding: '4px 12px', fontSize: '0.75rem', textDecoration: 'none' }}
-                        >
-                          Open
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-
-
-
-          <section className="library-panel">
-            <h3 className="library-panel-title">Administrative and Official Documents</h3>
-            <div className="library-admin-grid">
-              {ADMIN_ITEMS.map((item) => (
-                <article key={item.id} className="library-admin-card">
-                  <div>
-                    <span className={`library-badge library-badge-${item.tag}`}>{item.tag}</span>
-                    <h4>{item.label}</h4>
-                    <p>{item.summary}</p>
-                  </div>
-                  <button type="button" className="library-btn library-btn-ghost">
-                    Open
-                  </button>
-                </article>
-              ))}
-            </div>
-            <div className="library-calendar">
-              <div className="library-calendar-event">
-                <p>Apr 28 · Research Colloquium</p>
-                <span>Auditorium · 10:00 AM</span>
-              </div>
-              <div className="library-calendar-event">
-                <p>May 02 · Project Expo</p>
-                <span>Lab Block · 2:00 PM</span>
-              </div>
-            </div>
-          </section>
-
-          <section className="library-panel">
-            <h3 className="library-section-title">Technical and Project Resources</h3>
-            <div className="library-tech-grid">
-              {TECH_RESOURCES.map((item) => (
-                <article key={item.id} className="library-tech-card">
-                  <div className="library-tech-header">
-                    <div>
-                      <h4 className="library-tech-title">{item.title}</h4>
-                      <div className="library-chip-row">
-                        {item.tags.map(tag => <span key={tag} className="library-tech-badge">{tag}</span>)}
-                      </div>
-                    </div>
-                    <span className="library-tech-meta">{item.meta}</span>
-                  </div>
-
-                  <div className="library-tech-code">
-                    <code>{item.snippet}</code>
-                  </div>
-
-                  <div className="library-tech-actions">
-                    <Link to={`/library/resource/${item.resourceId}`} className="library-btn-tech library-btn-repo">
-                      View Project Details
-                    </Link>
-                    <Link to={`/library/resource/${item.resourceId}`} className="library-btn-tech library-btn-demo">
-                      View Demo
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-          </section>
-
-          <section className="library-panel">
-            <h3 className="library-section-title">Project Implementation Demos</h3>
-            <div className="library-demo-grid">
-              {RESOURCE_ITEMS.filter(res => res.type === 'Project' && res.youtubeId).map(demo => (
-                <Link
-                  key={demo.id}
-                  to={`/library/resource/${demo.id}`}
-                  className="library-demo-card"
-                  onMouseEnter={() => setHoveredMediaId(demo.id)}
-                  onMouseLeave={() => setHoveredMediaId(null)}
-                >
-                  <div className="library-demo-thumb-container">
-                    {hoveredMediaId === demo.id ? (
-                      <iframe
-                        src={`https://www.youtube.com/embed/${demo.youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${demo.youtubeId}`}
-                        style={{ width: '100%', height: '100%', border: 'none', pointerEvents: 'none' }}
-                        allow="autoplay"
-                        title={demo.title}
-                      />
-                    ) : (
-                      <img src={`https://img.youtube.com/vi/${demo.youtubeId}/mqdefault.jpg`} alt={demo.title} />
-                    )}
-                    <div className="library-demo-play" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '2rem', background: hoveredMediaId === demo.id ? 'transparent' : 'rgba(0,0,0,0.2)', pointerEvents: 'none' }}>▶</div>
-                  </div>
-
-                  <div className="library-demo-content">
-                    <h4>{demo.title}</h4>
-                    <p className="library-demo-description">{demo.description}</p>
-                    <div className="library-demo-footer">
-                      <span className="library-demo-tag">{demo.department}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>View Project details ➔</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          <section className="library-panel">
-            <h3 className="library-section-title">Research & Data Resources</h3>
-            <div className="library-research-grid">
-              {RESOURCE_ITEMS.filter(res => ['Paper', 'Thesis', 'Dataset'].includes(res.type)).map(res => (
-                <div key={res.id} className="library-research-card">
-                  <Link to={`/library/resource/${res.id}`} className="library-research-preview-thumb">
-                    {res.pdfUrl ? (
-                      <div className="library-card-preview-pdf" style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', background: 'white' }}>
-                        <Document
-                          file={{ url: res.pdfUrl }}
-                          loading={<div className="library-card-preview-loading" style={{ padding: '40px', fontSize: '0.7rem' }}>Loading preview...</div>}
-                          error={<div className="library-card-preview-loading" style={{ padding: '40px', fontSize: '0.7rem' }}>Preview unavailable</div>}
-                        >
-                          <Page
-                            pageNumber={1}
-                            width={240}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                          />
-                        </Document>
-                      </div>
-                    ) : res.type === 'Dataset' ? (
-                      <div className="library-data-viz-icon" style={{ fontSize: '2.5rem' }}>📊</div>
-                    ) : (
-                      <div className="library-research-doc-icon">
-                        <div className="icon-line" style={{ width: '60%', height: '4px', background: '#3b82f6', marginBottom: '8px' }}></div>
-                        <div className="icon-line"></div>
-                        <div className="icon-line"></div>
-                        <div className="icon-line" style={{ width: '80%' }}></div>
-                        <div className="icon-line"></div>
-                        <div className="icon-line"></div>
-                      </div>
-                    )}
-                  </Link>
-
-                  <div className="library-research-content">
-                    <div className={`library-research-type type-${res.type.toLowerCase()}`}>
-                      {res.type}
-                    </div>
-                    <Link to={`/library/resource/${res.id}`} style={{ textDecoration: 'none' }}>
-                      <h4>{res.title}</h4>
-                    </Link>
-                    <p className="library-research-author">{res.author}</p>
-                    <p className="library-research-summary">{res.summary}</p>
-
-                    <div className="library-research-meta-box">
-                      <div className="library-research-meta-item">
-                        <strong>{res.type === 'Dataset' ? 'Format' : 'Publisher'}</strong>
-                        {res.type === 'Dataset' ? res.format : (res.journal || 'Institutional Repository')}
-                      </div>
-                      <div className="library-research-meta-item">
-                        <strong>{res.type === 'Dataset' ? 'Size' : 'Identifier'}</strong>
-                        {res.type === 'Dataset' ? res.size : (res.doi ? 'DOI Available' : 'Thesis ID')}
-                      </div>
-                    </div>
-
-                    <div className="library-research-footer">
-                      <div className="library-research-stats">
-                        <span>👁 {res.downloads ? res.downloads * 3 : 0}</span>
-                        <span>⬇ {res.downloads || 0}</span>
-                      </div>
-                      <button
-                        className="library-research-btn"
-                        onClick={() => {
-                          const citation = `${res.author}. (${new Date(res.updatedAt).getFullYear()}). ${res.title}. ${res.journal || 'IP Lab Repository'}.`;
-                          navigator.clipboard.writeText(citation);
-                          alert('Citation copied to clipboard!');
-                        }}
-                      >
-                        Cite Asset ➔
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
       </div>
-    </section>
+
+      {/* Search + Actions Bar */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <Input 
+              placeholder="Search textbooks, authors, course codes..." 
+              className="pl-9 bg-muted/20 border-border"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <Button variant="outline" className="gap-1 text-xs h-10 border-border" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>
+              <Filter size={14} /> Filters
+            </Button>
+            <Button className="gap-1 text-xs h-10" onClick={() => setShowUploadModal(true)}>
+              <Plus size={15} /> Add Resource
+            </Button>
+          </div>
+        </div>
+
+        {showAdvancedFilters && (
+          <Card className="border-border bg-muted/10">
+            <CardContent className="p-4 grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="dept-filter" className="text-xs font-semibold text-muted-foreground">Department</Label>
+                <select id="dept-filter" value={filterDepartment} onChange={(e) => setFilterDepartment(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                  {departments.map(d => <option key={d} value={d}>{d === 'All' ? 'All Departments' : d}</option>)}
+                </select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="course-filter" className="text-xs font-semibold text-muted-foreground">Course Code</Label>
+                <select id="course-filter" value={filterCourse} onChange={(e) => setFilterCourse(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                  {courses.map(c => <option key={c} value={c}>{c === 'All' ? 'All Courses' : c}</option>)}
+                </select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="sort-by" className="text-xs font-semibold text-muted-foreground">Sort By</Label>
+                <select id="sort-by" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                  <option value="downloads">Most Downloaded</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="recent">Recently Updated</option>
+                </select>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Category Tabs */}
+        <div className="flex flex-wrap gap-1.5 border-b border-border pb-2">
+          {[
+            { id: 'All', label: 'All Resources', icon: BookOpen },
+            { id: 'Textbooks', label: 'Textbooks', icon: Book },
+            { id: 'Slides', label: 'Lecture Slides', icon: Presentation },
+            { id: 'Manuals', label: 'Lab Manuals', icon: FileText },
+            { id: 'Papers', label: 'Papers & Theses', icon: GraduationCap },
+            { id: 'Datasets', label: 'Datasets', icon: Database },
+          ].map(tab => {
+            const Icon = tab.icon
+            const isActive = selectedCategory === tab.id
+            return (
+              <button key={tab.id} onClick={() => setSelectedCategory(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border ${
+                  isActive ? 'bg-accent text-white border-accent shadow-sm' : 'bg-transparent text-muted-foreground border-transparent hover:bg-muted/40 hover:text-foreground'
+                }`}
+              >
+                <Icon size={14} /> {tab.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Main Content Layout */}
+      <div className="grid gap-6 md:grid-cols-[1fr_260px]">
+        
+        {/* Resource Cards Grid */}
+        <div className="grid gap-4">
+          <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            <span>Archive Index</span>
+            <span>{filteredResources.length} items found</span>
+          </div>
+
+          {filteredResources.length === 0 ? (
+            <Card className="p-12 text-center border-dashed border-2 border-border">
+              <p className="text-muted-foreground font-semibold text-sm">No resources found.</p>
+              <Button variant="outline" className="mt-4 text-xs" onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setFilterDepartment('All'); setFilterCourse('All') }}>
+                Clear Filters
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {filteredResources.map(item => {
+                const type = getResourceType(item)
+                const isBookmarked = bookmarks.includes(item.id)
+                const hasVideo = Boolean(item.youtubeId)
+                const hasPdf = Boolean(item.pdfUrl) && item.type !== 'Video'
+
+                return (
+                  <Card key={item.id} className="group hover:shadow-md transition-all border-border flex flex-col overflow-hidden">
+                    
+                    {/* Preview Thumbnail */}
+                    {hasVideo ? (
+                      /* Video Thumbnail with Play Button overlay */
+                      <Link to={`/library/resource/${item.id}`} className="relative block h-40 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
+                        <img 
+                          src={`https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`}
+                          alt={item.title}
+                          className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity"
+                          onError={(e) => {
+                            // Hide broken image; the parent gradient background shows instead
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <PlayCircle size={28} className="text-white fill-white" />
+                          </div>
+                        </div>
+                        <Badge className="absolute top-2 left-2 bg-red-600 text-white border-none text-[9px] font-bold uppercase">
+                          Video
+                        </Badge>
+                      </Link>
+                    ) : (
+                      /* Document type visual preview — real thumbnail image */
+                      (() => {
+                        const thumbMap = {
+                          'PDF': '/thumbs/thumb_pdf.png',
+                          'Paper': '/thumbs/thumb_paper.png',
+                          'Thesis': '/thumbs/thumb_paper.png',
+                          'PPT': '/thumbs/thumb_ppt.png',
+                          'Dataset': '/thumbs/thumb_dataset.png',
+                        }
+                        const thumbSrc = thumbMap[item.type] || '/thumbs/thumb_pdf.png'
+                        const badgeColors = {
+                          'PDF': 'bg-red-600',
+                          'Paper': 'bg-blue-600',
+                          'Thesis': 'bg-indigo-600',
+                          'PPT': 'bg-amber-500',
+                          'Dataset': 'bg-teal-600',
+                        }
+                        const badgeColor = badgeColors[item.type] || 'bg-slate-600'
+                        return (
+                          <Link to={`/library/resource/${item.id}`} className="relative block h-40 overflow-hidden bg-muted group">
+                            <img
+                              src={thumbSrc}
+                              alt={`${item.type} preview`}
+                              className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                            />
+                            {/* Dark overlay on hover */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center">
+                              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
+                                Click to View Details
+                              </span>
+                            </div>
+                            {/* Type badge */}
+                            <Badge className={`absolute bottom-2 left-2 ${badgeColor} text-white border-none text-[9px] font-bold uppercase`}>
+                              {item.type}
+                            </Badge>
+                          </Link>
+                        )
+                      })()
+                    )}
+
+                    <CardHeader className="p-4 pb-1">
+                      <div className="flex justify-between items-start gap-2">
+                        <Badge className={`text-[10px] font-bold px-2 py-0.5 border uppercase ${getTypeBadgeStyles(type)}`}>
+                          {type}
+                        </Badge>
+                        <Button size="icon" variant="ghost" className="w-7 h-7 hover:text-accent rounded-full -mt-0.5 -mr-1"
+                          onClick={() => toggleBookmark(item.id)}>
+                          <Bookmark size={14} className={isBookmarked ? 'fill-accent text-accent' : 'text-muted-foreground'} />
+                        </Button>
+                      </div>
+                      <CardTitle className="text-sm font-bold leading-snug mt-2 line-clamp-2 group-hover:text-accent transition-colors">
+                        {item.title}
+                      </CardTitle>
+                      <p className="text-[11px] text-muted-foreground">
+                        {item.author || 'Anonymous'} · <span className="font-semibold text-accent-strong">{item.course || 'General'}</span>
+                      </p>
+                    </CardHeader>
+                    
+                    <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-between gap-3">
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {item.summary || 'No summary description provided.'}
+                      </p>
+
+                      <div className="flex flex-wrap gap-1">
+                        {(item.tags || []).slice(0, 3).map(tag => (
+                          <Badge key={tag} variant="outline" className="text-[9px] py-0 px-1.5 bg-muted/10 text-muted-foreground border-muted/35">
+                            #{tag}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-border/50 pt-2.5 mt-1 text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-0.5 text-amber-500"><Star size={11} className="fill-amber-500" /> {item.rating || '5.0'}</span>
+                          <span>·</span>
+                          <span>{item.downloads || 0} DLs</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" className="h-7 text-[10px] px-2 gap-1 font-semibold text-muted-foreground hover:text-foreground"
+                            onClick={() => copyCitation(item)}>
+                            <Quote size={10} /> Cite
+                          </Button>
+                          <Button asChild variant="secondary" size="sm" className="h-7 text-[10px] px-2.5 font-bold">
+                            <Link to={`/library/resource/${item.id}`}>Open →</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="grid gap-6 self-start">
+          <Card className="bg-gradient-to-br from-accent/10 via-transparent to-transparent border-accent/20">
+            <CardContent className="p-5 grid gap-3">
+              <h4 className="text-xs font-bold text-accent-strong uppercase tracking-wider flex items-center gap-1">
+                <Sparkles size={13} /> Share Knowledge
+              </h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Have verified lecture slides, lab manuals, or textbook links? Upload them to the department directory.
+              </p>
+              <Button onClick={() => setShowUploadModal(true)} size="sm" className="w-full text-xs gap-1 py-4 font-semibold">
+                <Plus size={14} /> Upload Resource
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Bookmark size={13} className="text-accent" /> My Bookmarks ({bookmarks.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 grid gap-2.5">
+              {bookmarks.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground italic">No bookmarked items yet.</p>
+              ) : (
+                resources.filter(r => bookmarks.includes(r.id)).map(r => (
+                  <div key={r.id} className="group flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                    <div className="grid gap-0.5 min-w-0">
+                      <Link to={`/library/resource/${r.id}`} className="text-xs font-bold text-foreground truncate hover:text-accent transition-colors">
+                        {r.title}
+                      </Link>
+                      <p className="text-[10px] text-muted-foreground truncate">{r.course} · {r.author}</p>
+                    </div>
+                    <Button size="icon" variant="ghost" className="w-6 h-6 hover:text-red-500 shrink-0" onClick={() => toggleBookmark(r.id)}>
+                      <X size={12} />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-muted/20">
+            <CardContent className="p-4 grid gap-2 text-xs text-muted-foreground leading-relaxed">
+              <h4 className="font-bold text-foreground">Academic Integrity</h4>
+              <p>All resources are reviewed by course supervisors. Sharing copyright-infringed exams or assignments is strictly prohibited.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Upload Resource Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-xl border-border shadow-2xl overflow-hidden">
+            
+            {/* Modal Header */}
+            <CardHeader className="p-5 border-b border-border flex flex-row items-start justify-between bg-gradient-to-r from-muted/30 to-transparent">
+              <div>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <CloudUpload size={18} className="text-accent" />
+                  Add Academic Resource
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">Share textbooks, lecture slides, or research papers with the department.</p>
+              </div>
+              <Button size="icon" variant="ghost" className="w-8 h-8 rounded-full shrink-0" onClick={resetModal}>
+                <X size={16} />
+              </Button>
+            </CardHeader>
+
+            <form onSubmit={handleUploadSubmit}>
+              <CardContent className="p-5 grid gap-4 max-h-[70vh] overflow-y-auto">
+
+                {/* ── Resource Metadata ── */}
+                <div className="grid gap-1.5">
+                  <Label htmlFor="res-title-input" className="text-xs font-semibold">Resource Title *</Label>
+                  <Input id="res-title-input" placeholder="e.g. Introduction to Algorithms (CLRS) 4th Edition"
+                    value={newResource.title} onChange={e => setNewResource(p => ({ ...p, title: e.target.value }))} required />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="res-author-input" className="text-xs font-semibold">Author / Publisher *</Label>
+                    <Input id="res-author-input" placeholder="e.g. Thomas H. Cormen"
+                      value={newResource.author} onChange={e => setNewResource(p => ({ ...p, author: e.target.value }))} required />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="res-course-input" className="text-xs font-semibold">Course Code *</Label>
+                    <Input id="res-course-input" placeholder="e.g. CSE-201"
+                      value={newResource.course} onChange={e => setNewResource(p => ({ ...p, course: e.target.value }))} required />
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="res-dept-select" className="text-xs font-semibold">Department</Label>
+                    <select id="res-dept-select" value={newResource.department} onChange={e => setNewResource(p => ({ ...p, department: e.target.value }))}
+                      className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                      <option value="CSE">Computer Science & Engineering</option>
+                      <option value="Mathematics">Mathematics</option>
+                      <option value="Physics">Physics</option>
+                      <option value="Engineering">General Engineering</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="res-type-select" className="text-xs font-semibold">Resource Type</Label>
+                    <select id="res-type-select" value={newResource.type} onChange={e => setNewResource(p => ({ ...p, type: e.target.value }))}
+                      className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                      <option value="PDF">PDF Document / E-Book</option>
+                      <option value="PPT">Presentation Slides (PPT/PPTX)</option>
+                      <option value="Dataset">Dataset Archive (.csv / .zip)</option>
+                      <option value="Link">External Online Resource</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* ── Source: URL toggle or File upload ── */}
+                <div className="grid gap-2">
+                  <Label className="text-xs font-semibold">Document Source</Label>
+
+                  {/* Toggle buttons */}
+                  <div className="flex rounded-lg border border-border overflow-hidden">
+                    <button type="button"
+                      onClick={() => { setUploadMode('url'); setSelectedFile(null); setUploadError('') }}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-all ${
+                        uploadMode === 'url'
+                          ? 'bg-accent text-white'
+                          : 'bg-background text-muted-foreground hover:bg-muted/40'
+                      }`}>
+                      <Link2 size={13} /> Paste a URL
+                    </button>
+                    <button type="button"
+                      onClick={() => { setUploadMode('file'); setUploadError('') }}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-all border-l border-border ${
+                        uploadMode === 'file'
+                          ? 'bg-accent text-white'
+                          : 'bg-background text-muted-foreground hover:bg-muted/40'
+                      }`}>
+                      <Upload size={13} /> Upload File
+                    </button>
+                  </div>
+
+                  {/* URL mode */}
+                  {uploadMode === 'url' && (
+                    <Input id="res-url-input"
+                      placeholder="https://drive.google.com/file/d/... or any public link"
+                      value={newResource.linkUrl}
+                      onChange={e => setNewResource(p => ({ ...p, linkUrl: e.target.value }))}
+                    />
+                  )}
+
+                  {/* File upload mode */}
+                  {uploadMode === 'file' && (
+                    <div className="grid gap-2">
+                      {/* Hidden file input */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.ppt,.pptx,.doc,.docx,.csv,.zip,.xls,.xlsx"
+                        className="hidden"
+                        onChange={e => handleFileSelect(e.target.files?.[0])}
+                      />
+
+                      {/* Drag-and-drop zone */}
+                      {!selectedFile ? (
+                        <div
+                          onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
+                          onDragLeave={() => setIsDragOver(false)}
+                          onDrop={handleDrop}
+                          onClick={() => fileInputRef.current?.click()}
+                          className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer py-8 px-4 transition-all ${
+                            isDragOver
+                              ? 'border-accent bg-accent/5 scale-[1.01]'
+                              : 'border-border bg-muted/10 hover:border-accent/50 hover:bg-muted/20'
+                          }`}
+                        >
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                            isDragOver ? 'bg-accent/15' : 'bg-muted/30'
+                          }`}>
+                            <CloudUpload size={24} className={isDragOver ? 'text-accent' : 'text-muted-foreground'} />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs font-semibold text-foreground">Drop your file here, or <span className="text-accent">browse</span></p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">PDF, PPT, PPTX, DOC, DOCX, CSV, ZIP — max 50MB</p>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Selected file display */
+                        <div className="flex items-center gap-3 p-3 rounded-xl border border-accent/30 bg-accent/5">
+                          <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                            <FileText size={18} className="text-accent" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-foreground truncate">{selectedFile.name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                          <Button type="button" size="icon" variant="ghost" className="w-7 h-7 text-muted-foreground hover:text-red-500 shrink-0"
+                            onClick={() => { setSelectedFile(null); setUploadProgress(0) }}>
+                            <X size={13} />
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Upload Progress Bar */}
+                      {isUploading && (
+                        <div className="grid gap-1.5">
+                          <div className="flex justify-between text-[10px] text-muted-foreground">
+                            <span className="flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Uploading to server...</span>
+                            <span className="font-bold text-accent">{uploadProgress}%</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-accent to-accent/70 rounded-full transition-all duration-300"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Upload success */}
+                      {!isUploading && uploadProgress === 100 && (
+                        <p className="flex items-center gap-1 text-[11px] text-emerald-500 font-semibold">
+                          <CheckCircle2 size={12} /> File uploaded successfully!
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Tags */}
+                <div className="grid gap-1.5">
+                  <Label htmlFor="res-tags-input" className="text-xs font-semibold">Tags <span className="font-normal text-muted-foreground">(comma-separated)</span></Label>
+                  <Input id="res-tags-input" placeholder="e.g. dsa, textbook, core"
+                    value={newResource.tags} onChange={e => setNewResource(p => ({ ...p, tags: e.target.value }))} />
+                </div>
+
+                {/* Summary */}
+                <div className="grid gap-1.5">
+                  <Label htmlFor="res-summary-input" className="text-xs font-semibold">Short Summary</Label>
+                  <textarea id="res-summary-input" placeholder="Provide a brief description of this resource..." rows={2}
+                    value={newResource.summary} onChange={e => setNewResource(p => ({ ...p, summary: e.target.value }))}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 resize-none" />
+                </div>
+
+                {/* Error message */}
+                {uploadError && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-500">
+                    <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                    <span>{uploadError}</span>
+                  </div>
+                )}
+
+              </CardContent>
+
+              {/* Footer */}
+              <div className="flex gap-2 justify-end p-4 border-t border-border bg-muted/10">
+                <Button type="button" variant="outline" size="sm" onClick={resetModal} disabled={isUploading}>Cancel</Button>
+                <Button type="submit" size="sm" className="gap-1.5 min-w-[120px]" disabled={isUploading}>
+                  {isUploading
+                    ? <><Loader2 size={13} className="animate-spin" /> Uploading...</>
+                    : <><CloudUpload size={13} /> Add Resource</>
+                  }
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+    </div>
   )
 }

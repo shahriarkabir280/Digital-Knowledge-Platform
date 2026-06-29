@@ -14,12 +14,12 @@ export const navItems = [
   },
   {
     to: '/repository',
-    label: 'Repository',
+    label: 'Research Repository',
     roles: ROUTE_ACCESS.repository,
   },
   {
     to: '/library',
-    label: 'Library Hub',
+    label: 'Academic Resources',
     iconName: 'BookOpen',
     roles: ROUTE_ACCESS.library,
   },

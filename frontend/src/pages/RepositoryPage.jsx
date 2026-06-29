@@ -93,7 +93,7 @@ export default function RepositoryPage() {
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-4">
       <div className="grid gap-2">
-        <p className="brand-kicker">Repository</p>
+        <p className="brand-kicker">Research Repository</p>
         <h2 className="text-2xl font-semibold tracking-tight">My Uploads</h2>
         <p className="text-sm text-muted-foreground">View and filter only the documents you uploaded.</p>
       </div>

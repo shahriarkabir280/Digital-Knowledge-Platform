@@ -234,7 +234,7 @@ export default function LibraryPage() {
         <div className="library-hero-layout">
           <div>
             <p className="library-kicker">Digital Knowledge Platform</p>
-            <h2>Library Hub for fast academic discovery and resource management</h2>
+            <h2>Academic Resources for fast academic discovery and resource management</h2>
             <p>
               Discover, preview, and organize university resources with role-aware actions for students,
               faculty, and administrators.

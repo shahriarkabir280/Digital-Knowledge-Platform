@@ -7,6 +7,7 @@
  */
 
 const { createClient } = require("@supabase/supabase-js");
+const ws = require("ws");
 
 let supabaseAuth;
 
@@ -22,7 +23,14 @@ function initSupabaseAuth() {
     throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables");
   }
 
-  supabaseAuth = createClient(supabaseUrl, supabaseKey);
+  supabaseAuth = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false
+    },
+    realtime: {
+      transport: ws
+    }
+  });
   console.log("✅ Supabase Auth client initialized");
   return supabaseAuth;
 }

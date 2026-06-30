@@ -23,7 +23,12 @@ import {
   CloudUpload,
   CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  FolderOpen,
+  ClipboardCheck,
+  FilePlus,
+  HelpCircle,
+  CheckSquare
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -33,6 +38,7 @@ import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../app/use-auth.js'
 import { RESOURCE_ITEMS } from '../modules/library/data.js'
 import { uploadDocument } from '../services/api/documents.js'
+import PDFThumbnail from '../components/library/PDFThumbnail.jsx'
 
 export default function LibraryPage() {
   const { authState } = useAuth()
@@ -53,7 +59,7 @@ export default function LibraryPage() {
   })
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [newResource, setNewResource] = useState({
-    title: '', author: '', department: 'CSE', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '',
+    title: '', author: '', department: 'CSE', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook',
   })
   // Upload-specific state
   const [uploadMode, setUploadMode] = useState('url') // 'url' | 'file'
@@ -74,9 +80,12 @@ export default function LibraryPage() {
   const getResourceType = (item) => {
     const tags = (item.tags || []).map(t => t.toLowerCase())
     const type = String(item.type || '').toLowerCase()
-    if (type === 'paper') return 'Research Paper'
+    if (type === 'paper' || type === 'research paper') return 'Research Paper'
     if (type === 'thesis') return 'Thesis'
     if (type === 'dataset') return 'Dataset'
+    if (type === 'question bank' || type === 'qbank') return 'Question Bank'
+    if (type === 'assignment') return 'Assignment'
+    if (type === 'lab report' || type === 'labreport') return 'Lab Report'
     if (type === 'ppt' || tags.includes('slides')) return 'Lecture Slides'
     if (tags.includes('lab') || tags.includes('manual')) return 'Lab Manual'
     if (tags.includes('textbook') || tags.includes('book')) return 'Textbook'
@@ -91,6 +100,10 @@ export default function LibraryPage() {
       case 'Research Paper': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
       case 'Thesis': return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
       case 'Dataset': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+      case 'Question Bank': return 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20'
+      case 'Assignment': return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
+      case 'Lab Report': return 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
+      case 'Video': return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
       default: return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
     }
   }
@@ -118,13 +131,15 @@ export default function LibraryPage() {
 
   const resetModal = useCallback(() => {
     setShowUploadModal(false)
-    setNewResource({ title: '', author: '', department: 'CSE', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '' })
+    setNewResource({ title: '', author: '', department: 'CSE', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook' })
     setUploadMode('url')
     setSelectedFile(null)
     setUploadProgress(0)
     setIsUploading(false)
     setUploadError('')
     setIsDragOver(false)
+    // Switch to All so the newly uploaded card is always visible
+    setSelectedCategory('All')
   }, [])
 
   const handleFileSelect = (file) => {
@@ -133,11 +148,18 @@ export default function LibraryPage() {
     const ext = file.name.split('.').pop().toLowerCase()
     const typeMap = { pdf: 'PDF', ppt: 'PPT', pptx: 'PPT', doc: 'PDF', docx: 'PDF', csv: 'Dataset', zip: 'Dataset' }
     const inferredType = typeMap[ext] || 'PDF'
+    
+    // Auto-suggest storage category based on type
+    let inferredCategory = 'textbook'
+    if (inferredType === 'PPT') inferredCategory = 'lecture-slides'
+    if (inferredType === 'Dataset') inferredCategory = 'dataset'
+
     setSelectedFile(file)
     setUploadError('')
     setNewResource(p => ({
       ...p,
       type: inferredType,
+      resourceCategory: inferredCategory,
       title: p.title || file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
     }))
   }
@@ -162,6 +184,21 @@ export default function LibraryPage() {
     }
 
     let resolvedPdfUrl = uploadMode === 'url' ? newResource.linkUrl.trim() : null
+    let youtubeId = null
+
+    // Parse YouTube ID if type is Video
+    if (newResource.type === 'Video') {
+      if (uploadMode === 'url' && newResource.linkUrl) {
+        const url = newResource.linkUrl.trim()
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+        const match = url.match(regExp)
+        if (match && match[2].length === 11) {
+          youtubeId = match[2]
+        } else {
+          youtubeId = url
+        }
+      }
+    }
 
     // --- File upload path ---
     if (uploadMode === 'file' && selectedFile) {
@@ -174,15 +211,19 @@ export default function LibraryPage() {
       try {
         const result = await uploadDocument(
           selectedFile,
-          { title: newResource.title.trim(), description: newResource.summary.trim() },
+          { 
+            title: newResource.title.trim(), 
+            description: newResource.summary.trim(),
+            resourceCategory: newResource.resourceCategory 
+          },
           ({ percent }) => setUploadProgress(percent),
           authState.token
         )
         // Build streaming content URL from the returned document ID
         const docId = result?.data?.document?.id
         if (docId) {
-          const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
-          resolvedPdfUrl = `${apiBase}/repository/files/${docId}/content`
+          // Use relative /api path — works through Vite proxy in dev and nginx in prod
+          resolvedPdfUrl = `/api/repository/files/${docId}/content`
         }
       } catch (err) {
         setUploadError(err.message || 'Upload failed. Please try again.')
@@ -199,11 +240,12 @@ export default function LibraryPage() {
       department: newResource.department,
       course: newResource.course.trim().toUpperCase(),
       type: newResource.type,
+      youtubeId: youtubeId,
       year: new Date().getFullYear(),
       tags: newResource.tags.split(',').map(t => t.trim()).filter(Boolean),
       rating: 5.0, reviews: 0, downloads: 0, access: 'public',
       summary: newResource.summary.trim(),
-      pdfUrl: ['PDF', 'PPT'].includes(newResource.type) ? resolvedPdfUrl : null,
+      pdfUrl: ['PDF', 'Paper', 'Thesis', 'Question Bank', 'Assignment', 'Lab Report'].includes(newResource.type) ? resolvedPdfUrl : null,
       pptUrl: newResource.type === 'PPT' ? resolvedPdfUrl : null,
       githubUrl: ['Dataset', 'Project'].includes(newResource.type) ? resolvedPdfUrl : null,
       updatedAt: new Date().toISOString()
@@ -215,6 +257,12 @@ export default function LibraryPage() {
   const filteredResources = useMemo(() => {
     return resources.filter(item => {
       const type = getResourceType(item)
+      
+      // Exclude research-related types from the Academic Resources tab
+      if (['Research Paper', 'Thesis', 'Dataset'].includes(type)) {
+        return false
+      }
+
       const matchesSearch = 
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.author || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -225,8 +273,10 @@ export default function LibraryPage() {
         (selectedCategory === 'Textbooks' && type === 'Textbook') ||
         (selectedCategory === 'Slides' && type === 'Lecture Slides') ||
         (selectedCategory === 'Manuals' && type === 'Lab Manual') ||
-        (selectedCategory === 'Papers' && (type === 'Research Paper' || type === 'Thesis')) ||
-        (selectedCategory === 'Datasets' && type === 'Dataset')
+        (selectedCategory === 'QuestionBanks' && type === 'Question Bank') ||
+        (selectedCategory === 'Assignments' && type === 'Assignment') ||
+        (selectedCategory === 'LabReports' && type === 'Lab Report') ||
+        (selectedCategory === 'Videos' && type === 'Video')
       const matchesDept = filterDepartment === 'All' || item.department === filterDepartment
       const matchesCourse = filterCourse === 'All' || item.course === filterCourse
       return matchesSearch && matchesTab && matchesDept && matchesCourse
@@ -333,8 +383,10 @@ export default function LibraryPage() {
             { id: 'Textbooks', label: 'Textbooks', icon: Book },
             { id: 'Slides', label: 'Lecture Slides', icon: Presentation },
             { id: 'Manuals', label: 'Lab Manuals', icon: FileText },
-            { id: 'Papers', label: 'Papers & Theses', icon: GraduationCap },
-            { id: 'Datasets', label: 'Datasets', icon: Database },
+            { id: 'QuestionBanks', label: 'Question Banks', icon: HelpCircle },
+            { id: 'Assignments', label: 'Assignments', icon: ClipboardCheck },
+            { id: 'LabReports', label: 'Lab Reports', icon: FilePlus },
+            { id: 'Videos', label: 'Video Content', icon: PlayCircle },
           ].map(tab => {
             const Icon = tab.icon
             const isActive = selectedCategory === tab.id
@@ -402,41 +454,66 @@ export default function LibraryPage() {
                         </Badge>
                       </Link>
                     ) : (
-                      /* Document type visual preview — real thumbnail image */
+                      /* Document type visual preview */
                       (() => {
+                        // Types that can be rendered from an actual PDF page
+                        const isPdfRenderable = ['PDF', 'Paper', 'Thesis', 'Question Bank', 'Assignment', 'Lab Report'].includes(item.type) && Boolean(item.pdfUrl)
+
+                        // Static fallback thumbnails by type
                         const thumbMap = {
-                          'PDF': '/thumbs/thumb_pdf.png',
-                          'Paper': '/thumbs/thumb_paper.png',
-                          'Thesis': '/thumbs/thumb_paper.png',
-                          'PPT': '/thumbs/thumb_ppt.png',
-                          'Dataset': '/thumbs/thumb_dataset.png',
+                          'PDF':           '/thumbs/thumb_pdf.png',
+                          'Paper':         '/thumbs/thumb_paper.png',
+                          'Thesis':        '/thumbs/thumb_paper.png',
+                          'PPT':           '/thumbs/thumb_ppt.png',
+                          'Dataset':       '/thumbs/thumb_dataset.png',
+                          'Question Bank': '/thumbs/thumb_qbank.png',
+                          'Assignment':    '/thumbs/thumb_assignment.png',
+                          'Lab Report':    '/thumbs/thumb_lab_report.png',
                         }
-                        const thumbSrc = thumbMap[item.type] || '/thumbs/thumb_pdf.png'
                         const badgeColors = {
-                          'PDF': 'bg-red-600',
-                          'Paper': 'bg-blue-600',
-                          'Thesis': 'bg-indigo-600',
-                          'PPT': 'bg-amber-500',
-                          'Dataset': 'bg-teal-600',
+                          'PDF':           'bg-red-600',
+                          'Paper':         'bg-blue-600',
+                          'Thesis':        'bg-indigo-600',
+                          'PPT':           'bg-amber-500',
+                          'Dataset':       'bg-purple-600',
+                          'Question Bank': 'bg-sky-600',
+                          'Assignment':    'bg-orange-600',
+                          'Lab Report':    'bg-teal-600',
                         }
-                        const badgeColor = badgeColors[item.type] || 'bg-slate-600'
+                        const fallbackSrc = thumbMap[item.type] || '/thumbs/thumb_pdf.png'
+                        const badgeColor  = badgeColors[item.type] || 'bg-slate-600'
+
                         return (
-                          <Link to={`/library/resource/${item.id}`} className="relative block h-40 overflow-hidden bg-muted group">
-                            <img
-                              src={thumbSrc}
-                              alt={`${item.type} preview`}
-                              className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
-                            />
-                            {/* Dark overlay on hover */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center">
-                              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
-                                Click to View Details
-                              </span>
-                            </div>
-                            {/* Type badge */}
-                            <Badge className={`absolute bottom-2 left-2 ${badgeColor} text-white border-none text-[9px] font-bold uppercase`}>
-                              {item.type}
-                            </Badge>
+                          <Link
+                            to={`/library/resource/${item.id}`}
+                            className="relative block h-40 overflow-hidden group"
+                          >
+                            {isPdfRenderable ? (
+                              /* ── Render actual first page of the PDF ── */
+                              <PDFThumbnail
+                                pdfUrl={item.pdfUrl}
+                                fallbackSrc={fallbackSrc}
+                                badgeColor={badgeColor}
+                                badgeLabel={item.type}
+                              />
+                            ) : (
+                              /* ── Static type-based thumbnail for PPT / Dataset ── */
+                              <div className="relative w-full h-40 overflow-hidden bg-muted">
+                                <img
+                                  src={fallbackSrc}
+                                  alt={`${item.type} preview`}
+                                  className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all duration-200 flex items-center justify-center">
+                                  <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
+                                    Click to View Details
+                                  </span>
+                                </div>
+                                <span className={`absolute bottom-2 left-2 ${badgeColor} text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded`}>
+                                  {item.type}
+                                </span>
+                              </div>
+                            )}
                           </Link>
                         )
                       })()
@@ -604,14 +681,46 @@ export default function LibraryPage() {
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor="res-type-select" className="text-xs font-semibold">Resource Type</Label>
-                    <select id="res-type-select" value={newResource.type} onChange={e => setNewResource(p => ({ ...p, type: e.target.value }))}
+                    <select id="res-type-select" value={newResource.type} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        let category = 'textbook';
+                        if (val === 'PPT') category = 'lecture-slides';
+                        if (val === 'Dataset') category = 'dataset';
+                        if (val === 'Question Bank') category = 'question-bank';
+                        if (val === 'Assignment') category = 'assignment';
+                        if (val === 'Lab Report') category = 'lab-report';
+                        if (val === 'Video') category = 'media';
+                        setNewResource(p => ({ ...p, type: val, resourceCategory: category }));
+                      }}
                       className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
                       <option value="PDF">PDF Document / E-Book</option>
                       <option value="PPT">Presentation Slides (PPT/PPTX)</option>
-                      <option value="Dataset">Dataset Archive (.csv / .zip)</option>
+                      <option value="Question Bank">Question Bank</option>
+                      <option value="Assignment">Assignment</option>
+                      <option value="Lab Report">Lab Report</option>
+                      <option value="Video">Video Content</option>
                       <option value="Link">External Online Resource</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label htmlFor="res-category-select" className="text-xs font-semibold text-accent-strong">Upload Directory / Storage Folder *</Label>
+                  <select id="res-category-select" value={newResource.resourceCategory} onChange={e => setNewResource(p => ({ ...p, resourceCategory: e.target.value }))}
+                    className="h-9 rounded-md border border-accent/40 bg-accent/5 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1">
+                    <option value="textbook">Textbooks (textbook/)</option>
+                    <option value="lecture-slides">Lecture Slides (lecture-slides/)</option>
+                    <option value="lab-manual">Lab Manuals (lab-manual/)</option>
+                    <option value="research-paper">Research Papers (research-paper/)</option>
+                    <option value="thesis">Theses (thesis/)</option>
+                    <option value="dataset">Datasets (dataset/)</option>
+                    <option value="question-bank">Question Banks (question-bank/)</option>
+                    <option value="assignment">Assignments (assignment/)</option>
+                    <option value="lab-report">Lab Reports (lab-report/)</option>
+                    <option value="project">Projects (project/)</option>
+                  </select>
+                  <p className="text-[9px] text-muted-foreground">Selects the folder path on the server where the file will be organized.</p>
                 </div>
 
                 {/* ── Source: URL toggle or File upload ── */}

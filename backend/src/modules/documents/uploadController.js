@@ -90,11 +90,22 @@ async function uploadFile(req, res, next) {
       console.warn('Upload warnings:', validation.warnings);
     }
 
-    // Determine category based on file type
+    // Determine storage directory:
+    // Use caller-supplied resourceCategory (e.g. 'question-bank', 'assignment')
+    // if provided & valid; otherwise fall back to file-extension-based category.
     const ext = req.file.originalname.split('.').pop().toLowerCase();
-    const category = getCategoryFromExtension(ext);
+    const ALLOWED_RESOURCE_CATEGORIES = new Set([
+      'documents', 'media',
+      'textbook', 'lecture-slides', 'lab-manual',
+      'research-paper', 'thesis', 'dataset',
+      'question-bank', 'assignment', 'lab-report', 'project',
+    ]);
+    const rawCategory = (req.body.resourceCategory || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const category = ALLOWED_RESOURCE_CATEGORIES.has(rawCategory)
+      ? rawCategory
+      : getCategoryFromExtension(ext);
 
-    // Store file to disk
+    // Store file to Supabase Storage
     const storeResult = await uploadService.storeUploadedFile(req.file, category);
 
     if (!storeResult.success) {

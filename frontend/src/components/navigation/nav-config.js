@@ -8,13 +8,9 @@ export const navItems = [
     roles: ROUTE_ACCESS.dashboard,
   },
   {
-    to: '/submit-paper',
-    label: 'Submission Wizard',
-    roles: ROUTE_ACCESS.uploadDocument,
-  },
-  {
     to: '/repository',
     label: 'Research Repository',
+    iconName: 'GraduationCap',
     roles: ROUTE_ACCESS.repository,
   },
   {

@@ -19,7 +19,10 @@ import {
   ExternalLink,
   Code2,
   Calendar,
-  User
+  User,
+  HelpCircle,
+  ClipboardCheck,
+  FilePlus
 } from 'lucide-react'
 
 function StarRating({ rating, onRate, readonly = false }) {
@@ -61,7 +64,14 @@ export default function LibraryResourceDetailsPage() {
   }, [resourceId])
 
   const resource = useMemo(() => {
-    return RESOURCE_ITEMS.find(item => item.id === resourceId) || RESOURCE_ITEMS[0]
+    // Check localStorage first (user-uploaded resources live there)
+    try {
+      const saved = localStorage.getItem('dkp_academic_resources')
+      const all = saved ? JSON.parse(saved) : RESOURCE_ITEMS
+      return all.find(item => item.id === resourceId) || RESOURCE_ITEMS.find(item => item.id === resourceId) || RESOURCE_ITEMS[0]
+    } catch {
+      return RESOURCE_ITEMS.find(item => item.id === resourceId) || RESOURCE_ITEMS[0]
+    }
   }, [resourceId])
 
   const hasPdf = Boolean(resource.pdfUrl) && !['Video', 'PPT'].includes(resource.type)
@@ -70,13 +80,19 @@ export default function LibraryResourceDetailsPage() {
   const hasReadme = Boolean(resource.readme)
   const hasGithub = Boolean(resource.githubUrl)
 
-  // Google Docs Viewer — works for any public PDF without CORS issues
-  const googleDocsViewerUrl = resource.pdfUrl
+  // Detect if the pdfUrl is a backend auth-gated API URL (not publicly accessible)
+  // Matches: relative /api/... paths AND absolute localhost/127.x URLs
+  const isLocalApiUrl = resource.pdfUrl
+    ? /^\/api\/|\/api\/|localhost|127\.0\.0\.1/.test(resource.pdfUrl)
+    : false
+
+  // Google Docs Viewer — only works for public URLs (not auth-gated)
+  const googleDocsViewerUrl = resource.pdfUrl && !isLocalApiUrl
     ? `https://docs.google.com/viewer?url=${encodeURIComponent(resource.pdfUrl)}&embedded=true`
     : null
 
   // Microsoft Office Online viewer URL for PPT/PPTX files
-  const officeViewerUrl = resource.pptUrl
+  const officeViewerUrl = resource.pptUrl && !isLocalApiUrl
     ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resource.pptUrl)}`
     : null
 
@@ -140,6 +156,14 @@ export default function LibraryResourceDetailsPage() {
       case 'paper': return <GraduationCap size={16} className="text-blue-500" />
       case 'thesis': return <BookOpen size={16} className="text-indigo-500" />
       case 'video': return <PlayCircle size={16} className="text-red-500" />
+      case 'question bank':
+      case 'qbank':
+        return <HelpCircle size={16} className="text-sky-500" />
+      case 'assignment':
+        return <ClipboardCheck size={16} className="text-orange-500" />
+      case 'lab report':
+      case 'labreport':
+        return <FilePlus size={16} className="text-teal-500" />
       default: return <BookOpen size={16} className="text-muted-foreground" />
     }
   }
@@ -318,14 +342,16 @@ export default function LibraryResourceDetailsPage() {
                   </div>
                 )}
 
-                {/* ── PDF Viewer — Google Docs Viewer (CORS-free) ── */}
+                {/* ── PDF Viewer ── */}
                 {hasPdf && !hasVideo && !hasPpt && (
                   <div>
                     {/* Toolbar */}
                     <div className="flex items-center justify-between gap-4 px-4 py-2.5 border-b border-border bg-muted/20">
                       <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                         <FileText size={14} className="text-red-500" />
-                        <span>PDF Document — Google Docs Viewer</span>
+                        <span>
+                          {isLocalApiUrl ? 'Uploaded Document — Server File' : 'PDF Document — Google Docs Viewer'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button asChild size="sm" variant="outline" className="text-xs gap-1 h-7">
@@ -335,35 +361,66 @@ export default function LibraryResourceDetailsPage() {
                         </Button>
                         <Button asChild size="sm" variant="ghost" className="text-xs gap-1 h-7">
                           <a href={resource.pdfUrl} download>
-                            <Download size={11} /> Download PDF
+                            <Download size={11} /> Download
                           </a>
                         </Button>
                       </div>
                     </div>
 
-                    {/* Google Docs Viewer iframe */}
-                    <div className="relative w-full bg-muted/10" style={{ height: '70vh' }}>
-                      <iframe
-                        src={googleDocsViewerUrl}
-                        width="100%"
-                        height="100%"
-                        frameBorder="0"
-                        title={resource.title}
-                        className="w-full h-full"
-                        allowFullScreen
-                      />
-                    </div>
-
-                    <div className="p-3 border-t border-border bg-muted/10 flex items-center justify-between">
-                      <p className="text-[10px] text-muted-foreground">
-                        Powered by Google Docs Viewer · If the preview fails, use "Open in Browser" above.
-                      </p>
-                      <Button asChild size="sm" variant="ghost" className="text-[10px] gap-1 h-7">
-                        <a href={googleDocsViewerUrl} target="_blank" rel="noreferrer">
-                          <ExternalLink size={11} /> Full-screen view
-                        </a>
-                      </Button>
-                    </div>
+                    {isLocalApiUrl ? (
+                      /* ── Auth-gated backend file: show download panel ── */
+                      <div className="flex flex-col items-center justify-center gap-6 py-16 px-8 bg-muted/5">
+                        <div className="w-20 h-20 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center">
+                          <FileText size={36} className="text-red-400" />
+                        </div>
+                        <div className="text-center grid gap-1.5 max-w-sm">
+                          <h3 className="font-bold text-base text-foreground">{resource.title}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            This document is stored on the server. Use the buttons above to open or download it.
+                          </p>
+                          <p className="text-[10px] text-muted-foreground/70 mt-1">
+                            In-browser preview requires the file to be publicly hosted. Locally uploaded files are served directly.
+                          </p>
+                        </div>
+                        <div className="flex gap-3">
+                          <Button asChild size="sm" className="gap-1.5">
+                            <a href={resource.pdfUrl} target="_blank" rel="noreferrer">
+                              <ExternalLink size={14} /> Open File
+                            </a>
+                          </Button>
+                          <Button asChild size="sm" variant="outline" className="gap-1.5">
+                            <a href={resource.pdfUrl} download>
+                              <Download size={14} /> Download
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ── Public URL: use Google Docs Viewer ── */
+                      <>
+                        <div className="relative w-full bg-muted/10" style={{ height: '70vh' }}>
+                          <iframe
+                            src={googleDocsViewerUrl}
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            title={resource.title}
+                            className="w-full h-full"
+                            allowFullScreen
+                          />
+                        </div>
+                        <div className="p-3 border-t border-border bg-muted/10 flex items-center justify-between">
+                          <p className="text-[10px] text-muted-foreground">
+                            Powered by Google Docs Viewer · If the preview fails, use "Open in Browser" above.
+                          </p>
+                          <Button asChild size="sm" variant="ghost" className="text-[10px] gap-1 h-7">
+                            <a href={googleDocsViewerUrl} target="_blank" rel="noreferrer">
+                              <ExternalLink size={11} /> Full-screen view
+                            </a>
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 

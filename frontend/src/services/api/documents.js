@@ -25,6 +25,11 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
       formData.append('description', metadata.description)
     }
 
+    // Pass the resource category so the backend stores in the correct subdirectory
+    if (metadata.resourceCategory) {
+      formData.append('resourceCategory', metadata.resourceCategory)
+    }
+
     const xhr = new XMLHttpRequest()
     xhr.timeout = 120000
 

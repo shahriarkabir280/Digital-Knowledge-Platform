@@ -32,7 +32,8 @@ a { color: var(--accent-strong); }
 
 /* ─── App shell ──────────────────────────────────────────────────────────── */
 .app-shell {
-  min-height: 100svh;
+  height: 100svh;
+  overflow: hidden;
   background: hsl(var(--background));
   display: flex;
   flex-direction: column;
@@ -324,6 +325,8 @@ a { color: var(--accent-strong); }
   grid-template-columns: var(--sidebar-width, 256px) 1fr;
   gap: 0;
   flex: 1;
+  height: calc(100svh - 64px);
+  overflow: hidden;
   transition: grid-template-columns 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -340,12 +343,10 @@ a { color: var(--accent-strong); }
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: calc(100svh - 64px);
-  position: sticky;
-  top: 64px;
-  height: calc(100svh - 64px);
+  height: 100%;
   overflow-y: auto;
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), padding 0.2s ease;
+  /* Sidebar is a natural fixed column — no sticky needed */
 }
 
 /* Collapsed sidebar styling rules */
@@ -518,7 +519,7 @@ a { color: var(--accent-strong); }
 .content-panel {
   flex: 1;
   padding: clamp(20px, 3vw, 32px);
-  min-height: calc(100svh - 64px);
+  height: 100%;
   background: hsl(var(--background));
   overflow-y: auto;
   overflow-x: hidden;
@@ -531,7 +532,6 @@ a { color: var(--accent-strong); }
   background: transparent;
   box-shadow: none;
   padding: clamp(12px, 2vw, 20px);
-  min-height: 100svh;
 }
 
 /* ─── Page header pattern ────────────────────────────────────────────────── */

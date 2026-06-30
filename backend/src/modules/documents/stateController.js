@@ -25,6 +25,33 @@ function buildTransitionNotification(document, fromState, toState, actorName, no
   const eventType = `document_${toState}`;
   const noteSuffix = note ? ` Reason: ${note}` : "";
 
+  // New upload awaiting approval
+  if (toState === "pending") {
+    return {
+      eventType,
+      title: "New document pending approval",
+      message: `"${document.title}" uploaded by ${actorName} is pending admin review.${noteSuffix}`,
+    };
+  }
+
+  // Admin approved document
+  if (fromState === "pending" && toState === "published") {
+    return {
+      eventType,
+      title: "Document approved and published",
+      message: `Your document "${document.title}" was approved and published by ${actorName}.${noteSuffix}`,
+    };
+  }
+
+  // Admin rejected document
+  if (fromState === "pending" && toState === "archived") {
+    return {
+      eventType,
+      title: "Document rejected",
+      message: `Your document "${document.title}" was rejected by ${actorName}.${noteSuffix}`,
+    };
+  }
+
   if (toState === "review") {
     return {
       eventType,
@@ -69,7 +96,27 @@ async function createTransitionNotifications(trx, document, fromState, toState, 
 
   const recipientIds = new Set();
 
-  // Flow 1: draft -> review (submission arrives for reviewer/staff).
+  // Flow 1: Document newly uploaded (pending) - notify admins
+  if (toState === "pending") {
+    const adminUsers = await trx("users")
+      .select("id")
+      .where({ role: "ADMIN" });
+
+    adminUsers.forEach((user) => {
+      if (user.id !== actor.id) {
+        recipientIds.add(user.id);
+      }
+    });
+  }
+
+  // Flow 2: pending -> published or pending -> archived (decision sent to uploader)
+  if (fromState === "pending" && (toState === "published" || toState === "archived")) {
+    if (document.uploader_id !== actor.id) {
+      recipientIds.add(document.uploader_id);
+    }
+  }
+
+  // Flow 3: draft -> review (submission arrives for reviewer/staff).
   if (toState === "review") {
     const staffUsers = await trx("users")
       .select("id")
@@ -82,7 +129,7 @@ async function createTransitionNotifications(trx, document, fromState, toState, 
     });
   }
 
-  // Flow 2: review -> published or review -> draft (decision sent back to requester/uploader).
+  // Flow 4: review -> published or review -> draft (decision sent back to requester/uploader).
   if (fromState === "review" && (toState === "published" || toState === "draft")) {
     if (document.uploader_id !== actor.id) {
       recipientIds.add(document.uploader_id);

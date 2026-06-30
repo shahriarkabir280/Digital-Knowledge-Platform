@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../app/use-auth.js'
+import { apiRequest } from '../services/api/client'
 import { RESOURCE_ITEMS } from '../modules/library/data.js'
 import { uploadDocument } from '../services/api/documents.js'
 import PDFThumbnail from '../components/library/PDFThumbnail.jsx'
@@ -33,6 +34,10 @@ import {
 
 export default function RepositoryPage() {
   const { authState } = useAuth()
+  
+  // Published documents from backend API
+  const [publishedDocs, setPublishedDocs] = useState([])
+  const [loadingPublished, setLoadingPublished] = useState(true)
   
   // Explore resources from localStorage or static data
   const [exploreResources, setExploreResources] = useState(() => {
@@ -81,6 +86,63 @@ export default function RepositoryPage() {
     localStorage.setItem('dkp_academic_resources', JSON.stringify(exploreResources))
   }, [exploreResources])
 
+  // Fetch published documents from backend
+  useEffect(() => {
+    const fetchPublishedDocuments = async () => {
+      try {
+        setLoadingPublished(true)
+        const response = await apiRequest('/documents/my-uploads?state=published&resourceCategory=research-paper', {
+          authToken: authState?.token,
+        })
+        
+        if (response?.data?.items) {
+          // Convert backend documents to resource format
+          const docs = await Promise.all(response.data.items.map(async (doc) => {
+            let signedUrl = `/api/repository/files/${doc.id}/content`
+            
+            // Try to get the signed URL for proper file access
+            try {
+              const signedUrlResponse = await apiRequest(`/repository/files/${doc.id}/signed-url`, {
+                authToken: authState?.token,
+              })
+              if (signedUrlResponse?.data?.signedUrl) {
+                signedUrl = signedUrlResponse.data.signedUrl
+              }
+            } catch (err) {
+              console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
+            }
+            
+            return {
+              id: `doc-${doc.id}`,
+              title: doc.title,
+              type: doc.type || 'Research Paper',
+              format: doc.format,
+              version: doc.version,
+              state: doc.state,
+              pdfUrl: signedUrl,
+              updatedAt: doc.updatedAt,
+              department: 'CSE',
+              course: 'N/A',
+              author: 'Unknown',
+              tags: [],
+              rating: 5.0,
+              downloads: 0,
+            }
+          }))
+          setPublishedDocs(docs)
+        }
+      } catch (error) {
+        console.error('Failed to fetch published documents:', error)
+      } finally {
+        setLoadingPublished(false)
+      }
+    }
+
+    if (authState?.token) {
+      fetchPublishedDocuments()
+    }
+  }, [authState?.token])
+
   // Classify types for badges and tabs
   const getResearchType = (item) => {
     const type = String(item.type || '').toLowerCase()
@@ -101,7 +163,20 @@ export default function RepositoryPage() {
 
   // Filtered lists
   const filteredExplore = useMemo(() => {
-    return exploreResources.filter(item => {
+    // Combine localStorage resources and published backend documents
+    const allResources = [...exploreResources, ...publishedDocs]
+    
+    return allResources.filter(item => {
+      // FILTER OUT PENDING DOCUMENTS - they shouldn't show in public repository
+      if (item.state === 'pending') {
+        return false
+      }
+      
+      // Only show published documents from backend
+      if (item.id.startsWith('doc-') && item.state !== 'published') {
+        return false
+      }
+      
       const type = getResearchType(item)
       // Only show research types in this repository
       if (!['Research Paper', 'Thesis', 'Dataset'].includes(type)) {
@@ -124,7 +199,7 @@ export default function RepositoryPage() {
       if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0)
       return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
     })
-  }, [exploreResources, searchQuery, selectedType, selectedDept, selectedCourse, sortBy])
+  }, [exploreResources, publishedDocs, searchQuery, selectedType, selectedDept, selectedCourse, sortBy])
 
   const departments = useMemo(() => {
     const deps = new Set(exploreResources.filter(r => ['Paper', 'Thesis', 'Dataset', 'Research Paper'].includes(r.type)).map(r => r.department).filter(Boolean))
@@ -198,6 +273,7 @@ export default function RepositoryPage() {
     }
 
     let resolvedPdfUrl = uploadMode === 'url' ? newResource.linkUrl.trim() : null
+    let uploadedDocState = 'draft' // default
 
     if (uploadMode === 'file' && selectedFile) {
       if (!authState?.token) {
@@ -218,8 +294,11 @@ export default function RepositoryPage() {
           authState.token
         )
         const docId = result?.data?.document?.id
+        const docState = result?.data?.document?.state // Get the state from backend
+        
         if (docId) {
           resolvedPdfUrl = `/api/repository/files/${docId}/content`
+          uploadedDocState = docState || 'pending' // Use backend state
         }
       } catch (err) {
         setUploadError(err.message || 'Upload failed. Please try again.')
@@ -242,6 +321,7 @@ export default function RepositoryPage() {
       summary: newResource.summary.trim(),
       pdfUrl: ['Research Paper', 'Thesis'].includes(newResource.type) ? resolvedPdfUrl : null,
       githubUrl: newResource.type === 'Dataset' ? resolvedPdfUrl : null,
+      state: uploadedDocState, // ADD STATE HERE
       updatedAt: new Date().toISOString()
     }
 
@@ -398,7 +478,7 @@ export default function RepositoryPage() {
                   <Card key={item.id} className="group hover:shadow-md transition-all border-border flex flex-col overflow-hidden">
                     
                     {/* Thumbnail section */}
-                    <Link to={`/library/resource/${item.id}`} className="relative block h-40 overflow-hidden group">
+                    <Link to={item.id.startsWith('doc-') ? `/viewer/${item.id.replace('doc-', '')}` : `/library/resource/${item.id}`} className="relative block h-40 overflow-hidden group">
                       {isPdfRenderable ? (
                         <PDFThumbnail
                           pdfUrl={item.pdfUrl}
@@ -468,7 +548,11 @@ export default function RepositoryPage() {
                             <Quote size={10} /> Cite
                           </Button>
                           <Button asChild variant="secondary" size="sm" className="h-7 text-[10px] px-2.5 font-bold">
-                            <Link to={`/library/resource/${item.id}`}>Open →</Link>
+                            {item.id.startsWith('doc-') ? (
+                              <Link to={`/viewer/${item.id.replace('doc-', '')}`}>Open →</Link>
+                            ) : (
+                              <Link to={`/library/resource/${item.id}`}>Open →</Link>
+                            )}
                           </Button>
                         </div>
                       </div>

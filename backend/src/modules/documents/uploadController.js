@@ -123,7 +123,10 @@ async function uploadFile(req, res, next) {
     const description = req.body.description || null;
 
     // Determine document type and format
-    const docType = category === 'documents' ? extractDocumentType(ext) : 'media';
+    // Use the type from form if provided, otherwise infer from category/extension
+    const docType = req.body.type 
+      ? req.body.type.toLowerCase() 
+      : (category === 'documents' ? extractDocumentType(ext) : 'media');
     const format = ext.toLowerCase();
 
     // Create document record
@@ -135,8 +138,9 @@ async function uploadFile(req, res, next) {
         format,
         file_path: fileData.relativePath,
         version: 1,
-        state: 'draft', // New uploads start as draft
+        state: 'pending', // New uploads start as pending (awaiting admin approval)
         access_tier: 'REGISTERED', // Default access
+        resource_category: rawCategory || category, // Store the resource category
         created_at: db.fn.now(),
         updated_at: db.fn.now(),
       })
@@ -164,6 +168,28 @@ async function uploadFile(req, res, next) {
 
     // Retrieve complete document record
     const document = await db('documents').where({ id: documentId }).first();
+
+    // Notify admins about new pending document
+    try {
+      const adminUsers = await db('users').where({ role: 'ADMIN' }).select('id');
+      if (adminUsers.length > 0) {
+        const notifications = adminUsers.map((admin) => ({
+          user_id: admin.id,
+          document_id: documentId,
+          event_type: 'document_pending',
+          title: 'New document pending approval',
+          message: `"${document.title || 'Untitled'}" uploaded by ${authorName} is pending admin review.`,
+          is_read: false,
+          created_at: db.fn.now(),
+        }));
+        
+        await db('notifications').insert(notifications).catch((err) => {
+          console.warn('Failed to create notifications:', err.message);
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to notify admins:', err.message);
+    }
 
     return res.status(201).json({
       success: true,
@@ -425,6 +451,53 @@ async function getFileInfo(req, res, next) {
 }
 
 /**
+ * GET /api/repository/files/:documentId/signed-url
+ * Get a long-lived signed URL for downloading the file (valid for 1 hour)
+ */
+async function getSignedFileUrl(req, res, next) {
+  try {
+    const { documentId } = req.params;
+
+    // Get document record
+    const document = await db('documents').where({ id: documentId }).first();
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found',
+        code: 'NOT_FOUND',
+      });
+    }
+
+    if (!canAccessDocumentContent(document, req.user)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied',
+        code: 'FORBIDDEN',
+      });
+    }
+
+    // Generate a long-lived signed URL (3600 seconds = 1 hour)
+    const signedUrl = await uploadService.getSignedUrl(document.file_path, 3600);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        signedUrl,
+        expiresIn: 3600, // seconds
+      },
+    });
+  } catch (error) {
+    console.error('Get signed URL error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate signed URL',
+      code: 'SIGNED_URL_ERROR',
+    });
+  }
+}
+
+/**
  * DELETE /api/repository/files/:documentId
  * Delete a file and document record
  */
@@ -523,6 +596,7 @@ module.exports = {
   uploadFile,
   replaceFile,
   getFileInfo,
+  getSignedFileUrl,
   streamFileContent,
   deleteFile,
 };

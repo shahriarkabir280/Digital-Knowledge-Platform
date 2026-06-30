@@ -279,7 +279,7 @@ export default function DashboardPage() {
 
               {/* Status Filter buttons */}
               <div className="flex bg-muted p-0.5 rounded-lg border border-border/50">
-                {['All', 'draft', 'review', 'published'].map(state => (
+                {['All', 'pending', 'draft', 'review', 'published'].map(state => (
                   <button
                     key={state}
                     onClick={() => setSelectedState(state)}

@@ -274,7 +274,13 @@ export default function SubmissionWizardPage() {
       setPendingFileStatus('idle')
       await loadDocumentContext(document.id, form)
       setCurrentStep(2)
-      setMessage(`File uploaded successfully as document #${document.id}.`)
+      
+      // Update message based on document state
+      if (document.state === 'pending') {
+        setMessage(`Document #${document.id} uploaded and is awaiting admin approval before appearing in the repository.`)
+      } else {
+        setMessage(`File uploaded successfully as document #${document.id}.`)
+      }
     } catch (uploadError) {
       setPendingFileStatus('error')
       setError(uploadError.message || 'Failed to upload file.')

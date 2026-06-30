@@ -12,7 +12,9 @@ import LibraryResourceDetailsPage from '../pages/LibraryResourceDetailsPage.jsx'
 import LibrarySettingsPage from '../pages/LibrarySettingsPage.jsx'
 import LibraryUploadPage from '../pages/LibraryUploadPage.jsx'
 import LibraryAnalyticsPage from '../pages/LibraryAnalyticsPage.jsx'
+import LibraryModerationPage from '../pages/LibraryModerationPage.jsx'
 import LoginPage from '../pages/LoginPage.jsx'
+import ModerationQueuePage from '../pages/ModerationQueuePage.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
 import NotificationsPage from '../pages/NotificationsPage.jsx'
 import RegisterPage from '../pages/RegisterPage.jsx'
@@ -62,6 +64,14 @@ export const appRouter = createBrowserRouter([
               {
                 path: '/dashboard/admin',
                 element: <AdminDashboardPage />,
+              },
+              {
+                path: '/moderation-queue',
+                element: <ModerationQueuePage />,
+              },
+              {
+                path: '/library-moderation-queue',
+                element: <LibraryModerationPage />,
               },
             ],
           },

@@ -2,6 +2,7 @@ const { z } = require("zod");
 const { sameDocumentOwner } = require("./ownership");
 
 const DOCUMENT_STATES = Object.freeze({
+  PENDING: "pending",
   DRAFT: "draft",
   REVIEW: "review",
   PUBLISHED: "published",
@@ -14,13 +15,20 @@ const lifecycleSchema = z.object({
 });
 
 const allowedTransitions = {
+  // New uploads start in pending - awaiting admin approval
+  [DOCUMENT_STATES.PENDING]: [DOCUMENT_STATES.PUBLISHED, DOCUMENT_STATES.ARCHIVED],
+  // Members can move draft to review for submission
   [DOCUMENT_STATES.DRAFT]: [DOCUMENT_STATES.REVIEW],
+  // Reviewers can approve (publish) or request revision (back to draft)
   [DOCUMENT_STATES.REVIEW]: [DOCUMENT_STATES.PUBLISHED, DOCUMENT_STATES.DRAFT],
+  // Published can be archived
   [DOCUMENT_STATES.PUBLISHED]: [DOCUMENT_STATES.ARCHIVED],
+  // Archived is final state
   [DOCUMENT_STATES.ARCHIVED]: [],
 };
 
 const rolePolicyByTargetState = {
+  [DOCUMENT_STATES.PENDING]: [], // Internal state, no direct transitions allowed
   [DOCUMENT_STATES.DRAFT]: [
     "REVIEWER",
     "STAFF",
@@ -34,10 +42,7 @@ const rolePolicyByTargetState = {
     "ADMIN",
   ],
   [DOCUMENT_STATES.PUBLISHED]: [
-    "REVIEWER",
-    "STAFF",
-    "LAB_MANAGER",
-    "ADMIN",
+    "ADMIN", // Only admin can publish from pending
   ],
   [DOCUMENT_STATES.ARCHIVED]: ["STAFF", "LAB_MANAGER", "ADMIN"],
 };
@@ -118,8 +123,10 @@ function validateTransition(currentState, nextState) {
 
 function validateTransitionNote(currentState, nextState, note) {
   const requiresNote =
-    currentState === DOCUMENT_STATES.REVIEW &&
-    (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.DRAFT);
+    (currentState === DOCUMENT_STATES.PENDING &&
+      (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.ARCHIVED)) ||
+    (currentState === DOCUMENT_STATES.REVIEW &&
+      (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.DRAFT));
 
   if (!requiresNote) {
     return { ok: true };
@@ -131,7 +138,7 @@ function validateTransitionNote(currentState, nextState, note) {
       error: {
         statusCode: 400,
         code: "TRANSITION_NOTE_REQUIRED",
-        message: "A review note is required when publishing or rejecting a document",
+        message: "A note is required for this state transition (approval, rejection, or revision request)",
       },
     };
   }

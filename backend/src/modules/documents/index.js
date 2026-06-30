@@ -42,6 +42,7 @@ router.post(
  * Read file metadata and content endpoints
  */
 router.get("/files/:documentId", uploadController.getFileInfo);
+router.get("/files/:documentId/signed-url", uploadController.getSignedFileUrl);
 router.get("/files/:documentId/content", uploadController.streamFileContent);
 router.delete("/files/:documentId", uploadController.deleteFile);
 
@@ -97,6 +98,12 @@ router.get("/my-uploads", listController.getMyUploads);
  * GET /api/documents/review-queue?type=
  */
 router.get("/review-queue", listController.getReviewQueue);
+
+/**
+ * Admin global records - pending approval
+ * GET /api/documents/pending?type=
+ */
+router.get("/pending", listController.getPendingDocuments);
 
 /**
  * Staff/reviewer all uploads listing

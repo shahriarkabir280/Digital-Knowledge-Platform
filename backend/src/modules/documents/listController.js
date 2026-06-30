@@ -4,7 +4,7 @@ const AccessTier = require("../../../../shared/types/AccessTier");
 const db = require("../../db");
 
 const querySchema = z.object({
-  state: z.enum(["draft", "review", "published", "archived"]).optional(),
+  state: z.enum(["pending", "draft", "review", "published", "archived"]).optional(),
   type: z.string().trim().min(1).max(100).optional(),
 });
 
@@ -12,8 +12,12 @@ const reviewQueueQuerySchema = z.object({
   type: z.string().trim().min(1).max(100).optional(),
 });
 
+const pendingDocumentsQuerySchema = z.object({
+  type: z.string().trim().min(1).max(100).optional(),
+});
+
 const allUploadsQuerySchema = z.object({
-  state: z.enum(["draft", "review", "published", "archived"]).optional(),
+  state: z.enum(["pending", "draft", "review", "published", "archived"]).optional(),
   type: z.string().trim().min(1).max(100).optional(),
   uploaderId: z.preprocess((value) => {
     if (value === "" || value === undefined || value === null) {
@@ -161,6 +165,34 @@ function validateReviewQueueFilters(query) {
   };
 }
 
+function validatePendingDocumentsFilters(query) {
+  const parsed = pendingDocumentsQuerySchema.safeParse(query);
+
+  if (!parsed.success) {
+    const details = parsed.error.issues.map((issue) => ({
+      field: issue.path.join("."),
+      message: issue.message,
+    }));
+
+    return {
+      ok: false,
+      error: {
+        statusCode: 400,
+        code: "VALIDATION_ERROR",
+        message: "Invalid pending documents query",
+        details,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      type: parsed.data.type ? parsed.data.type.toLowerCase() : undefined,
+    },
+  };
+}
+
 function validateAllUploadsFilters(query) {
   const parsed = allUploadsQuerySchema.safeParse(query);
 
@@ -212,6 +244,7 @@ async function getMyUploads(req, res, next) {
 
   try {
     const { state, type } = filterResult.data;
+    const resourceCategory = req.query.resourceCategory; // Optional filter
 
     let query = db("documents")
       .select(
@@ -238,6 +271,10 @@ async function getMyUploads(req, res, next) {
       query = query.andWhereRaw("LOWER(type) = ?", [type]);
     }
 
+    if (resourceCategory) {
+      query = query.andWhere({ resource_category: resourceCategory });
+    }
+
     const rows = await query;
     const items = rows.map(normalizeDocumentRow);
 
@@ -249,6 +286,7 @@ async function getMyUploads(req, res, next) {
         filters: {
           state: state || null,
           type: type || null,
+          resourceCategory: resourceCategory || null,
         },
       },
       message: items.length > 0 ? "My uploads fetched" : "No uploads found",
@@ -321,6 +359,79 @@ async function getReviewQueue(req, res, next) {
         },
       },
       message: items.length > 0 ? "Review queue fetched" : "Review queue is empty",
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getPendingDocuments(req, res, next) {
+  const userRole = req.user?.role;
+
+  // Only admins can view pending documents
+  if (userRole !== "ADMIN") {
+    return next({
+      statusCode: 403,
+      code: "FORBIDDEN",
+      message: "Admin access is required to view pending documents",
+    });
+  }
+
+  const filterResult = validatePendingDocumentsFilters(req.query || {});
+  if (!filterResult.ok) {
+    return next(filterResult.error);
+  }
+
+  try {
+    const { type } = filterResult.data;
+    const resourceCategory = req.query.resourceCategory || 'research-paper'; // Default to research-paper
+
+    let query = db("documents as d")
+      .leftJoin("users as u", "d.uploader_id", "u.id")
+      .leftJoin("metadata as m", "d.id", "m.document_id")
+      .select(
+        "d.id",
+        "d.title",
+        "d.type",
+        "d.format",
+        "d.version",
+        "d.state",
+        "d.access_tier",
+        "d.created_at",
+        "d.updated_at",
+        "d.uploader_id",
+        db.raw("u.name as uploader_name"),
+        db.raw("u.email as uploader_email"),
+        "m.author",
+        "m.abstract",
+        "m.keywords",
+        "m.language",
+        "m.published_year",
+        "m.department",
+      )
+      .where({ "d.state": "pending" })
+      .andWhere({ "d.resource_category": resourceCategory })
+      .orderBy("d.created_at", "asc");
+
+    if (type) {
+      query = query.andWhereRaw("LOWER(d.type) = ?", [type]);
+    }
+
+    const rows = await query;
+    const items = rows.map(normalizeReviewRow);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        items,
+        total: items.length,
+        filters: {
+          state: "pending",
+          type: type || null,
+          resourceCategory,
+        },
+      },
+      message: items.length > 0 ? "Pending documents fetched" : "No pending documents",
     });
   } catch (error) {
     return next(error);
@@ -407,5 +518,6 @@ async function getAllUploads(req, res, next) {
 module.exports = {
   getMyUploads,
   getReviewQueue,
+  getPendingDocuments,
   getAllUploads,
 };

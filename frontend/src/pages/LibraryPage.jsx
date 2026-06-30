@@ -36,12 +36,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../app/use-auth.js'
+import { apiRequest } from '../services/api/client'
 import { RESOURCE_ITEMS } from '../modules/library/data.js'
 import { uploadDocument } from '../services/api/documents.js'
 import PDFThumbnail from '../components/library/PDFThumbnail.jsx'
 
 export default function LibraryPage() {
   const { authState } = useAuth()
+  
+  // Published documents from backend API
+  const [publishedDocs, setPublishedDocs] = useState([])
+  const [loadingPublished, setLoadingPublished] = useState(true)
   
   const [resources, setResources] = useState(() => {
     const saved = localStorage.getItem('dkp_academic_resources')
@@ -76,6 +81,63 @@ export default function LibraryPage() {
   useEffect(() => {
     localStorage.setItem('dkp_bookmarked_resources', JSON.stringify(bookmarks))
   }, [bookmarks])
+
+  // Fetch published documents from backend
+  useEffect(() => {
+    const fetchPublishedDocuments = async () => {
+      try {
+        setLoadingPublished(true)
+        const response = await apiRequest('/documents/my-uploads?state=published&resourceCategory=textbook', {
+          authToken: authState?.token,
+        })
+        
+        if (response?.data?.items) {
+          // Convert backend documents to resource format
+          const docs = await Promise.all(response.data.items.map(async (doc) => {
+            let signedUrl = `/api/repository/files/${doc.id}/content`
+            
+            // Try to get the signed URL for proper file access
+            try {
+              const signedUrlResponse = await apiRequest(`/repository/files/${doc.id}/signed-url`, {
+                authToken: authState?.token,
+              })
+              if (signedUrlResponse?.data?.signedUrl) {
+                signedUrl = signedUrlResponse.data.signedUrl
+              }
+            } catch (err) {
+              console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
+            }
+            
+            return {
+              id: `doc-${doc.id}`,
+              title: doc.title,
+              type: doc.type || 'Lecture Notes',
+              format: doc.format,
+              version: doc.version,
+              state: doc.state,
+              pdfUrl: signedUrl,
+              updatedAt: doc.updatedAt,
+              department: 'CSE',
+              course: 'N/A',
+              author: 'Unknown',
+              tags: [],
+              rating: 5.0,
+              downloads: 0,
+            }
+          }))
+          setPublishedDocs(docs)
+        }
+      } catch (error) {
+        console.error('Failed to fetch published documents:', error)
+      } finally {
+        setLoadingPublished(false)
+      }
+    }
+
+    if (authState?.token) {
+      fetchPublishedDocuments()
+    }
+  }, [authState?.token])
 
   const getResourceType = (item) => {
     const tags = (item.tags || []).map(t => t.toLowerCase())
@@ -255,11 +317,19 @@ export default function LibraryPage() {
   }
 
   const filteredResources = useMemo(() => {
-    return resources.filter(item => {
+    // Combine localStorage resources and published backend documents
+    const allResources = [...resources, ...publishedDocs]
+    
+    return allResources.filter(item => {
       const type = getResourceType(item)
       
       // Exclude research-related types from the Academic Resources tab
       if (['Research Paper', 'Thesis', 'Dataset'].includes(type)) {
+        return false
+      }
+
+      // Filter out pending documents - only show published ones
+      if (item.id.startsWith('doc-') && item.state !== 'published') {
         return false
       }
 
@@ -286,7 +356,7 @@ export default function LibraryPage() {
       if (sortBy === 'recent') return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
       return 0
     })
-  }, [resources, searchQuery, selectedCategory, filterDepartment, filterCourse, sortBy])
+  }, [resources, publishedDocs, searchQuery, selectedCategory, filterDepartment, filterCourse, sortBy])
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2">
@@ -434,7 +504,7 @@ export default function LibraryPage() {
                     {/* Preview Thumbnail */}
                     {hasVideo ? (
                       /* Video Thumbnail with Play Button overlay */
-                      <Link to={`/library/resource/${item.id}`} className="relative block h-40 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
+                      <Link to={item.id.startsWith('doc-') ? `/viewer/${item.id.replace('doc-', '')}` : `/library/resource/${item.id}`} className="relative block h-40 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
                         <img 
                           src={`https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`}
                           alt={item.title}
@@ -485,7 +555,7 @@ export default function LibraryPage() {
 
                         return (
                           <Link
-                            to={`/library/resource/${item.id}`}
+                            to={item.id.startsWith('doc-') ? `/viewer/${item.id.replace('doc-', '')}` : `/library/resource/${item.id}`}
                             className="relative block h-40 overflow-hidden group"
                           >
                             {isPdfRenderable ? (
@@ -562,7 +632,11 @@ export default function LibraryPage() {
                             <Quote size={10} /> Cite
                           </Button>
                           <Button asChild variant="secondary" size="sm" className="h-7 text-[10px] px-2.5 font-bold">
-                            <Link to={`/library/resource/${item.id}`}>Open →</Link>
+                            {item.id.startsWith('doc-') ? (
+                              <Link to={`/viewer/${item.id.replace('doc-', '')}`}>Open →</Link>
+                            ) : (
+                              <Link to={`/library/resource/${item.id}`}>Open →</Link>
+                            )}
                           </Button>
                         </div>
                       </div>

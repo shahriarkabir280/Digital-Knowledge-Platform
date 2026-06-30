@@ -13,6 +13,7 @@ import {
   Search,
   GraduationCap,
   FilePlus,
+  Layers,
   X,
   ChevronLeft,
   ChevronRight,
@@ -36,6 +37,7 @@ const iconMap = {
   Search,
   GraduationCap,
   FilePlus,
+  Layers,
 }
 
 // Fallback icons for items without an iconName
@@ -80,13 +82,15 @@ export default function Sidebar() {
       </button>
 
       <div className="library-nav-group">
-        <div className="sidebar-brand-container">
-          <img src={cseduLogo} alt="CSEDU Logo" className="sidebar-brand-logo" />
-          <div className="sidebar-brand-text">
-            <span className="sidebar-brand-kicker">Digital Knowledge Platform</span>
-            <span className="sidebar-brand-name">CSEDU</span>
+        {isMobileMenuOpen && (
+          <div className="sidebar-brand-container">
+            <img src={cseduLogo} alt="CSEDU Logo" className="sidebar-brand-logo" />
+            <div className="sidebar-brand-text">
+              <span className="sidebar-brand-kicker">Digital Knowledge Platform</span>
+              <span className="sidebar-brand-name">CSEDU</span>
+            </div>
           </div>
-        </div>
+        )}
         <nav aria-label="Main navigation">
           <ul className="sidebar-list">
             {items.map((item) => {
@@ -113,38 +117,8 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* Collapse control button - visible only on desktop */}
-      <button
-        type="button"
-        className="sidebar-collapse-btn"
-        onClick={toggleSidebarCollapse}
-        aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        style={{
-          marginTop: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
-          gap: '10px',
-          padding: '9px 12px',
-          borderRadius: '8px',
-          border: '1px solid var(--line)',
-          background: 'transparent',
-          color: 'var(--muted)',
-          cursor: 'pointer',
-          fontSize: '.875rem',
-          fontWeight: 500,
-          width: '100%',
-        }}
-      >
-        {isSidebarCollapsed ? (
-          <ChevronRight size={16} />
-        ) : (
-          <>
-            <ChevronLeft size={16} />
-            <span className="nav-link-text">Collapse Menu</span>
-          </>
-        )}
-      </button>
+
+
 
       {/* Footer info */}
       <div style={{

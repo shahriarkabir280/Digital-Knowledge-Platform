@@ -32,14 +32,9 @@ export const navItems = [
     roles: ROUTE_ACCESS.libraryAnalytics,
   },
   {
-    to: '/library/settings',
-    label: 'Settings',
-    iconName: 'Settings2',
-    roles: ROUTE_ACCESS.librarySettings,
-  },
-  {
     to: '/student-projects',
     label: 'Project Showcase',
+    iconName: 'Layers',
     roles: ROUTE_ACCESS.studentProjectShowcase,
   },
   {
@@ -54,11 +49,16 @@ export const navItems = [
     iconName: 'ClipboardCheck',
     roles: ROUTE_ACCESS.reviewQueue,
   },
-
   {
     to: '/admin',
     label: 'System Admin',
     iconName: 'ShieldCheck',
     roles: ROUTE_ACCESS.admin,
+  },
+  {
+    to: '/library/settings',
+    label: 'Settings',
+    iconName: 'Settings2',
+    roles: ROUTE_ACCESS.librarySettings,
   },
 ]

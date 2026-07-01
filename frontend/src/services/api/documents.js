@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import { loadAuthSession, saveAuthSession } from '../../app/auth-session.js'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')
 
@@ -13,24 +14,59 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
  * @returns {Promise<Object>} Upload response with document and file info
  */
 export async function uploadDocument(file, metadata = {}, onProgress, authToken) {
+  // Refresh token before uploading if close to expiration
+  let token = authToken
+  const stored = loadAuthSession()
+  if (stored?.refreshToken && stored?.expiresAt) {
+    const now = Date.now()
+    const expiresAt = new Date(stored.expiresAt).getTime()
+    // If token expires in less than 5 minutes, refresh it
+    if (expiresAt - now < 300000) {
+      try {
+        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: stored.refreshToken }),
+        })
+        if (refreshRes.ok) {
+          const refreshed = await refreshRes.json()
+          const newToken = refreshed?.accessToken || refreshed?.token || ''
+          if (newToken) {
+            token = newToken
+            const nextSession = { ...stored, token: newToken }
+            if (refreshed?.refreshToken) {
+              nextSession.refreshToken = refreshed.refreshToken
+            }
+            saveAuthSession(nextSession)
+          }
+        }
+      } catch (err) {
+        console.warn('Token refresh failed, continuing with current token:', err)
+      }
+    }
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  if (metadata.title) {
+    formData.append('title', metadata.title)
+  }
+  
+  if (metadata.description) {
+    formData.append('description', metadata.description)
+  }
+
+  // Pass the resource category so the backend stores in the correct subdirectory
+  if (metadata.resourceCategory) {
+    formData.append('resourceCategory', metadata.resourceCategory)
+  }
+
+  // Use fetch API which can handle progress and token refresh
+  let uploadedBytes = 0
+  const xhr = new XMLHttpRequest()
+
   return new Promise((resolve, reject) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    
-    if (metadata.title) {
-      formData.append('title', metadata.title)
-    }
-    
-    if (metadata.description) {
-      formData.append('description', metadata.description)
-    }
-
-    // Pass the resource category so the backend stores in the correct subdirectory
-    if (metadata.resourceCategory) {
-      formData.append('resourceCategory', metadata.resourceCategory)
-    }
-
-    const xhr = new XMLHttpRequest()
     xhr.timeout = 120000
 
     // Track upload progress
@@ -78,7 +114,7 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
     })
 
     xhr.open('POST', `${API_BASE_URL}/repository/upload`)
-    xhr.setRequestHeader('Authorization', `Bearer ${authToken}`)
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
     xhr.send(formData)
   })
 }

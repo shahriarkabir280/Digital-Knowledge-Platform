@@ -31,6 +31,7 @@ const departmentOptions = [
   'Computer Science and Engineering',
   'Information Science and Library Management',
   'Electrical and Electronic Engineering',
+  'Genetic Engineering',
   'Mathematics',
   'Physics',
   'Chemistry',

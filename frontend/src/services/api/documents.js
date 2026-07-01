@@ -13,37 +13,22 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
  * @param {string} authToken - JWT authentication token
  * @returns {Promise<Object>} Upload response with document and file info
  */
+/**
+ * Upload a document file to the repository
+ * @param {File} file - The file to upload
+ * @param {Object} metadata - Document metadata
+ * @param {string} metadata.title - Document title
+ * @param {string} [metadata.description] - Document description
+ * @param {Function} [onProgress] - Progress callback (receives progress event)
+ * @param {string} authToken - JWT authentication token
+ * @returns {Promise<Object>} Upload response with document and file info
+ */
 export async function uploadDocument(file, metadata = {}, onProgress, authToken) {
-  // Refresh token before uploading if close to expiration
-  let token = authToken
-  const stored = loadAuthSession()
-  if (stored?.refreshToken && stored?.expiresAt) {
-    const now = Date.now()
-    const expiresAt = new Date(stored.expiresAt).getTime()
-    // If token expires in less than 5 minutes, refresh it
-    if (expiresAt - now < 300000) {
-      try {
-        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken: stored.refreshToken }),
-        })
-        if (refreshRes.ok) {
-          const refreshed = await refreshRes.json()
-          const newToken = refreshed?.accessToken || refreshed?.token || ''
-          if (newToken) {
-            token = newToken
-            const nextSession = { ...stored, token: newToken }
-            if (refreshed?.refreshToken) {
-              nextSession.refreshToken = refreshed.refreshToken
-            }
-            saveAuthSession(nextSession)
-          }
-        }
-      } catch (err) {
-        console.warn('Token refresh failed, continuing with current token:', err)
-      }
-    }
+  const storedSession = loadAuthSession()
+  const effectiveAuthToken = authToken || storedSession?.token || ''
+
+  if (!effectiveAuthToken) {
+    return Promise.reject(new Error('You must be logged in to upload files.'))
   }
 
   const formData = new FormData()
@@ -62,11 +47,40 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
     formData.append('resourceCategory', metadata.resourceCategory)
   }
 
-  // Use fetch API which can handle progress and token refresh
-  let uploadedBytes = 0
-  const xhr = new XMLHttpRequest()
+  // Pass tags/keywords if provided
+  if (metadata.tags && Array.isArray(metadata.tags) && metadata.tags.length > 0) {
+    formData.append('tags', JSON.stringify(metadata.tags))
+  }
+  
+  if (metadata.keywords && Array.isArray(metadata.keywords) && metadata.keywords.length > 0) {
+    formData.append('keywords', JSON.stringify(metadata.keywords))
+  }
+
+  // Pass optional metadata fields
+  if (metadata.author) {
+    formData.append('author', metadata.author)
+  }
+
+  // Always append department (can be empty string, backend will handle it)
+  formData.append('department', metadata.department || '')
+
+  // Always append course (can be empty string, backend will handle it)
+  formData.append('course', metadata.course || '')
+
+  if (metadata.year) {
+    formData.append('year', metadata.year)
+  }
+
+  if (metadata.publishedYear) {
+    formData.append('publishedYear', metadata.publishedYear)
+  }
+
+  if (metadata.language) {
+    formData.append('language', metadata.language)
+  }
 
   return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
     xhr.timeout = 120000
 
     // Track upload progress
@@ -91,10 +105,12 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
         } catch (error) {
           reject(new Error('Failed to parse upload response'))
         }
+      } else if (xhr.status === 401) {
+        reject(new Error('Your session has expired. Please refresh the page and log in again.'))
       } else {
         try {
           const error = JSON.parse(xhr.responseText)
-          reject(new Error(error.error || 'Upload failed'))
+          reject(new Error(error.error || `Upload failed with status ${xhr.status}`))
         } catch {
           reject(new Error(`Upload failed with status ${xhr.status}`))
         }
@@ -102,7 +118,7 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
     })
 
     xhr.addEventListener('error', () => {
-      reject(new Error('Network error during upload'))
+      reject(new Error('Network error during upload. Please check your connection.'))
     })
 
     xhr.addEventListener('abort', () => {
@@ -110,11 +126,11 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
     })
 
     xhr.addEventListener('timeout', () => {
-      reject(new Error('Upload timed out. Please retry with a stable connection or smaller file.'))
+      reject(new Error('Upload timed out. Please retry with a smaller file or better connection.'))
     })
 
     xhr.open('POST', `${API_BASE_URL}/repository/upload`)
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    xhr.setRequestHeader('Authorization', `Bearer ${effectiveAuthToken}`)
     xhr.send(formData)
   })
 }

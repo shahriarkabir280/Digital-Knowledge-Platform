@@ -28,10 +28,15 @@ export default function ModerationQueuePage() {
     setError('')
     setMessage('')
     try {
-      const response = await apiRequest('/documents/pending?resourceCategory=research-paper', {
+      // Fetch all pending research documents (research-paper, thesis, dataset)
+      const response = await apiRequest('/documents/pending', {
         authToken: authState.token,
       })
-      setPendingDocs(response?.data?.items || [])
+      // Filter to show only research documents (not academic library resources)
+      const researchDocs = (response?.data?.items || []).filter(doc => 
+        ['research-paper', 'thesis', 'dataset'].includes(String(doc.resourceCategory || '').toLowerCase())
+      )
+      setPendingDocs(researchDocs)
     } catch (error) {
       console.error('Failed to fetch pending documents:', error)
       setError(`Failed to load pending documents: ${error.message}`)

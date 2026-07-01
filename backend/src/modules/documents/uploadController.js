@@ -10,8 +10,28 @@ const db = require('../../db');
 const { validateDocumentId } = require('./metadataValidator');
 const { versionIncrementExpression } = require('./versionService');
 const { sameDocumentOwner } = require('./ownership');
+const { createResourceRecord, findResourceById, parseResourceId } = require('./resourceStorage');
 
 const PRIVILEGED_REPOSITORY_ROLES = new Set(['STAFF', 'LAB_MANAGER', 'REVIEWER', 'ADMIN']);
+const RESOURCE_CATEGORY_ALIASES = {
+  'textbook': 'textbook',
+  'lecture-slides': 'lecture-slides',
+  'lecture slides': 'lecture-slides',
+  'slides': 'lecture-slides',
+  'lab-manual': 'lab-manual',
+  'lab manual': 'lab-manual',
+  'question-bank': 'question-bank',
+  'question bank': 'question-bank',
+  'assignment': 'assignment',
+  'lab-report': 'lab-report',
+  'lab report': 'lab-report',
+  'research-paper': 'research-paper',
+  'research paper': 'research-paper',
+  'thesis': 'thesis',
+  'dataset': 'dataset',
+  'media': 'media',
+  'documents': 'documents',
+};
 
 function canAccessDocumentContent(document, user) {
   if (!user) {
@@ -37,6 +57,24 @@ function canAccessDocumentContent(document, user) {
 function getCategoryFromExtension(ext) {
   const category = uploadService.uploadConfig.getCategoryByExtension(ext);
   return category || 'documents';
+}
+
+function normalizeResourceCategory(value) {
+  if (typeof value !== 'string') {
+    console.log('[normalizeResourceCategory] value is not string:', typeof value, value);
+    return '';
+  }
+
+  const normalized = value.toLowerCase().trim().replace(/[^a-z0-9-]/g, '');
+  console.log('[normalizeResourceCategory] value:', value, 'normalized:', normalized);
+  if (!normalized) {
+    console.log('[normalizeResourceCategory] normalized is empty');
+    return '';
+  }
+
+  const result = RESOURCE_CATEGORY_ALIASES[normalized] || RESOURCE_CATEGORY_ALIASES[value.toLowerCase().trim()] || normalized;
+  console.log('[normalizeResourceCategory] final result:', result);
+  return result;
 }
 
 /**
@@ -90,9 +128,53 @@ async function uploadFile(req, res, next) {
       console.warn('Upload warnings:', validation.warnings);
     }
 
-    // Determine storage directory:
-    // Use caller-supplied resourceCategory (e.g. 'question-bank', 'assignment')
-    // if provided & valid; otherwise fall back to file-extension-based category.
+    console.log('[uploadController.uploadFile] req.body fields:', Object.keys(req.body));
+    console.log('[uploadController.uploadFile] req.body.resourceCategory:', req.body.resourceCategory);
+    console.log('[uploadController.uploadFile] req.body.keywords:', req.body.keywords, 'type:', typeof req.body.keywords);
+    console.log('[uploadController.uploadFile] req.body.tags:', req.body.tags, 'type:', typeof req.body.tags);
+    console.log('[uploadController.uploadFile] req.body.department:', req.body.department, 'type:', typeof req.body.department);
+    console.log('[uploadController.uploadFile] req.body.course:', req.body.course, 'type:', typeof req.body.course);
+    console.log('[uploadController.uploadFile] FULL req.body:', JSON.stringify(req.body, null, 2));
+
+    // Parse keywords from FormData (they come as JSON string)
+    let parsedKeywords = [];
+    if (req.body.keywords) {
+      try {
+        const keywordValue = req.body.keywords;
+        if (typeof keywordValue === 'string') {
+          // Try to parse as JSON first
+          try {
+            const parsed = JSON.parse(keywordValue);
+            parsedKeywords = Array.isArray(parsed) ? parsed : [keywordValue];
+          } catch {
+            // If not JSON, treat as comma-separated string
+            parsedKeywords = keywordValue.split(',').map(t => t.trim()).filter(Boolean);
+          }
+        } else if (Array.isArray(keywordValue)) {
+          parsedKeywords = keywordValue;
+        }
+        console.log('[uploadController.uploadFile] parsedKeywords:', parsedKeywords);
+      } catch (err) {
+        console.warn('[uploadController.uploadFile] Error parsing keywords:', err);
+      }
+    } else if (req.body.tags) {
+      try {
+        const tagValue = req.body.tags;
+        if (typeof tagValue === 'string') {
+          try {
+            const parsed = JSON.parse(tagValue);
+            parsedKeywords = Array.isArray(parsed) ? parsed : [tagValue];
+          } catch {
+            parsedKeywords = tagValue.split(',').map(t => t.trim()).filter(Boolean);
+          }
+        } else if (Array.isArray(tagValue)) {
+          parsedKeywords = tagValue;
+        }
+      } catch (err) {
+        console.warn('[uploadController.uploadFile] Error parsing tags:', err);
+      }
+    }
+
     const ext = req.file.originalname.split('.').pop().toLowerCase();
     const ALLOWED_RESOURCE_CATEGORIES = new Set([
       'documents', 'media',
@@ -100,10 +182,17 @@ async function uploadFile(req, res, next) {
       'research-paper', 'thesis', 'dataset',
       'question-bank', 'assignment', 'lab-report', 'project',
     ]);
-    const rawCategory = (req.body.resourceCategory || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const rawCategory = normalizeResourceCategory(req.body.resourceCategory);
+    console.log('[uploadController] req.body.resourceCategory:', req.body.resourceCategory, 'rawCategory:', rawCategory);
     const category = ALLOWED_RESOURCE_CATEGORIES.has(rawCategory)
       ? rawCategory
       : getCategoryFromExtension(ext);
+    console.log('[uploadController] category:', category, 'ALLOWED_RESOURCE_CATEGORIES.has(rawCategory):', ALLOWED_RESOURCE_CATEGORIES.has(rawCategory));
+    const resourceType = ['research-paper', 'thesis', 'dataset'].includes(rawCategory)
+      ? 'research'
+      : 'academic';
+    const storedResourceCategory = rawCategory || (category === 'documents' ? extractDocumentType(ext) : 'media');
+    console.log('[uploadController] storedResourceCategory:', storedResourceCategory);
 
     // Store file to Supabase Storage
     const storeResult = await uploadService.storeUploadedFile(req.file, category);
@@ -118,71 +207,72 @@ async function uploadFile(req, res, next) {
 
     const fileData = storeResult.data;
 
-    // Get or create document record in database
     const title = req.body.title || extractTitleFromFilename(fileData.originalFilename);
     const description = req.body.description || null;
-
-    // Determine document type and format
-    // Use the type from form if provided, otherwise infer from category/extension
-    const docType = req.body.type 
-      ? req.body.type.toLowerCase() 
-      : (category === 'documents' ? extractDocumentType(ext) : 'media');
     const format = ext.toLowerCase();
 
-    // Create document record
-    const insertedDocs = await db('documents')
-      .insert({
-        uploader_id: userId,
-        title,
-        type: docType,
-        format,
-        file_path: fileData.relativePath,
-        version: 1,
-        state: 'pending', // New uploads start as pending (awaiting admin approval)
-        access_tier: 'REGISTERED', // Default access
-        resource_category: rawCategory || category, // Store the resource category
-        created_at: db.fn.now(),
-        updated_at: db.fn.now(),
-      })
-      .returning('id');
-
-    const documentId = Array.isArray(insertedDocs) ? insertedDocs[0].id || insertedDocs[0] : insertedDocs.id || insertedDocs;
-
-    // Create metadata record for the document
-    // Get user name from database for metadata
     const user = await db('users').where({ id: userId }).first(['name', 'email']);
-    const authorName = user?.name || user?.email || 'Unknown';
+    const defaultAuthorName = user?.name || user?.email || 'Unknown';
+    // Use provided author from form, fallback to logged-in user
+    const authorName = req.body.author ? req.body.author.trim() : defaultAuthorName;
 
-    await db('metadata')
-      .insert({
-        document_id: documentId,
+    // Get current year as default if not provided
+    const currentYear = new Date().getFullYear();
+    const uploadYear = req.body.year ? Number(req.body.year) : currentYear;
+    const publishedYear = req.body.publishedYear ? Number(req.body.publishedYear) : uploadYear;
+
+    console.log('[uploadController] Processing department:', {
+      raw: req.body.department,
+      type: typeof req.body.department,
+      trimmed: req.body.department?.trim?.(),
+      condition: req.body.department && req.body.department.trim() ? 'WILL_STORE' : 'WILL_BE_NULL'
+    });
+
+    console.log('[uploadController] Processing course:', {
+      raw: req.body.course,
+      type: typeof req.body.course,
+      trimmed: req.body.course?.trim?.(),
+      condition: req.body.course && req.body.course.trim() ? 'WILL_STORE' : 'WILL_BE_NULL'
+    });
+
+    const resourceRecord = await createResourceRecord({
+      resourceType,
+      uploaderId: userId,
+      title,
+      description,
+      filePath: fileData.relativePath,
+      format,
+      state: 'pending',
+      accessTier: 'REGISTERED',
+      metadata: {
         author: authorName,
-        abstract: description,
-        created_at: db.fn.now(),
-        updated_at: db.fn.now(),
-      })
-      .catch((err) => {
-        console.warn('Failed to create metadata:', err.message);
-        // Don't fail the upload if metadata fails - just warn
-      });
+        department: req.body.department && req.body.department.trim() ? req.body.department.trim() : null,
+        course: req.body.course && req.body.course.trim() ? req.body.course.trim() : null,
+        year: uploadYear,
+        publishedYear: publishedYear,
+        language: req.body.language || 'English',
+        keywords: parsedKeywords,
+        type: storedResourceCategory,
+        resourceCategory: storedResourceCategory,
+      },
+    });
 
-    // Retrieve complete document record
-    const document = await db('documents').where({ id: documentId }).first();
+    const resourceId = resourceRecord.id;
+    const resourceTable = resourceRecord.table;
 
-    // Notify admins about new pending document
     try {
       const adminUsers = await db('users').where({ role: 'ADMIN' }).select('id');
       if (adminUsers.length > 0) {
         const notifications = adminUsers.map((admin) => ({
           user_id: admin.id,
-          document_id: documentId,
+          document_id: null,
           event_type: 'document_pending',
-          title: 'New document pending approval',
-          message: `"${document.title || 'Untitled'}" uploaded by ${authorName} is pending admin review.`,
+          title: 'New resource pending approval',
+          message: `"${resourceRecord.title || 'Untitled'}" uploaded by ${authorName} is pending admin review.`,
           is_read: false,
           created_at: db.fn.now(),
         }));
-        
+
         await db('notifications').insert(notifications).catch((err) => {
           console.warn('Failed to create notifications:', err.message);
         });
@@ -195,15 +285,17 @@ async function uploadFile(req, res, next) {
       success: true,
       data: {
         document: {
-          id: document.id,
-          title: document.title,
-          type: document.type,
-          format: document.format,
-          version: document.version,
-          state: document.state,
-          accessTier: document.access_tier,
+          id: resourceId,
+          title: resourceRecord.title,
+          type: resourceRecord.type,
+          format,
+          version: 1,
+          state: 'pending',
+          accessTier: 'REGISTERED',
           uploadedBy: userId,
-          uploadedAt: document.created_at,
+          uploadedAt: new Date().toISOString(),
+          resourceTable,
+          resourceType,
         },
         file: {
           originalFilename: fileData.originalFilename,
@@ -248,7 +340,8 @@ async function replaceFile(req, res, next) {
     const documentId = documentIdResult.data;
     const userId = req.user?.id;
 
-    const existingDocument = await db('documents').where({ id: documentId }).first();
+    const resourceLookup = await findResourceById(documentId);
+    const existingDocument = resourceLookup?.document;
     if (!existingDocument) {
       return res.status(404).json({
         success: false,
@@ -279,8 +372,9 @@ async function replaceFile(req, res, next) {
     }
 
     const ext = req.file.originalname.split('.').pop().toLowerCase();
-    const category = getCategoryFromExtension(ext);
-    const docType = category === 'documents' ? extractDocumentType(ext) : 'media';
+    const rawCategory = normalizeResourceCategory(req.body.resourceCategory);
+    const category = rawCategory || getCategoryFromExtension(ext);
+    const storedResourceCategory = rawCategory || (category === 'documents' ? extractDocumentType(ext) : 'media');
 
     const storeResult = await uploadService.storeUploadedFile(req.file, category);
     if (!storeResult.success) {
@@ -297,10 +391,10 @@ async function replaceFile(req, res, next) {
 
     let updatedDocument;
     try {
-      const result = await db('documents')
+      const result = await db(resourceLookup.table)
         .where({ id: documentId })
         .update({
-          type: docType,
+          resource_type: storedResourceCategory,
           format: ext,
           file_path: fileData.relativePath,
           version: versionIncrementExpression(db),
@@ -328,7 +422,7 @@ async function replaceFile(req, res, next) {
         document: {
           id: updatedDocument.id,
           title: updatedDocument.title,
-          type: updatedDocument.type,
+          type: updatedDocument.resource_type || updatedDocument.type,
           format: updatedDocument.format,
           version: updatedDocument.version,
           previousVersion,
@@ -397,9 +491,10 @@ function extractTitleFromFilename(filename) {
 async function getFileInfo(req, res, next) {
   try {
     const { documentId } = req.params;
+    const parsedDocumentId = parseResourceId(documentId);
 
-    // Get document record
-    const document = await db('documents').where({ id: documentId }).first();
+    const resourceLookup = await findResourceById(parsedDocumentId || documentId);
+    const document = resourceLookup?.document;
 
     if (!document) {
       return res.status(404).json({
@@ -426,7 +521,7 @@ async function getFileInfo(req, res, next) {
         document: {
           id: document.id,
           title: document.title,
-          type: document.type,
+          type: document.resource_type || document.type,
           format: document.format,
           state: document.state,
         },
@@ -457,9 +552,10 @@ async function getFileInfo(req, res, next) {
 async function getSignedFileUrl(req, res, next) {
   try {
     const { documentId } = req.params;
+    const parsedDocumentId = parseResourceId(documentId);
 
-    // Get document record
-    const document = await db('documents').where({ id: documentId }).first();
+    const resourceLookup = await findResourceById(parsedDocumentId || documentId);
+    const document = resourceLookup?.document;
 
     if (!document) {
       return res.status(404).json({
@@ -504,6 +600,7 @@ async function getSignedFileUrl(req, res, next) {
 async function deleteFile(req, res, next) {
   try {
     const { documentId } = req.params;
+    const parsedDocumentId = parseResourceId(documentId);
     const userId = req.user?.id;
 
     if (!userId) {
@@ -514,8 +611,8 @@ async function deleteFile(req, res, next) {
       });
     }
 
-    // Get document record
-    const document = await db('documents').where({ id: documentId }).first();
+    const resourceLookup = await findResourceById(parsedDocumentId || documentId);
+    const document = resourceLookup?.document;
 
     if (!document) {
       return res.status(404).json({
@@ -542,9 +639,8 @@ async function deleteFile(req, res, next) {
       // Continue anyway - remove database record
     }
 
-    // Delete document record and associated metadata
-    await db('metadata').where({ document_id: documentId }).delete();
-    await db('documents').where({ id: documentId }).delete();
+    // Delete the resource record from its table
+    await db(resourceLookup.table).where({ id: parsedDocumentId || documentId }).delete();
 
     return res.status(200).json({
       success: true,
@@ -567,8 +663,10 @@ async function deleteFile(req, res, next) {
 async function streamFileContent(req, res, next) {
   try {
     const { documentId } = req.params;
+    const parsedDocumentId = parseResourceId(documentId);
 
-    const document = await db('documents').where({ id: documentId }).first();
+    const resourceLookup = await findResourceById(parsedDocumentId || documentId);
+    const document = resourceLookup?.document;
     if (!document) {
       return res.status(404).json({
         success: false,

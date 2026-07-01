@@ -46,13 +46,16 @@ export default function AdminDashboardPage() {
         })
         setResearchPendingCount(researchResponse?.data?.total || 0)
 
-        // Fetch textbook resources pending count
-        const libraryResponse = await apiRequest('/documents/pending?resourceCategory=textbook', {
+        // Fetch all academic resources pending count (no specific category filter to get all academic resources)
+        const libraryResponse = await apiRequest('/documents/pending', {
           authToken: authState.token,
         })
-        setLibraryPendingCount(libraryResponse?.data?.total || 0)
+        // Filter out research papers since we fetched them separately
+        const allPending = libraryResponse?.data?.items || []
+        const academicPending = allPending.filter(item => item.resourceCategory !== 'research-paper')
+        setLibraryPendingCount(academicPending.length)
 
-        console.log('Research pending:', researchResponse?.data?.total, 'Library pending:', libraryResponse?.data?.total)
+        console.log('Research pending:', researchResponse?.data?.total, 'Academic pending:', academicPending.length)
       } catch (error) {
         console.error('Failed to fetch pending counts:', error)
       }

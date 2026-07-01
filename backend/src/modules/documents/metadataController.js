@@ -66,6 +66,7 @@ function formatMetadata(metadata) {
     language: metadata.language || null,
     year: metadata.published_year || null,
     department: metadata.department || null,
+    course: metadata.course || null,
     updatedAt: metadata.updated_at,
   };
 }
@@ -117,6 +118,10 @@ function buildMetadataUpdates(payload) {
 
   if (payload.department !== undefined) {
     updates.department = payload.department.trim();
+  }
+
+  if (payload.course !== undefined) {
+    updates.course = payload.course.trim();
   }
 
   return updates;

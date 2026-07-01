@@ -28,7 +28,8 @@ export default function LibraryModerationPage() {
     setError('')
     setMessage('')
     try {
-      const response = await apiRequest('/documents/pending?resourceCategory=textbook', {
+      // Fetch all pending academic resources (no specific category filter)
+      const response = await apiRequest('/documents/pending', {
         authToken: authState.token,
       })
       setPendingResources(response?.data?.items || [])

@@ -59,8 +59,10 @@ export default function RepositoryPage() {
 
   // Upload Modal States
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showUploadSuccess, setShowUploadSuccess] = useState(false)
+  const [uploadSuccessTitle, setUploadSuccessTitle] = useState('')
   const [newResource, setNewResource] = useState({
-    title: '', author: '', department: 'CSE', course: 'N/A', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper',
+    title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper',
   })
   const [uploadMode, setUploadMode] = useState('url') // 'url' | 'file'
   const [selectedFile, setSelectedFile] = useState(null)
@@ -91,46 +93,64 @@ export default function RepositoryPage() {
     const fetchPublishedDocuments = async () => {
       try {
         setLoadingPublished(true)
-        const response = await apiRequest('/documents/my-uploads?state=published&resourceCategory=research-paper', {
-          authToken: authState?.token,
-        })
-        
-        if (response?.data?.items) {
-          // Convert backend documents to resource format
-          const docs = await Promise.all(response.data.items.map(async (doc) => {
-            let signedUrl = `/api/repository/files/${doc.id}/content`
-            
-            // Try to get the signed URL for proper file access
-            try {
-              const signedUrlResponse = await apiRequest(`/repository/files/${doc.id}/signed-url`, {
-                authToken: authState?.token,
-              })
-              if (signedUrlResponse?.data?.signedUrl) {
-                signedUrl = signedUrlResponse.data.signedUrl
+        // Fetch all published research documents (research-paper, thesis, dataset)
+        const categories = ['research-paper', 'thesis', 'dataset']
+        const docs = []
+        const seenDocIds = new Set()
+
+        for (const resourceCategory of categories) {
+          try {
+            const response = await apiRequest(`/documents/my-uploads?state=published&resourceCategory=${resourceCategory}`, {
+              authToken: authState?.token,
+            })
+
+            if (response?.data?.items?.length) {
+              for (const doc of response.data.items) {
+                const numericDocId = Number(doc.id)
+                let signedUrl = `/api/repository/files/${numericDocId || doc.id}/content`
+
+                try {
+                  const signedUrlResponse = await apiRequest(`/repository/files/${numericDocId || doc.id}/signed-url`, {
+                    authToken: authState?.token,
+                  })
+                  if (signedUrlResponse?.data?.signedUrl) {
+                    signedUrl = signedUrlResponse.data.signedUrl
+                  }
+                } catch (err) {
+                  console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
+                }
+
+                const docId = `doc-${doc.id}`
+                if (seenDocIds.has(docId)) {
+                  continue
+                }
+                seenDocIds.add(docId)
+
+                docs.push({
+                  id: docId,
+                  title: doc.title,
+                  type: doc.type || 'Research Paper',
+                  resourceCategory: doc.resourceCategory || resourceCategory,
+                  format: doc.format,
+                  version: doc.version,
+                  state: doc.state,
+                  pdfUrl: signedUrl,
+                  updatedAt: doc.updatedAt,
+                  department: doc.department || 'CSE',
+                  course: doc.course || 'N/A',
+                  author: doc.author || 'Unknown',
+                  tags: doc.keywords || [],
+                  rating: 5.0,
+                  downloads: 0,
+                })
               }
-            } catch (err) {
-              console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
             }
-            
-            return {
-              id: `doc-${doc.id}`,
-              title: doc.title,
-              type: doc.type || 'Research Paper',
-              format: doc.format,
-              version: doc.version,
-              state: doc.state,
-              pdfUrl: signedUrl,
-              updatedAt: doc.updatedAt,
-              department: 'CSE',
-              course: 'N/A',
-              author: 'Unknown',
-              tags: [],
-              rating: 5.0,
-              downloads: 0,
-            }
-          }))
-          setPublishedDocs(docs)
+          } catch (error) {
+            console.error(`Failed to fetch published documents for ${resourceCategory}:`, error)
+          }
         }
+
+        setPublishedDocs(docs)
       } catch (error) {
         console.error('Failed to fetch published documents:', error)
       } finally {
@@ -145,6 +165,13 @@ export default function RepositoryPage() {
 
   // Classify types for badges and tabs
   const getResearchType = (item) => {
+    // First check resourceCategory from backend
+    const category = String(item.resourceCategory || '').toLowerCase()
+    if (category === 'research-paper') return 'Research Paper'
+    if (category === 'thesis') return 'Thesis'
+    if (category === 'dataset') return 'Dataset'
+    
+    // Fallback to type field
     const type = String(item.type || '').toLowerCase()
     if (type === 'paper' || type === 'research paper') return 'Research Paper'
     if (type === 'thesis') return 'Thesis'
@@ -225,7 +252,8 @@ export default function RepositoryPage() {
   // Upload handlers
   const resetModal = useCallback(() => {
     setShowUploadModal(false)
-    setNewResource({ title: '', author: '', department: 'CSE', course: 'N/A', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper' })
+    setShowUploadSuccess(false)
+    setNewResource({ title: '', author: '', department: 'Computer Science and Engineering', course: 'N/A', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper' })
     setUploadMode('url')
     setSelectedFile(null)
     setUploadProgress(0)
@@ -288,7 +316,13 @@ export default function RepositoryPage() {
           { 
             title: newResource.title.trim(), 
             description: newResource.summary.trim(),
-            resourceCategory: newResource.resourceCategory 
+            resourceCategory: newResource.resourceCategory,
+            keywords: newResource.tags.split(',').map(t => t.trim()).filter(Boolean),
+            author: newResource.author.trim(),
+            department: newResource.department,
+            course: newResource.course.trim(),
+            year: new Date().getFullYear(),
+            language: 'English',
           },
           ({ percent }) => setUploadProgress(percent),
           authState.token
@@ -326,7 +360,9 @@ export default function RepositoryPage() {
     }
 
     setExploreResources(prev => [created, ...prev])
-    resetModal()
+    setShowUploadModal(false)
+    setUploadSuccessTitle(newResource.title.trim())
+    setShowUploadSuccess(true)
   }
 
   const addTag = (tag) => {
@@ -659,10 +695,15 @@ export default function RepositoryPage() {
                     <Label htmlFor="repo-dept-select" className="text-xs font-semibold">Department</Label>
                     <select id="repo-dept-select" value={newResource.department} onChange={e => setNewResource(p => ({ ...p, department: e.target.value }))}
                       className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
-                      <option value="CSE">Computer Science & Engineering</option>
+                      <option value="Computer Science and Engineering">Computer Science and Engineering</option>
+                      <option value="Information Science and Library Management">Information Science and Library Management</option>
+                      <option value="Electrical and Electronic Engineering">Electrical and Electronic Engineering</option>
+                      <option value="Genetic Engineering">Genetic Engineering</option>
                       <option value="Mathematics">Mathematics</option>
                       <option value="Physics">Physics</option>
-                      <option value="Engineering">General Engineering</option>
+                      <option value="Chemistry">Chemistry</option>
+                      <option value="Business Administration">Business Administration</option>
+                      <option value="Other">Other</option>
                     </select>
                   </div>
                   {/* Type */}
@@ -682,18 +723,6 @@ export default function RepositoryPage() {
                       <option value="Dataset">Dataset Archive</option>
                     </select>
                   </div>
-                </div>
-
-                {/* Upload Category / Directory */}
-                <div className="grid gap-1.5">
-                  <Label htmlFor="repo-category-select" className="text-xs font-semibold text-accent-strong">Upload Directory / Storage Folder *</Label>
-                  <select id="repo-category-select" value={newResource.resourceCategory} onChange={e => setNewResource(p => ({ ...p, resourceCategory: e.target.value }))}
-                    className="h-9 rounded-md border border-accent/40 bg-accent/5 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1">
-                    <option value="research-paper">Research Papers (research-paper/)</option>
-                    <option value="thesis">Theses (thesis/)</option>
-                    <option value="dataset">Datasets (dataset/)</option>
-                  </select>
-                  <p className="text-[9px] text-muted-foreground font-medium">Selects the folder path on the server where the file will be organized.</p>
                 </div>
 
                 {/* Source toggle */}
@@ -816,6 +845,37 @@ export default function RepositoryPage() {
                 </Button>
               </div>
             </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Upload Success Modal */}
+      {showUploadSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md border-border shadow-2xl">
+            <CardContent className="p-8 flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                <CheckCircle2 size={32} className="text-green-500" />
+              </div>
+              <div className="grid gap-2">
+                <h3 className="text-lg font-bold">Submitted Successfully!</h3>
+                <p className="text-sm text-muted-foreground">
+                  Your research paper "<strong>{uploadSuccessTitle}</strong>" has been submitted for admin review.
+                </p>
+              </div>
+              <div className="w-full rounded-lg bg-blue-500/10 border border-blue-500/20 p-4 text-left">
+                <p className="text-xs font-semibold text-blue-600 mb-2">📋 What happens next?</p>
+                <ul className="text-xs text-blue-600 space-y-1.5 list-disc list-inside">
+                  <li>An admin will review your publication</li>
+                  <li>You'll be notified once it's approved</li>
+                  <li>Once approved, it appears in the Research Repository</li>
+                </ul>
+              </div>
+              <Button onClick={resetModal} className="w-full gap-2 bg-green-500 hover:bg-green-600 text-white">
+                <CheckCircle2 size={16} />
+                Done
+              </Button>
+            </CardContent>
           </Card>
         </div>
       )}

@@ -142,7 +142,7 @@ async function createTransitionNotifications(trx, document, fromState, toState, 
 
   const rows = Array.from(recipientIds).map((userId) => ({
     user_id: userId,
-    document_id: document.id,
+    document_id: null,
     event_type: notification.eventType,
     title: notification.title,
     message: notification.message,
@@ -174,7 +174,9 @@ async function patchDocumentState(req, res, next) {
       .where({ id: req.user.id })
       .first();
 
-    const document = await db("documents").where({ id: documentId }).first();
+    const researchDocument = await db("research_resources").where({ id: documentId }).first();
+    const academicDocument = await db("academic_resources").where({ id: documentId }).first();
+    const document = researchDocument || academicDocument;
 
     if (!document) {
       return next({
@@ -199,26 +201,19 @@ async function patchDocumentState(req, res, next) {
       return next(permissionResult.error);
     }
 
+    const resourceTable = researchDocument ? 'research_resources' : 'academic_resources';
+
     const updatedDocument = await db.transaction(async (trx) => {
-      await trx("documents")
+      await trx(resourceTable)
         .where({ id: documentId })
         .update({
           state: nextState,
           updated_at: trx.fn.now(),
         });
 
-      await trx("document_state_logs").insert({
-        document_id: documentId,
-        from_state: document.state,
-        to_state: nextState,
-        note,
-        changed_by: req.user.id,
-        created_at: trx.fn.now(),
-      });
-
       await createTransitionNotifications(trx, document, document.state, nextState, actor || req.user, note);
 
-      return trx("documents").where({ id: documentId }).first();
+      return trx(resourceTable).where({ id: documentId }).first();
     });
 
     return res.status(200).json({
@@ -248,7 +243,9 @@ async function getDocumentAuditLogs(req, res, next) {
 
   try {
     const documentId = idResult.data;
-    const document = await db("documents").where({ id: documentId }).first();
+    const researchDocument = await db("research_resources").where({ id: documentId }).first();
+    const academicDocument = await db("academic_resources").where({ id: documentId }).first();
+    const document = researchDocument || academicDocument;
 
     if (!document) {
       return next({

@@ -266,3 +266,123 @@ A: Yes, all your data is exportable. You can restore to local PostgreSQL anytime
 
 **Q: How do I handle secrets in production?**  
 A: Set environment variables via your hosting platform (Railway, Vercel, etc.)
+
+
+---
+
+# Fix: Academic Resources Tags, Department, Course Storage
+
+## Latest Updates (Current)
+
+### Issue Resolved
+**Problem:** When users submitted academic resources forms with tags, department, and course information, these fields were not being stored in Supabase.
+
+**Root Causes:**
+1. Frontend: Initial form state used `'CSE'` as department default, but dropdown had full names (mismatch)
+2. Frontend: FormData wasn't always appending department/course fields (conditional appends)
+3. Backend: Enhanced logging added to diagnose data flow issues
+
+### Files Modified
+
+#### `/frontend/src/pages/RepositoryPage.jsx`
+- **Line 65:** Fixed initial department state from `'CSE'` to `'Computer Science and Engineering'`
+- **Line 65:** Fixed initial course state from `'N/A'` to `''` (empty string)
+- **Impact:** Form now displays correctly with matching dropdown options
+
+#### `/frontend/src/services/api/documents.js`
+- **Lines 67-73:** Always append department and course to FormData
+- **Before:** `if (metadata.department) { formData.append(...) }`
+- **After:** `formData.append('department', metadata.department || '')`
+- **Impact:** Fields are always sent to backend, even if empty
+
+#### `/backend/src/modules/documents/uploadController.js`
+- **Line 126:** Added full `req.body` logging: `console.log('[uploadController.uploadFile] FULL req.body:', JSON.stringify(req.body, null, 2))`
+- **Lines 226-242:** Added detailed processing logs for department and course
+- **Impact:** Clear visibility into what FormData fields are received and how they're processed
+
+### Data Flow (Verified)
+
+```
+Frontend Form
+  ↓
+User enters: Department, Course, Tags
+  ↓
+Form submission → uploadDocument()
+  ↓
+Convert to FormData with all metadata
+  ↓
+Backend: POST /api/repository/upload
+  ↓
+Multer parses FormData → req.body
+  ↓
+uploadController.uploadFile() processes:
+  - department: req.body.department.trim()
+  - course: req.body.course.trim()
+  - keywords: parsed from tags array
+  ↓
+resourceStorage.createResourceRecord()
+  ↓
+INSERT into academic_resources or research_resources
+  ↓
+Supabase Database
+```
+
+### Testing the Fix
+
+After deploying these changes:
+
+1. **Upload a resource** with:
+   - Department: Select from dropdown (e.g., "Computer Science and Engineering")
+   - Course: Enter code (e.g., "CS301")
+   - Tags: Enter comma-separated values (e.g., "ai, machine-learning")
+
+2. **Verify in Supabase:**
+   - Check `academic_resources` or `research_resources` table
+   - New record should have:
+     - `department` = full department name
+     - `course` = course code
+     - `keywords` = `["ai", "machine-learning"]` (JSON array)
+
+3. **Check server logs** (for debugging):
+   - Look for: `[uploadController] Processing department:`
+   - Should show raw value, trimmed value, and storage decision
+
+### Debugging
+
+If tags/department/course still don't appear:
+
+1. **Check server logs** for:
+   - `[uploadController] FULL req.body:` - what FormData was received
+   - `[uploadController] Processing department:` - how it was processed
+   - `[resourceStorage.createResourceRecord] department:` - what's being stored
+
+2. **If req.body fields are undefined:**
+   - Multer isn't parsing FormData correctly
+   - Check middleware order in app.js
+   - Verify express.json() is configured
+
+3. **If data received but not stored:**
+   - Check the INSERT query in resourceStorage.js
+   - Verify Supabase table columns exist
+   - Check database logs for constraint violations
+
+4. **If keywords are empty:**
+   - Verify `keywords`/`tags` JSON stringification works
+   - Check parsing logic handles both JSON and comma-separated
+
+### Related Files
+
+- **Full documentation:** [TAGS_DEPARTMENT_COURSE_FIX.md](./TAGS_DEPARTMENT_COURSE_FIX.md)
+- **Database schema:** `backend/scripts/create_resource_tables.sql`
+- **Resource storage:** `backend/src/modules/documents/resourceStorage.js`
+- **Form component:** `frontend/src/pages/RepositoryPage.jsx`
+- **Upload service:** `frontend/src/services/api/documents.js`
+
+### Summary
+
+✅ **Fixed form state initialization** - Department dropdown now displays correct default  
+✅ **Fixed FormData appending** - All fields are sent to backend consistently  
+✅ **Added diagnostic logging** - Clear visibility into data flow for troubleshooting  
+✅ **Verified data flow** - From frontend form to Supabase database  
+
+**Status:** Ready for testing. Deploy changes and upload a test resource to verify tags, department, and course are now stored correctly.

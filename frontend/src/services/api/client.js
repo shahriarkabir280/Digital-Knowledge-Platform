@@ -45,11 +45,13 @@ function extractErrorMessage(parsedBody, status) {
 
 export async function apiRequest(path, options = {}) {
   const { authToken, headers, ...restOptions } = options
+  const storedSession = loadAuthSession()
+  const effectiveAuthToken = authToken || storedSession?.token || ''
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(effectiveAuthToken ? { Authorization: `Bearer ${effectiveAuthToken}` } : {}),
       ...(headers || {}),
     },
     ...restOptions,

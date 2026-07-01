@@ -19,6 +19,7 @@ const metadataPayloadSchema = z.object({
     return Number.isNaN(parsed) ? value : parsed;
   }, z.number().int().min(1900).max(currentYear + 1).optional()),
   department: z.string().trim().min(1).max(255).optional(),
+  course: z.string().trim().min(1).max(255).optional(),
   accessTier: z.enum(Object.values(AccessTier)).optional(),
 }).refine(
   (payload) =>
@@ -30,6 +31,7 @@ const metadataPayloadSchema = z.object({
         payload.language ||
         payload.year !== undefined ||
         payload.department ||
+        payload.course ||
         payload.accessTier,
     ),
   {

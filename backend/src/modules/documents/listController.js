@@ -33,20 +33,219 @@ const allUploadsQuerySchema = z.object({
 const REVIEW_QUEUE_ROLES = ["STAFF", "LAB_MANAGER", "REVIEWER", "ADMIN"];
 const ALL_UPLOADS_ROLES = ["STAFF", "LAB_MANAGER", "REVIEWER", "ADMIN"];
 
-function normalizeDocumentRow(row) {
+function parseKeywords(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function normalizeDocumentRow(row, resourceCategory = null) {
   return {
     id: row.id,
     title: row.title,
-    type: row.type,
+    type: row.resource_type || row.type || null,
     format: row.format,
     version: row.version,
     state: row.state,
     accessTier: row.access_tier,
     filePath: row.file_path,
+    resourceCategory,
+    author: row.author || null,
+    abstract: row.abstract || null,
+    keywords: parseKeywords(row.keywords),
+    language: row.language || null,
+    year: row.published_year || null,
+    department: row.department || null,
+    course: row.course || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     uploaderId: row.uploader_id,
   };
+}
+
+function resolveResourceTable(resourceCategory) {
+  const normalizedCategory = String(resourceCategory || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "");
+
+  if (["researchpaper", "thesis", "dataset", "research-paper", "researchpaper"].includes(normalizedCategory)) {
+    return "research_resources";
+  }
+
+  return "academic_resources";
+}
+
+function resolveResourceTables(resourceCategory) {
+  if (resourceCategory) {
+    return [resolveResourceTable(resourceCategory)];
+  }
+
+  return ["research_resources", "academic_resources"];
+}
+
+function normalizeResourceCategory(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function getCategoryValueAliases(resourceCategory) {
+  const normalizedCategory = normalizeResourceCategory(resourceCategory);
+
+  const aliasesByCategory = {
+    researchpaper: ["researchpaper", "research-paper", "research", "paper"],
+    thesis: ["thesis"],
+    dataset: ["dataset", "datasets"],
+    textbook: ["textbook", "textbookresource", "book", "pdf"],
+    lectureslides: ["lectureslides", "lecture-slides", "slides", "presentation", "ppt", "pptx"],
+    labmanual: ["labmanual", "lab-manual", "manual"],
+    questionbank: ["questionbank", "question-bank", "qbank"],
+    assignment: ["assignment", "assignments"],
+    labreport: ["labreport", "lab-report", "report"],
+    media: ["media", "video", "videos"],
+    project: ["project"],
+  };
+
+  return aliasesByCategory[normalizedCategory] || [normalizedCategory];
+}
+
+function buildResourceQuery(table, filters = {}) {
+  let query = db(table).select(
+    "id",
+    "title",
+    "resource_type",
+    "format",
+    "version",
+    "state",
+    "access_tier",
+    "file_path",
+    "author",
+    "abstract",
+    "keywords",
+    "language",
+    "published_year",
+    "department",
+    "course",
+    "created_at",
+    "updated_at",
+    "uploader_id",
+  );
+
+  if (filters.state) {
+    query = query.where({ state: filters.state });
+  }
+
+  if (filters.type) {
+    query = query.whereRaw("LOWER(resource_type) = ?", [filters.type]);
+  }
+
+  if (filters.uploaderId) {
+    query = query.where({ uploader_id: filters.uploaderId });
+  }
+
+  if (filters.resourceCategory) {
+    const categoryAliases = getCategoryValueAliases(filters.resourceCategory);
+    query = query.where((builder) => {
+      categoryAliases.forEach((alias, index) => {
+        if (index === 0) {
+          builder.whereRaw("LOWER(resource_type) = ?", [alias]);
+        } else {
+          builder.orWhereRaw("LOWER(resource_type) = ?", [alias]);
+        }
+      });
+    });
+  }
+
+  return query.orderBy("created_at", "desc");
+}
+
+function buildReviewQueueQuery(table, filters = {}) {
+  let query = db(table)
+    .leftJoin("users as u", `${table}.uploader_id`, "u.id")
+    .select(
+      `${table}.id as id`,
+      `${table}.title as title`,
+      `${table}.resource_type as type`,
+      `${table}.format as format`,
+      `${table}.version as version`,
+      `${table}.state as state`,
+      `${table}.access_tier as access_tier`,
+      `${table}.created_at as created_at`,
+      `${table}.updated_at as updated_at`,
+      `${table}.uploader_id as uploader_id`,
+      db.raw("u.name as uploader_name"),
+      db.raw("u.email as uploader_email"),
+      `${table}.author as author`,
+      `${table}.abstract as abstract`,
+      `${table}.keywords as keywords`,
+      `${table}.language as language`,
+      `${table}.published_year as published_year`,
+      `${table}.department as department`,
+      `${table}.course as course`,
+    )
+    .where(`${table}.state`, "review")
+    .orderBy(`${table}.created_at`, "asc");
+
+  if (filters.type) {
+    query = query.andWhereRaw(`LOWER(${table}.resource_type) = ?`, [filters.type]);
+  }
+
+  return query;
+}
+
+function buildAllUploadsQuery(table, filters = {}) {
+  let query = db(table)
+    .leftJoin("users as u", `${table}.uploader_id`, "u.id")
+    .select(
+      `${table}.id as id`,
+      `${table}.title as title`,
+      `${table}.resource_type as type`,
+      `${table}.format as format`,
+      `${table}.version as version`,
+      `${table}.state as state`,
+      `${table}.access_tier as access_tier`,
+      `${table}.created_at as created_at`,
+      `${table}.updated_at as updated_at`,
+      `${table}.uploader_id as uploader_id`,
+      db.raw("u.name as uploader_name"),
+      db.raw("u.email as uploader_email"),
+      `${table}.author as author`,
+      `${table}.abstract as abstract`,
+      `${table}.keywords as keywords`,
+      `${table}.language as language`,
+      `${table}.published_year as published_year`,
+      `${table}.department as department`,
+      `${table}.course as course`,
+    )
+    .orderBy(`${table}.created_at`, "desc");
+
+  if (filters.state) {
+    query = query.where(`${table}.state`, filters.state);
+  }
+
+  if (filters.type) {
+    query = query.andWhereRaw(`LOWER(${table}.resource_type) = ?`, [filters.type]);
+  }
+
+  if (filters.uploaderId) {
+    query = query.andWhere(`${table}.uploader_id`, filters.uploaderId);
+  }
+
+  if (filters.accessTier) {
+    query = query.andWhere(`${table}.access_tier`, filters.accessTier);
+  }
+
+  return query;
 }
 
 function normalizeReviewRow(row) {
@@ -85,6 +284,7 @@ function normalizeReviewRow(row) {
     language: row.language || null,
     year: row.published_year || null,
     department: row.department || null,
+    course: row.course || null,
   };
 }
 
@@ -103,6 +303,9 @@ function normalizeAllUploadsRow(row) {
     uploaderName: row.uploader_name || null,
     uploaderEmail: row.uploader_email || null,
     author: row.author || null,
+    year: row.published_year || null,
+    department: row.department || null,
+    course: row.course || null,
   };
 }
 
@@ -246,37 +449,16 @@ async function getMyUploads(req, res, next) {
     const { state, type } = filterResult.data;
     const resourceCategory = req.query.resourceCategory; // Optional filter
 
-    let query = db("documents")
-      .select(
-        "id",
-        "title",
-        "type",
-        "format",
-        "version",
-        "state",
-        "access_tier",
-        "file_path",
-        "created_at",
-        "updated_at",
-        "uploader_id",
-      )
-      .where({ uploader_id: userId })
-      .orderBy("created_at", "desc");
+    const tables = resolveResourceTables(resourceCategory);
+    const results = await Promise.all(
+      tables.map(async (table) => {
+        const rows = await buildResourceQuery(table, { state, type, resourceCategory, uploaderId: userId });
+        // Use the actual resource_type from the row, not a default
+        return rows.map((row) => normalizeDocumentRow(row, row.resource_type || (table === "research_resources" ? "research-paper" : "textbook")));
+      })
+    );
 
-    if (state) {
-      query = query.andWhere({ state });
-    }
-
-    if (type) {
-      query = query.andWhereRaw("LOWER(type) = ?", [type]);
-    }
-
-    if (resourceCategory) {
-      query = query.andWhere({ resource_category: resourceCategory });
-    }
-
-    const rows = await query;
-    const items = rows.map(normalizeDocumentRow);
+    const items = results.flat().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return res.status(200).json({
       success: true,
@@ -315,38 +497,17 @@ async function getReviewQueue(req, res, next) {
   try {
     const { type } = filterResult.data;
 
-    let query = db("documents as d")
-      .leftJoin("users as u", "d.uploader_id", "u.id")
-      .leftJoin("metadata as m", "d.id", "m.document_id")
-      .select(
-        "d.id",
-        "d.title",
-        "d.type",
-        "d.format",
-        "d.version",
-        "d.state",
-        "d.access_tier",
-        "d.created_at",
-        "d.updated_at",
-        "d.uploader_id",
-        db.raw("u.name as uploader_name"),
-        db.raw("u.email as uploader_email"),
-        "m.author",
-        "m.abstract",
-        "m.keywords",
-        "m.language",
-        "m.published_year",
-        "m.department",
-      )
-      .where({ "d.state": "review" })
-      .orderBy("d.created_at", "asc");
+    const tables = ["research_resources", "academic_resources"];
+    const rows = [];
 
-    if (type) {
-      query = query.andWhereRaw("LOWER(d.type) = ?", [type]);
+    for (const table of tables) {
+      const query = buildReviewQueueQuery(table, { type });
+      rows.push(...(await query));
     }
 
-    const rows = await query;
-    const items = rows.map(normalizeReviewRow);
+    const items = rows
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      .map(normalizeReviewRow);
 
     return res.status(200).json({
       success: true,
@@ -384,41 +545,40 @@ async function getPendingDocuments(req, res, next) {
 
   try {
     const { type } = filterResult.data;
-    const resourceCategory = req.query.resourceCategory || 'research-paper'; // Default to research-paper
+    const resourceCategory = req.query.resourceCategory; // Optional filter - can be null to get both
+    
+    // If a specific category is requested, query only that table
+    if (resourceCategory) {
+      const table = resolveResourceTable(resourceCategory);
+      const rows = await buildResourceQuery(table, { state: 'pending', type, resourceCategory, uploaderId: null });
+      const items = rows.map((row) => normalizeDocumentRow(row, resourceCategory));
 
-    let query = db("documents as d")
-      .leftJoin("users as u", "d.uploader_id", "u.id")
-      .leftJoin("metadata as m", "d.id", "m.document_id")
-      .select(
-        "d.id",
-        "d.title",
-        "d.type",
-        "d.format",
-        "d.version",
-        "d.state",
-        "d.access_tier",
-        "d.created_at",
-        "d.updated_at",
-        "d.uploader_id",
-        db.raw("u.name as uploader_name"),
-        db.raw("u.email as uploader_email"),
-        "m.author",
-        "m.abstract",
-        "m.keywords",
-        "m.language",
-        "m.published_year",
-        "m.department",
-      )
-      .where({ "d.state": "pending" })
-      .andWhere({ "d.resource_category": resourceCategory })
-      .orderBy("d.created_at", "asc");
-
-    if (type) {
-      query = query.andWhereRaw("LOWER(d.type) = ?", [type]);
+      return res.status(200).json({
+        success: true,
+        data: {
+          items,
+          total: items.length,
+          filters: {
+            state: "pending",
+            type: type || null,
+            resourceCategory,
+          },
+        },
+        message: items.length > 0 ? "Pending documents fetched" : "No pending documents",
+      });
     }
 
-    const rows = await query;
-    const items = rows.map(normalizeReviewRow);
+    // If no specific category, query both research and academic resources
+    const tables = ["research_resources", "academic_resources"];
+    const allRows = [];
+
+    for (const table of tables) {
+      const rows = await buildResourceQuery(table, { state: 'pending', type, resourceCategory: null, uploaderId: null });
+      // Use the actual resource_type from each row
+      allRows.push(...rows.map((row) => normalizeDocumentRow(row, row.resource_type || (table === "research_resources" ? "research-paper" : "textbook"))));
+    }
+
+    const items = allRows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     return res.status(200).json({
       success: true,
@@ -428,7 +588,7 @@ async function getPendingDocuments(req, res, next) {
         filters: {
           state: "pending",
           type: type || null,
-          resourceCategory,
+          resourceCategory: null,
         },
       },
       message: items.length > 0 ? "Pending documents fetched" : "No pending documents",
@@ -457,44 +617,17 @@ async function getAllUploads(req, res, next) {
   try {
     const { state, type, uploaderId, accessTier } = filterResult.data;
 
-    let query = db("documents as d")
-      .leftJoin("users as u", "d.uploader_id", "u.id")
-      .leftJoin("metadata as m", "d.id", "m.document_id")
-      .select(
-        "d.id",
-        "d.title",
-        "d.type",
-        "d.format",
-        "d.version",
-        "d.state",
-        "d.access_tier",
-        "d.created_at",
-        "d.updated_at",
-        "d.uploader_id",
-        db.raw("u.name as uploader_name"),
-        db.raw("u.email as uploader_email"),
-        "m.author",
-      )
-      .orderBy("d.created_at", "desc");
+    const tables = ["research_resources", "academic_resources"];
+    const rows = [];
 
-    if (state) {
-      query = query.andWhere({ "d.state": state });
+    for (const table of tables) {
+      const query = buildAllUploadsQuery(table, { state, type, uploaderId, accessTier });
+      rows.push(...(await query));
     }
 
-    if (type) {
-      query = query.andWhereRaw("LOWER(d.type) = ?", [type]);
-    }
-
-    if (uploaderId) {
-      query = query.andWhere({ "d.uploader_id": uploaderId });
-    }
-
-    if (accessTier) {
-      query = query.andWhere({ "d.access_tier": accessTier });
-    }
-
-    const rows = await query;
-    const items = rows.map(normalizeAllUploadsRow);
+    const items = rows
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map(normalizeAllUploadsRow);
 
     return res.status(200).json({
       success: true,

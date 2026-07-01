@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS metadata (
   language         TEXT,
   published_year   INTEGER,
   department       TEXT,
+  course           TEXT,
   subject          TEXT,
   license          TEXT,
   institution      TEXT,

@@ -2,9 +2,21 @@ import { useState, useRef } from 'react'
 import { UploadCloud, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { useAuth } from '../app/use-auth.js'
 import { apiRequest } from '../services/api/client'
+import { uploadDocument } from '../services/api/documents.js'
 import './LibrarySection.css'
 
 const ACCESS_OPTIONS = ['public', 'restricted', 'private']
+
+// Map user-facing type labels to backend resource categories
+const TYPE_TO_RESOURCE_CATEGORY = {
+  'PDF Document / E-Book': 'textbook',
+  'Presentation Slides (PPT/PPTX)': 'lecture-slides',
+  'Question Bank': 'question-bank',
+  'Assignment': 'assignment',
+  'Lab Report': 'lab-report',
+  'Video Content': 'media',
+  'External Online Resource': 'media',
+}
 
 export default function LibraryUploadPage() {
   const { authState } = useAuth()
@@ -17,12 +29,14 @@ export default function LibraryUploadPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState(null) // 'success', 'error', null
   const [uploadMessage, setUploadMessage] = useState('')
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successTitle, setSuccessTitle] = useState('')
   
   const [formData, setFormData] = useState({
     title: '',
     author: '',
     course: '',
-    department: 'CSE',
+    department: 'Computer Science and Engineering',
     year: new Date().getFullYear(),
     type: 'PDF Document / E-Book',
     tags: '',
@@ -92,33 +106,33 @@ export default function LibraryUploadPage() {
 
     try {
       // Upload file to backend - will be stored as pending by default
-      const formDataToSend = new FormData()
-      formDataToSend.append('file', selectedFile)
-      formDataToSend.append('title', formData.title.trim())
-      formDataToSend.append('description', formData.description.trim())
-      formDataToSend.append('type', formData.type) // Add document type from form
-      formDataToSend.append('resourceCategory', 'textbook') // Category for academic resources
-
-      const response = await fetch('/api/repository/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authState.token}`,
+      const resourceCategory = TYPE_TO_RESOURCE_CATEGORY[formData.type] || 'textbook'
+      console.log('[LibraryUpload] Starting upload with type:', formData.type, 'resourceCategory:', resourceCategory)
+      const result = await uploadDocument(
+        selectedFile,
+        { 
+          title: formData.title.trim(), 
+          description: formData.description.trim(),
+          resourceCategory: resourceCategory,
+          keywords: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+          author: formData.author.trim(),
+          department: formData.department,
+          course: formData.course.trim(),
+          year: formData.year,
+          language: 'English',
         },
-        body: formDataToSend,
-      })
+        ({ percent }) => setUploadProgress(percent),
+        authState.token
+      )
 
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed')
-      }
-
+      console.log('[LibraryUpload] Upload successful, result:', result)
       const docId = result?.data?.document?.id
       const docState = result?.data?.document?.state
 
       if (docId) {
         // Create/update metadata for the document
         try {
+          console.log('[LibraryUpload] Creating metadata for docId:', docId)
           await apiRequest(`/repository/${docId}/metadata`, {
             method: 'POST',
             authToken: authState.token,
@@ -131,28 +145,34 @@ export default function LibraryUploadPage() {
               department: formData.department,
             }),
           })
+          console.log('[LibraryUpload] Metadata created successfully')
         } catch (metaErr) {
-          console.warn('Failed to create metadata:', metaErr)
+          console.warn('[LibraryUpload] Failed to create metadata:', metaErr)
         }
 
         setUploadStatus('success')
         setUploadMessage(`Resource submitted successfully! It's now pending admin approval.`)
+        setSuccessTitle(formData.title.trim())
+        setShowSuccessModal(true)
         
-        // Reset form
-        setSelectedFile(null)
-        setFormData({
-          title: '',
-          author: '',
-          course: '',
-          department: 'CSE',
-          year: new Date().getFullYear(),
-          type: 'PDF Document / E-Book',
-          tags: '',
-          description: '',
-        })
-        setUploadProgress(0)
+        // Reset form after showing modal
+        setTimeout(() => {
+          setSelectedFile(null)
+          setFormData({
+            title: '',
+            author: '',
+            course: '',
+            department: 'Computer Science and Engineering',
+            year: new Date().getFullYear(),
+            type: 'PDF Document / E-Book',
+            tags: '',
+            description: '',
+          })
+          setUploadProgress(0)
+        }, 500)
       }
     } catch (error) {
+      console.error('[LibraryUpload] Upload failed:', error)
       setUploadStatus('error')
       setUploadMessage(error.message || 'Upload failed. Please try again.')
     } finally {
@@ -302,10 +322,15 @@ export default function LibraryUploadPage() {
                 value={formData.department}
                 onChange={handleInputChange}
               >
-                <option>CSE</option>
+                <option>Computer Science and Engineering</option>
+                <option>Information Science and Library Management</option>
+                <option>Electrical and Electronic Engineering</option>
+                <option>Genetic Engineering</option>
                 <option>Mathematics</option>
                 <option>Physics</option>
-                <option>Engineering</option>
+                <option>Chemistry</option>
+                <option>Business Administration</option>
+                <option>Other</option>
               </select>
             </div>
             <div className="library-form-field">
@@ -401,7 +426,7 @@ export default function LibraryUploadPage() {
                   title: '',
                   author: '',
                   course: '',
-                  department: 'CSE',
+                  department: 'Computer Science and Engineering',
                   year: new Date().getFullYear(),
                   type: 'PDF Document / E-Book',
                   tags: '',
@@ -414,6 +439,83 @@ export default function LibraryUploadPage() {
           </div>
         </form>
       </section>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(0,0,0,0.6)',
+          padding: '16px',
+        }}>
+          <div style={{
+            background: 'var(--card-bg)',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '420px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '2px solid #22c55e',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}>
+              <CheckCircle2 size={36} style={{ color: '#22c55e' }} />
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', fontWeight: 700, color: 'var(--ink)' }}>
+              Submitted Successfully!
+            </h3>
+            <p style={{ margin: '0 0 16px', fontSize: '.9rem', color: 'var(--muted)' }}>
+              Your resource "<strong>{successTitle}</strong>" has been submitted for admin review.
+            </p>
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '16px',
+              textAlign: 'left',
+              fontSize: '.85rem',
+            }}>
+              <p style={{ margin: '0 0 8px', fontWeight: 600, color: '#1e40af' }}>📋 What happens next?</p>
+              <ul style={{ margin: 0, paddingLeft: '20px', color: '#1e40af', lineHeight: 1.6 }}>
+                <li>An admin will review your resource</li>
+                <li>You'll be notified once it's approved</li>
+                <li>Once approved, it appears in the Library</li>
+              </ul>
+            </div>
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              style={{
+                width: '100%',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                background: '#22c55e',
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: '.9rem',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              ✓ Done
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

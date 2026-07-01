@@ -64,7 +64,7 @@ export default function LibraryPage() {
   })
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [newResource, setNewResource] = useState({
-    title: '', author: '', department: 'CSE', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook',
+    title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook',
   })
   // Upload-specific state
   const [uploadMode, setUploadMode] = useState('url') // 'url' | 'file'
@@ -73,6 +73,8 @@ export default function LibraryPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
+  const [showUploadSuccess, setShowUploadSuccess] = useState(false)
+  const [uploadSuccessTitle, setUploadSuccessTitle] = useState('')
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -82,51 +84,68 @@ export default function LibraryPage() {
     localStorage.setItem('dkp_bookmarked_resources', JSON.stringify(bookmarks))
   }, [bookmarks])
 
-  // Fetch published documents from backend
+  // Fetch published documents from backend by academic-resource category
   useEffect(() => {
     const fetchPublishedDocuments = async () => {
       try {
         setLoadingPublished(true)
-        const response = await apiRequest('/documents/my-uploads?state=published&resourceCategory=textbook', {
-          authToken: authState?.token,
-        })
-        
-        if (response?.data?.items) {
-          // Convert backend documents to resource format
-          const docs = await Promise.all(response.data.items.map(async (doc) => {
-            let signedUrl = `/api/repository/files/${doc.id}/content`
-            
-            // Try to get the signed URL for proper file access
-            try {
-              const signedUrlResponse = await apiRequest(`/repository/files/${doc.id}/signed-url`, {
-                authToken: authState?.token,
-              })
-              if (signedUrlResponse?.data?.signedUrl) {
-                signedUrl = signedUrlResponse.data.signedUrl
+        const categories = ['textbook', 'lecture-slides', 'lab-manual', 'question-bank', 'assignment', 'lab-report', 'media']
+        const docs = []
+        const seenDocIds = new Set()
+
+        for (const resourceCategory of categories) {
+          try {
+            const response = await apiRequest(`/documents/my-uploads?state=published&resourceCategory=${resourceCategory}`, {
+              authToken: authState?.token,
+            })
+
+            if (response?.data?.items?.length) {
+              for (const doc of response.data.items) {
+                const numericDocId = Number(doc.id)
+                let signedUrl = `/api/repository/files/${numericDocId || doc.id}/content`
+
+                try {
+                  const signedUrlResponse = await apiRequest(`/repository/files/${numericDocId || doc.id}/signed-url`, {
+                    authToken: authState?.token,
+                  })
+                  if (signedUrlResponse?.data?.signedUrl) {
+                    signedUrl = signedUrlResponse.data.signedUrl
+                  }
+                } catch (err) {
+                  console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
+                }
+
+                const docId = `doc-${doc.id}`
+                if (seenDocIds.has(docId)) {
+                  return
+                }
+                seenDocIds.add(docId)
+
+                docs.push({
+                  id: docId,
+                  title: doc.title,
+                  type: doc.type || 'Lecture Notes',
+                  format: doc.format,
+                  version: doc.version,
+                  state: doc.state,
+                  resourceCategory: doc.resourceCategory || resourceCategory,
+                  pdfUrl: signedUrl,
+                  updatedAt: doc.updatedAt,
+                  department: doc.department || 'CSE',
+                  course: doc.course || 'N/A',
+                  author: doc.author || 'Unknown',
+                  tags: doc.keywords || [],
+                  rating: 5.0,
+                  downloads: 0,
+                })
               }
-            } catch (err) {
-              console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
             }
-            
-            return {
-              id: `doc-${doc.id}`,
-              title: doc.title,
-              type: doc.type || 'Lecture Notes',
-              format: doc.format,
-              version: doc.version,
-              state: doc.state,
-              pdfUrl: signedUrl,
-              updatedAt: doc.updatedAt,
-              department: 'CSE',
-              course: 'N/A',
-              author: 'Unknown',
-              tags: [],
-              rating: 5.0,
-              downloads: 0,
-            }
-          }))
-          setPublishedDocs(docs)
+          } catch (error) {
+            console.error(`Failed to fetch published documents for ${resourceCategory}:`, error)
+          }
         }
+
+        setPublishedDocs(docs)
       } catch (error) {
         console.error('Failed to fetch published documents:', error)
       } finally {
@@ -140,6 +159,15 @@ export default function LibraryPage() {
   }, [authState?.token])
 
   const getResourceType = (item) => {
+    const category = String(item.resourceCategory || '').toLowerCase()
+    if (category === 'textbook') return 'Textbook'
+    if (category === 'lecture-slides') return 'Lecture Slides'
+    if (category === 'lab-manual') return 'Lab Manual'
+    if (category === 'question-bank') return 'Question Bank'
+    if (category === 'assignment') return 'Assignment'
+    if (category === 'lab-report') return 'Lab Report'
+    if (category === 'media') return 'Video'
+
     const tags = (item.tags || []).map(t => t.toLowerCase())
     const type = String(item.type || '').toLowerCase()
     if (type === 'paper' || type === 'research paper') return 'Research Paper'
@@ -151,7 +179,30 @@ export default function LibraryPage() {
     if (type === 'ppt' || tags.includes('slides')) return 'Lecture Slides'
     if (tags.includes('lab') || tags.includes('manual')) return 'Lab Manual'
     if (tags.includes('textbook') || tags.includes('book')) return 'Textbook'
+    if (type === 'video' || tags.includes('video')) return 'Video'
     return 'Lecture Notes'
+  }
+
+  const getResourceTabKey = (item) => {
+    const category = String(item.resourceCategory || '').toLowerCase()
+    if (category === 'textbook') return 'Textbooks'
+    if (category === 'lecture-slides') return 'Slides'
+    if (category === 'lab-manual') return 'Manuals'
+    if (category === 'question-bank') return 'QuestionBanks'
+    if (category === 'assignment') return 'Assignments'
+    if (category === 'lab-report') return 'LabReports'
+    if (category === 'media') return 'Videos'
+
+    const tags = (item.tags || []).map(t => t.toLowerCase())
+    const type = String(item.type || '').toLowerCase()
+    if (type === 'ppt' || tags.includes('slides')) return 'Slides'
+    if (tags.includes('lab') || tags.includes('manual')) return 'Manuals'
+    if (type === 'question bank' || type === 'qbank' || tags.includes('question')) return 'QuestionBanks'
+    if (type === 'assignment' || tags.includes('assignment')) return 'Assignments'
+    if (type === 'lab report' || type === 'labreport' || tags.includes('lab report')) return 'LabReports'
+    if (type === 'video' || tags.includes('video')) return 'Videos'
+    if (tags.includes('textbook') || tags.includes('book') || type === 'pdf' || type === 'book') return 'Textbooks'
+    return 'Textbooks'
   }
 
   const getTypeBadgeStyles = (type) => {
@@ -193,7 +244,7 @@ export default function LibraryPage() {
 
   const resetModal = useCallback(() => {
     setShowUploadModal(false)
-    setNewResource({ title: '', author: '', department: 'CSE', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook' })
+    setNewResource({ title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook' })
     setUploadMode('url')
     setSelectedFile(null)
     setUploadProgress(0)
@@ -218,12 +269,17 @@ export default function LibraryPage() {
 
     setSelectedFile(file)
     setUploadError('')
-    setNewResource(p => ({
-      ...p,
-      type: inferredType,
-      resourceCategory: inferredCategory,
-      title: p.title || file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
-    }))
+    setNewResource(p => {
+      const hasExplicitCategory = Boolean(p.resourceCategory) && p.resourceCategory !== 'textbook'
+      const nextCategory = hasExplicitCategory ? p.resourceCategory : inferredCategory
+
+      return {
+        ...p,
+        type: inferredType,
+        resourceCategory: nextCategory,
+        title: p.title || file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+      }
+    })
   }
 
   const handleDrop = useCallback((e) => {
@@ -276,7 +332,7 @@ export default function LibraryPage() {
           { 
             title: newResource.title.trim(), 
             description: newResource.summary.trim(),
-            resourceCategory: newResource.resourceCategory 
+            resourceCategory: newResource.resourceCategory || 'textbook'
           },
           ({ percent }) => setUploadProgress(percent),
           authState.token
@@ -295,24 +351,8 @@ export default function LibraryPage() {
       setIsUploading(false)
     }
 
-    const created = {
-      id: `res-${Date.now()}`,
-      title: newResource.title.trim(),
-      author: newResource.author.trim(),
-      department: newResource.department,
-      course: newResource.course.trim().toUpperCase(),
-      type: newResource.type,
-      youtubeId: youtubeId,
-      year: new Date().getFullYear(),
-      tags: newResource.tags.split(',').map(t => t.trim()).filter(Boolean),
-      rating: 5.0, reviews: 0, downloads: 0, access: 'public',
-      summary: newResource.summary.trim(),
-      pdfUrl: ['PDF', 'Paper', 'Thesis', 'Question Bank', 'Assignment', 'Lab Report'].includes(newResource.type) ? resolvedPdfUrl : null,
-      pptUrl: newResource.type === 'PPT' ? resolvedPdfUrl : null,
-      githubUrl: ['Dataset', 'Project'].includes(newResource.type) ? resolvedPdfUrl : null,
-      updatedAt: new Date().toISOString()
-    }
-    setResources(prev => [created, ...prev])
+    setUploadSuccessTitle(newResource.title.trim())
+    setShowUploadSuccess(true)
     resetModal()
   }
 
@@ -322,6 +362,7 @@ export default function LibraryPage() {
     
     return allResources.filter(item => {
       const type = getResourceType(item)
+      const tabKey = getResourceTabKey(item)
       
       // Exclude research-related types from the Academic Resources tab
       if (['Research Paper', 'Thesis', 'Dataset'].includes(type)) {
@@ -338,15 +379,7 @@ export default function LibraryPage() {
         (item.author || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.course || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.tags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      const matchesTab = 
-        selectedCategory === 'All' ||
-        (selectedCategory === 'Textbooks' && type === 'Textbook') ||
-        (selectedCategory === 'Slides' && type === 'Lecture Slides') ||
-        (selectedCategory === 'Manuals' && type === 'Lab Manual') ||
-        (selectedCategory === 'QuestionBanks' && type === 'Question Bank') ||
-        (selectedCategory === 'Assignments' && type === 'Assignment') ||
-        (selectedCategory === 'LabReports' && type === 'Lab Report') ||
-        (selectedCategory === 'Videos' && type === 'Video')
+      const matchesTab = selectedCategory === 'All' || tabKey === selectedCategory
       const matchesDept = filterDepartment === 'All' || item.department === filterDepartment
       const matchesCourse = filterCourse === 'All' || item.course === filterCourse
       return matchesSearch && matchesTab && matchesDept && matchesCourse
@@ -700,6 +733,37 @@ export default function LibraryPage() {
         </div>
       </div>
 
+      {/* Upload Success Modal */}
+      {showUploadSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md border-border shadow-2xl">
+            <CardContent className="p-8 flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                <CheckCircle2 size={32} className="text-green-500" />
+              </div>
+              <div className="grid gap-2">
+                <h3 className="text-lg font-bold">Submitted Successfully!</h3>
+                <p className="text-sm text-muted-foreground">
+                  Your academic resource "<strong>{uploadSuccessTitle}</strong>" has been submitted for admin review.
+                </p>
+              </div>
+              <div className="w-full rounded-lg bg-blue-500/10 border border-blue-500/20 p-4 text-left">
+                <p className="text-xs font-semibold text-blue-600 mb-2">📋 What happens next?</p>
+                <ul className="text-xs text-blue-600 space-y-1.5 list-disc list-inside">
+                  <li>An admin will review your resource</li>
+                  <li>You'll be notified once it's approved</li>
+                  <li>Once approved, it appears in the library</li>
+                </ul>
+              </div>
+              <Button onClick={() => { setShowUploadSuccess(false); setUploadSuccessTitle('') }} className="w-full gap-2 bg-green-500 hover:bg-green-600 text-white">
+                <CheckCircle2 size={16} />
+                Done
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Upload Resource Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -765,6 +829,7 @@ export default function LibraryPage() {
                         if (val === 'Assignment') category = 'assignment';
                         if (val === 'Lab Report') category = 'lab-report';
                         if (val === 'Video') category = 'media';
+                        if (val === 'Link') category = 'media';
                         setNewResource(p => ({ ...p, type: val, resourceCategory: category }));
                       }}
                       className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
@@ -777,24 +842,6 @@ export default function LibraryPage() {
                       <option value="Link">External Online Resource</option>
                     </select>
                   </div>
-                </div>
-
-                <div className="grid gap-1.5">
-                  <Label htmlFor="res-category-select" className="text-xs font-semibold text-accent-strong">Upload Directory / Storage Folder *</Label>
-                  <select id="res-category-select" value={newResource.resourceCategory} onChange={e => setNewResource(p => ({ ...p, resourceCategory: e.target.value }))}
-                    className="h-9 rounded-md border border-accent/40 bg-accent/5 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1">
-                    <option value="textbook">Textbooks (textbook/)</option>
-                    <option value="lecture-slides">Lecture Slides (lecture-slides/)</option>
-                    <option value="lab-manual">Lab Manuals (lab-manual/)</option>
-                    <option value="research-paper">Research Papers (research-paper/)</option>
-                    <option value="thesis">Theses (thesis/)</option>
-                    <option value="dataset">Datasets (dataset/)</option>
-                    <option value="question-bank">Question Banks (question-bank/)</option>
-                    <option value="assignment">Assignments (assignment/)</option>
-                    <option value="lab-report">Lab Reports (lab-report/)</option>
-                    <option value="project">Projects (project/)</option>
-                  </select>
-                  <p className="text-[9px] text-muted-foreground">Selects the folder path on the server where the file will be organized.</p>
                 </div>
 
                 {/* ── Source: URL toggle or File upload ── */}

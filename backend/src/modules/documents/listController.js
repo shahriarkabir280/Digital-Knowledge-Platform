@@ -648,9 +648,65 @@ async function getAllUploads(req, res, next) {
   }
 }
 
+async function getPublishedDocuments(req, res, next) {
+  const filterResult = validateFilters(req.query || {});
+  if (!filterResult.ok) {
+    return next(filterResult.error);
+  }
+
+  try {
+    const { state, type } = filterResult.data;
+    const resourceCategory = req.query.resourceCategory; // Optional filter
+
+    const tables = resolveResourceTables(resourceCategory);
+    const results = await Promise.all(
+      tables.map(async (table) => {
+        // Query published documents WITHOUT filtering by uploader — visible to all users
+        const rows = await buildResourceQuery(table, {
+          state: "published",
+          type,
+          resourceCategory,
+          // NOTE: No uploaderId filter — this is intentional so ALL users can see approved resources
+        });
+        return rows.map((row) =>
+          normalizeDocumentRow(
+            row,
+            row.resource_type ||
+              (table === "research_resources" ? "research-paper" : "textbook")
+          )
+        );
+      })
+    );
+
+    const items = results
+      .flat()
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        items,
+        total: items.length,
+        filters: {
+          state: "published",
+          type: type || null,
+          resourceCategory: resourceCategory || null,
+        },
+      },
+      message:
+        items.length > 0
+          ? "Published documents fetched"
+          : "No published documents found",
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   getMyUploads,
   getReviewQueue,
   getPendingDocuments,
   getAllUploads,
+  getPublishedDocuments,
 };

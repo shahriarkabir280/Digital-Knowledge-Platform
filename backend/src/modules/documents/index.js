@@ -106,6 +106,12 @@ router.get("/review-queue", listController.getReviewQueue);
 router.get("/pending", listController.getPendingDocuments);
 
 /**
+ * Published documents visible to ALL authenticated users
+ * GET /api/documents/published?resourceCategory=
+ */
+router.get("/published", listController.getPublishedDocuments);
+
+/**
  * Staff/reviewer all uploads listing
  * GET /api/documents/all-uploads?state=&type=&uploaderId=&accessTier=
  */

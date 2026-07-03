@@ -95,7 +95,7 @@ export default function LibraryPage() {
 
         for (const resourceCategory of categories) {
           try {
-            const response = await apiRequest(`/documents/my-uploads?state=published&resourceCategory=${resourceCategory}`, {
+            const response = await apiRequest(`/documents/published?resourceCategory=${resourceCategory}`, {
               authToken: authState?.token,
             })
 

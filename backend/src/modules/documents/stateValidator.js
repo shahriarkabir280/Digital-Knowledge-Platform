@@ -15,16 +15,16 @@ const lifecycleSchema = z.object({
 });
 
 const allowedTransitions = {
-  // New uploads start in pending - awaiting admin approval
+  // New uploads start in pending - awaiting moderation review
   [DOCUMENT_STATES.PENDING]: [DOCUMENT_STATES.PUBLISHED, DOCUMENT_STATES.ARCHIVED],
   // Members can move draft to review for submission
-  [DOCUMENT_STATES.DRAFT]: [DOCUMENT_STATES.REVIEW],
+  [DOCUMENT_STATES.DRAFT]: [DOCUMENT_STATES.REVIEW, DOCUMENT_STATES.PUBLISHED],
   // Reviewers can approve (publish) or request revision (back to draft)
   [DOCUMENT_STATES.REVIEW]: [DOCUMENT_STATES.PUBLISHED, DOCUMENT_STATES.DRAFT],
   // Published can be archived
   [DOCUMENT_STATES.PUBLISHED]: [DOCUMENT_STATES.ARCHIVED],
-  // Archived is final state
-  [DOCUMENT_STATES.ARCHIVED]: [],
+  // Archived items can be restored directly to published by staff
+  [DOCUMENT_STATES.ARCHIVED]: [DOCUMENT_STATES.PUBLISHED],
 };
 
 const rolePolicyByTargetState = {
@@ -42,7 +42,10 @@ const rolePolicyByTargetState = {
     "ADMIN",
   ],
   [DOCUMENT_STATES.PUBLISHED]: [
-    "ADMIN", // Only admin can publish from pending
+    "STAFF",
+    "LAB_MANAGER",
+    "REVIEWER",
+    "ADMIN",
   ],
   [DOCUMENT_STATES.ARCHIVED]: ["STAFF", "LAB_MANAGER", "ADMIN"],
 };
@@ -125,6 +128,7 @@ function validateTransitionNote(currentState, nextState, note) {
   const requiresNote =
     (currentState === DOCUMENT_STATES.PENDING &&
       (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.ARCHIVED)) ||
+    (currentState === DOCUMENT_STATES.DRAFT && nextState === DOCUMENT_STATES.PUBLISHED) ||
     (currentState === DOCUMENT_STATES.REVIEW &&
       (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.DRAFT));
 

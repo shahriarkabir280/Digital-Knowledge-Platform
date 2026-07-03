@@ -29,17 +29,17 @@ function buildTransitionNotification(document, fromState, toState, actorName, no
   if (toState === "pending") {
     return {
       eventType,
-      title: "New document pending approval",
-      message: `"${document.title}" uploaded by ${actorName} is pending admin review.${noteSuffix}`,
+      title: "New document pending review",
+      message: `"${document.title}" uploaded by ${actorName} is pending moderation review.${noteSuffix}`,
     };
   }
 
-  // Admin approved document
-  if (fromState === "pending" && toState === "published") {
+  // Direct publish from any state
+  if (toState === "published") {
     return {
       eventType,
-      title: "Document approved and published",
-      message: `Your document "${document.title}" was approved and published by ${actorName}.${noteSuffix}`,
+      title: fromState === "archived" ? "Document republished" : "Document published",
+      message: `Your document "${document.title}" was published by ${actorName}.${noteSuffix}`,
     };
   }
 
@@ -57,14 +57,6 @@ function buildTransitionNotification(document, fromState, toState, actorName, no
       eventType,
       title: "New document submitted for review",
       message: `"${document.title}" was submitted for review by ${actorName}.${noteSuffix}`,
-    };
-  }
-
-  if (fromState === "review" && toState === "published") {
-    return {
-      eventType,
-      title: "Document approved and published",
-      message: `Your document "${document.title}" was approved and published by ${actorName}.${noteSuffix}`,
     };
   }
 

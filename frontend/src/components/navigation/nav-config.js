@@ -44,16 +44,10 @@ export const navItems = [
     roles: ROUTE_ACCESS.allUploads,
   },
   {
-    to: '/review-queue',
-    label: 'Review Lab',
+    to: '/library-moderation-queue',
+    label: 'Library Moderation',
     iconName: 'ClipboardCheck',
     roles: ROUTE_ACCESS.reviewQueue,
-  },
-  {
-    to: '/admin',
-    label: 'System Admin',
-    iconName: 'ShieldCheck',
-    roles: ROUTE_ACCESS.admin,
   },
   {
     to: '/library/settings',

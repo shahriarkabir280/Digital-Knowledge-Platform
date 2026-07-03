@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Bell, LogOut, User, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import cseduLogo from '@/assets/CSEDULOGO.png'
 import { useAuth } from '../../app/use-auth.js'
 import { useLayout } from '../../app/layout-context.jsx'
+import { defaultRouteForRole } from '../../app/rbac.js'
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -16,7 +17,15 @@ function resolveNotificationRoute(notification, role) {
   const eventType = String(notification?.eventType || '')
   if (eventType.startsWith('document_')) {
     if (STAFF_ROLES.has(role)) {
-      return eventType === 'document_review' ? '/review-queue' : '/all-uploads'
+      if (eventType === 'document_review') {
+        return '/review-queue'
+      }
+
+      if (eventType === 'document_pending') {
+        return '/library-moderation-queue'
+      }
+
+      return '/all-uploads'
     }
     return '/repository'
   }
@@ -97,13 +106,13 @@ export default function Navbar() {
       </button>
 
       {/* Brand */}
-      <div className="brand-block">
+      <Link to={defaultRouteForRole(authState.role)} className="brand-block" aria-label="Go to home page">
         <img src={cseduLogo} alt="CSEDU Logo" className="brand-logo" />
         <div className="brand-copy">
           <p className="brand-kicker brand-tagline">Digital Knowledge Platform</p>
           <h1>CSEDU</h1>
         </div>
-      </div>
+      </Link>
 
       {/* Actions */}
       <div className="topbar-actions">

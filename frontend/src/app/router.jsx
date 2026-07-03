@@ -24,12 +24,11 @@ import RoutePage from '../pages/RoutePage.jsx'
 import SearchPage from '../pages/SearchPage.jsx'
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import StudentProjectShowcasePage from '../pages/StudentProjectShowcasePage.jsx'
-import UnauthorizedPage from '../pages/UnauthorizedPage.jsx'
 import ViewerPage from '../pages/ViewerPage.jsx'
 import SubmissionWizardPage from '../pages/SubmissionWizardPage.jsx'
 import ProtectedRoute from '../routes/ProtectedRoute.jsx'
 import RoleRoute from '../routes/RoleRoute.jsx'
-import { ROLES, ROUTE_ACCESS } from './rbac.js'
+import { ROLES, ALL_AUTH_ROLES, ROUTE_ACCESS } from './rbac.js'
 
 export const appRouter = createBrowserRouter([
   {
@@ -48,15 +47,65 @@ export const appRouter = createBrowserRouter([
         children: [
           {
             path: '/',
-            element: <Navigate to="/dashboard" replace />,
+            element: <Navigate to="/login" replace />,
           },
           {
-            path: '/dashboard',
-            element: <DashboardPage />,
-          },
-          {
-            path: '/notifications',
-            element: <NotificationsPage />,
+            element: <RoleRoute allowedRoles={ALL_AUTH_ROLES} />,
+            children: [
+              {
+                path: '/dashboard',
+                element: <DashboardPage />,
+              },
+              {
+                path: '/notifications',
+                element: <NotificationsPage />,
+              },
+              {
+                path: '/upload-document',
+                element: <Navigate to="/submit-paper" replace />,
+              },
+              {
+                path: '/submit-paper',
+                element: <SubmissionWizardPage />,
+              },
+              {
+                path: '/metadata-form',
+                element: <SubmissionWizardPage />,
+              },
+              {
+                path: '/borrow-item',
+                element: (
+                  <RoutePage
+                    title="Borrow Item"
+                    description="Open the circulation workflow for requesting an available library item."
+                  />
+                ),
+              },
+              {
+                path: '/library/upload',
+                element: <LibraryUploadPage />,
+              },
+              {
+                path: '/library/bookmarks',
+                element: <LibraryBookmarksPage />,
+              },
+              {
+                path: '/library/profile',
+                element: <LibraryProfilePage />,
+              },
+              {
+                path: '/library/settings',
+                element: <LibrarySettingsPage />,
+              },
+              {
+                path: '/uploads',
+                element: <Navigate to="/library/upload" replace />,
+              },
+              {
+                path: '/bookmarks',
+                element: <Navigate to="/library/bookmarks" replace />,
+              },
+            ],
           },
           {
             element: <RoleRoute allowedRoles={[ROLES.ADMIN]} />,
@@ -69,6 +118,20 @@ export const appRouter = createBrowserRouter([
                 path: '/moderation-queue',
                 element: <ModerationQueuePage />,
               },
+            ],
+          },
+          {
+            element: <RoleRoute allowedRoles={ROUTE_ACCESS.reviewQueue} />,
+            children: [
+              {
+                path: '/review-queue',
+                element: <ReviewQueuePage />,
+              },
+            ],
+          },
+          {
+            element: <RoleRoute allowedRoles={ROUTE_ACCESS.reviewQueue} />,
+            children: [
               {
                 path: '/library-moderation-queue',
                 element: <LibraryModerationPage />,
@@ -84,30 +147,30 @@ export const appRouter = createBrowserRouter([
               },
             ],
           },
+          // Public routes — accessible by GUEST and all authenticated roles
           {
-            path: '/upload-document',
-            element: <Navigate to="/submit-paper" replace />,
+            path: '/library',
+            element: <LibraryPage />,
           },
           {
-            path: '/submit-paper',
-            element: <SubmissionWizardPage />,
-          },
-          {
-            path: '/metadata-form',
-            element: <SubmissionWizardPage />,
-          },
-          {
-            path: '/borrow-item',
-            element: (
-              <RoutePage
-                title="Borrow tem"
-                description="Open the circulation workflow for requesting an available library item."
-              />
-            ),
+            path: '/library/resource/:resourceId',
+            element: <LibraryResourceDetailsPage />,
           },
           {
             path: '/repository',
             element: <RepositoryPage />,
+          },
+          {
+            path: '/search',
+            element: <SearchPage />,
+          },
+          {
+            path: '/student-projects',
+            element: <StudentProjectShowcasePage />,
+          },
+          {
+            path: '/viewer/:docId?',
+            element: <ViewerPage />,
           },
           {
             element: <RoleRoute allowedRoles={ROUTE_ACCESS.allUploads} />,
@@ -128,30 +191,6 @@ export const appRouter = createBrowserRouter([
             ],
           },
           {
-            path: '/library',
-            element: <LibraryPage />,
-          },
-          {
-            path: '/library/resource/:resourceId',
-            element: <LibraryResourceDetailsPage />,
-          },
-          {
-            path: '/library/upload',
-            element: <LibraryUploadPage />,
-          },
-          {
-            path: '/library/bookmarks',
-            element: <LibraryBookmarksPage />,
-          },
-          {
-            path: '/library/profile',
-            element: <LibraryProfilePage />,
-          },
-          {
-            path: '/library/settings',
-            element: <LibrarySettingsPage />,
-          },
-          {
             element: <RoleRoute allowedRoles={ROUTE_ACCESS.libraryAnalytics} />,
             children: [
               {
@@ -159,26 +198,6 @@ export const appRouter = createBrowserRouter([
                 element: <LibraryAnalyticsPage />,
               },
             ],
-          },
-          {
-            path: '/uploads',
-            element: <Navigate to="/library/upload" replace />,
-          },
-          {
-            path: '/bookmarks',
-            element: <Navigate to="/library/bookmarks" replace />,
-          },
-          {
-            path: '/search',
-            element: <SearchPage />,
-          },
-          {
-            path: '/student-projects',
-            element: <StudentProjectShowcasePage />,
-          },
-          {
-            path: '/viewer/:docId?',
-            element: <ViewerPage />,
           },
           {
             element: <RoleRoute allowedRoles={ROUTE_ACCESS.admin} />,
@@ -197,7 +216,7 @@ export const appRouter = createBrowserRouter([
       },
       {
         path: '/403',
-        element: <UnauthorizedPage />,
+        element: <Navigate to="/login" replace />,
       },
     ],
   },

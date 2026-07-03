@@ -17,6 +17,10 @@ function resolveNotificationRoute(notification, role) {
         return '/review-queue'
       }
 
+      if (eventType === 'document_pending') {
+        return '/library-moderation-queue'
+      }
+
       return '/all-uploads'
     }
 

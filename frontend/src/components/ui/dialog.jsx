@@ -6,18 +6,19 @@ const DialogContext = createContext()
 
 function Dialog({ open, onOpenChange, children }) {
   const [isOpen, setIsOpen] = useState(open ?? false)
-  
+
   const handleOpenChange = (newOpen) => {
     setIsOpen(newOpen)
     onOpenChange?.(newOpen)
   }
 
+  const dialogOpen = open ?? isOpen
+
   return (
-    <DialogContext.Provider value={{ open: open ?? isOpen, onOpenChange: handleOpenChange }}>
-      {children}
-      {(open ?? isOpen) && (
+    <DialogContext.Provider value={{ open: dialogOpen, onOpenChange: handleOpenChange }}>
+      {dialogOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
+          <div
             className="fixed inset-0 bg-black/50"
             onClick={() => handleOpenChange(false)}
           />
@@ -25,7 +26,7 @@ function Dialog({ open, onOpenChange, children }) {
             {children}
           </div>
         </div>
-      )}
+      ) : null}
     </DialogContext.Provider>
   )
 }

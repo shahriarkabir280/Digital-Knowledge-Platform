@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import cseduLogo from '@/assets/CSEDULOGO.png'
 import { defaultRouteForRole } from '../app/rbac.js'
 import { useAuth } from '../app/use-auth.js'
-import { createDemoSession, loginRequest } from '../services/api/auth.js'
+import { loginRequest } from '../services/api/auth.js'
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('')
@@ -48,10 +48,16 @@ export default function LoginPage() {
     }
   }
 
-  const onDemoLogin = () => {
-    const session = createDemoSession(identifier.trim())
-    login({ role: session.user.role, name: session.user.name, token: session.token, refreshToken: session.refreshToken, expiresAt: session.expiresAt })
-    navigate(from || defaultRouteForRole(session.user.role), { replace: true })
+  const onGuestAccess = () => {
+    // Guest session — no token, can only browse public resources
+    login({
+      role: 'GUEST',
+      name: 'Guest',
+      token: '',
+      refreshToken: '',
+      expiresAt: null,
+    })
+    navigate('/library', { replace: true })
   }
 
   return (
@@ -166,8 +172,8 @@ export default function LoginPage() {
               <div style={{ flex: 1, height: '1px', background: 'hsl(var(--border))' }} />
             </div>
 
-            <Button type="button" variant="outline" size="lg" onClick={onDemoLogin} style={{ height: '44px', fontSize: '.95rem' }}>
-              ASHRAFUL LOGIN
+            <Button type="button" variant="outline" size="lg" onClick={onGuestAccess} style={{ height: '44px', fontSize: '.95rem' }}>
+              Guest Access
             </Button>
           </form>
 

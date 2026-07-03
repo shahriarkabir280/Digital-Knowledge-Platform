@@ -17,33 +17,44 @@ export const ALL_AUTH_ROLES = [
   ROLES.REVIEWER,
 ]
 
+export const PUBLIC_ROUTES = [
+  ROLES.GUEST,
+  ...ALL_AUTH_ROLES,
+]
+
 export const ROUTE_ACCESS = Object.freeze({
-  home: ALL_AUTH_ROLES,
-  dashboard: ALL_AUTH_ROLES,
-  notifications: ALL_AUTH_ROLES,
-  uploadDocument: ALL_AUTH_ROLES,
-  repository: ALL_AUTH_ROLES,
-  library: ALL_AUTH_ROLES,
+  library: PUBLIC_ROUTES,
   libraryBookmarks: ALL_AUTH_ROLES,
+  libraryResourceDetails: PUBLIC_ROUTES,
   libraryUpload: ALL_AUTH_ROLES,
   librarySettings: ALL_AUTH_ROLES,
   libraryProfile: ALL_AUTH_ROLES,
   libraryAnalytics: [ROLES.ADMIN, ROLES.STAFF, ROLES.LAB_MANAGER],
-  search: ALL_AUTH_ROLES,
-  viewer: ALL_AUTH_ROLES,
-  studentProjectShowcase: ALL_AUTH_ROLES,
+  repository: PUBLIC_ROUTES,
+  search: PUBLIC_ROUTES,
+  viewer: PUBLIC_ROUTES,
+  studentProjectShowcase: PUBLIC_ROUTES,
+  home: ALL_AUTH_ROLES,
+  dashboard: ALL_AUTH_ROLES,
+  notifications: ALL_AUTH_ROLES,
+  uploadDocument: ALL_AUTH_ROLES,
+  submitPaper: ALL_AUTH_ROLES,
   allUploads: [ROLES.STAFF, ROLES.LAB_MANAGER, ROLES.REVIEWER, ROLES.ADMIN],
   reviewQueue: [ROLES.STAFF, ROLES.LAB_MANAGER, ROLES.REVIEWER, ROLES.ADMIN],
   admin: [ROLES.ADMIN],
 })
 
 export function defaultRouteForRole(role) {
+  if (role === ROLES.GUEST) {
+    return '/library'
+  }
+
   if (role === ROLES.ADMIN) {
-    return '/dashboard/admin'
+    return '/dashboard'
   }
 
   if (role === ROLES.STAFF || role === ROLES.LAB_MANAGER) {
-    return '/dashboard/staff'
+    return '/dashboard'
   }
 
   return '/dashboard'

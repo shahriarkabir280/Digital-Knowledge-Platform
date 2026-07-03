@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../app/use-auth.js'
 import { useLayout } from '../../app/layout-context.jsx'
+import { defaultRouteForRole } from '../../app/rbac.js'
 import { navItems } from './nav-config.js'
 import cseduLogo from '@/assets/CSEDULOGO.png'
 
@@ -83,13 +84,18 @@ export default function Sidebar() {
 
       <div className="library-nav-group">
         {isMobileMenuOpen && (
-          <div className="sidebar-brand-container">
+          <NavLink
+            to={defaultRouteForRole(authState.role)}
+            onClick={closeMobileMenu}
+            className="sidebar-brand-container"
+            aria-label="Go to home page"
+          >
             <img src={cseduLogo} alt="CSEDU Logo" className="sidebar-brand-logo" />
             <div className="sidebar-brand-text">
               <span className="sidebar-brand-kicker">Digital Knowledge Platform</span>
               <span className="sidebar-brand-name">CSEDU</span>
             </div>
-          </div>
+          </NavLink>
         )}
         <nav aria-label="Main navigation">
           <ul className="sidebar-list">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
 import { useAuth } from '../app/use-auth.js'
 import { ROLES } from '../app/rbac.js'
+import { apiRequest } from '../services/api/client'
 import {
   fetchMyUploads,
   fetchReviewQueue,
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   
   const [reviewQueue, setReviewQueue] = useState([])
   const [reviewQueueStatus, setReviewQueueStatus] = useState('idle')
+  const [pendingCount, setPendingCount] = useState(0)
 
   const filteredUploads = useMemo(() => {
     return uploadsItems.filter(item => {
@@ -54,24 +56,25 @@ export default function DashboardPage() {
     })
   }, [uploadsItems, selectedState])
 
-  // Stats from localStorage
-  const bookmarksCount = useMemo(() => {
+  // Live bookmark count — reads localStorage fresh every render
+  const getBookmarksCount = () => {
     try {
       const saved = localStorage.getItem('dkp_bookmarked_resources')
       return saved ? JSON.parse(saved).length : 0
     } catch {
       return 0
     }
-  }, [])
+  }
 
-  const totalRepoCount = useMemo(() => {
+  // Live total repo count from the published docs cache
+  const getRepoCount = () => {
     try {
-      const saved = localStorage.getItem('dkp_academic_resources')
+      const saved = localStorage.getItem('dkp_published_docs_cache')
       return saved ? JSON.parse(saved).length : 0
     } catch {
       return 0
     }
-  }, [])
+  }
 
   // Check user privileges
   const isReviewer = [ROLES.REVIEWER, ROLES.STAFF, ROLES.LAB_MANAGER, ROLES.ADMIN].includes(authState.role)
@@ -107,10 +110,24 @@ export default function DashboardPage() {
     }
   }
 
+  // Load pending approvals for anyone who can review them
+  const loadPendingCount = async () => {
+    if (!authState?.token || !isReviewer) return
+    try {
+      const result = await apiRequest('/documents/pending', { authToken: authState.token })
+      setPendingCount(result?.data?.total || 0)
+    } catch {
+      // Silently fail
+    }
+  }
+
   useEffect(() => {
     loadMyUploads()
     if (isReviewer) {
       loadReviewQueue()
+    }
+    if (isReviewer) {
+      loadPendingCount()
     }
   }, [authState?.token])
 
@@ -195,70 +212,133 @@ export default function DashboardPage() {
 
       {/* Metrics Dashboard */}
       <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-        <Card className="border-border hover:shadow-sm transition-all">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="grid gap-0.5">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">My Submissions</span>
-              <span className="text-2xl font-black text-foreground">{uploadsStatus === 'success' ? uploadsItems.length : 0}</span>
+        {!isAdmin && (
+          <Card className="border-border hover:shadow-sm transition-all">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="grid gap-0.5">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">My Submissions</span>
+                <span className="text-2xl font-black text-foreground">{uploadsStatus === 'success' ? uploadsItems.length : 0}</span>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
+                <History size={18} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!isAdmin && (
+          <Card className="border-border hover:shadow-sm transition-all">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="grid gap-0.5">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">My Bookmarks</span>
+                <span className="text-2xl font-black text-foreground">{getBookmarksCount()}</span>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
+                <Bookmark size={18} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="border-border hover:shadow-md transition-all md:col-span-1 bg-gradient-to-br from-blue-500/5 to-transparent">
+          <CardContent className="p-6 flex items-center justify-between gap-4">
+            <div className="grid gap-1">
+              <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Total Publications</span>
+              <span className="text-4xl font-black text-foreground">{getRepoCount()}</span>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
-              <History size={18} />
+            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+              <BookOpen size={28} />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border hover:shadow-sm transition-all">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="grid gap-0.5">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">My Bookmarks</span>
-              <span className="text-2xl font-black text-foreground">{bookmarksCount}</span>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
-              <Bookmark size={18} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border hover:shadow-sm transition-all">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="grid gap-0.5">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Publications</span>
-              <span className="text-2xl font-black text-foreground">{totalRepoCount}</span>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
-              <BookOpen size={18} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border hover:shadow-sm transition-all">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="border-border hover:shadow-md transition-all md:col-span-1 bg-gradient-to-br from-amber-500/5 to-transparent">
+          <CardContent className="p-6 flex items-center justify-between gap-4">
             {isReviewer ? (
               <>
-                <div className="grid gap-0.5">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Pending Reviews</span>
-                  <span className="text-2xl font-black text-amber-500">{reviewQueue.length}</span>
+                <div className="grid gap-1">
+                  <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Pending Reviews</span>
+                  <span className="text-4xl font-black text-amber-500">{reviewQueue.length + pendingCount}</span>
                 </div>
-                <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
-                  <ClipboardCheck size={18} />
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                  <ClipboardCheck size={28} />
                 </div>
               </>
             ) : (
               <>
-                <div className="grid gap-0.5">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">System Status</span>
+                <div className="grid gap-1">
+                  <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">System Status</span>
                   <span className="text-xs font-bold text-emerald-500 flex items-center gap-1 mt-1">
                     <CheckCircle2 size={11} /> Online
                   </span>
                 </div>
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
-                  <Activity size={18} />
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
+                  <Activity size={28} />
                 </div>
               </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Admin Panel Section — visible only to admins, at the top */}
+      {isAdmin && (
+        <div className="grid gap-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            <ShieldCheck size={14} className="text-red-500" />
+            <span>Admin Panel</span>
+          </div>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+            <Link to="/dashboard/admin" className="group block">
+              <Card className="border-border hover:border-red-500/30 hover:shadow-md transition-all h-full">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 group-hover:bg-red-500/20 transition-colors flex items-center justify-center">
+                    <LayoutDashboard size={20} className="text-red-500" />
+                  </div>
+                  <span className="text-xs font-bold">Admin Dashboard</span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">Full system overview and analytics</span>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to="/moderation-queue" className="group block">
+              <Card className="border-border hover:border-amber-500/30 hover:shadow-md transition-all h-full">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 group-hover:bg-amber-500/20 transition-colors flex items-center justify-center">
+                    <ClipboardCheck size={20} className="text-amber-500" />
+                  </div>
+                  <span className="text-xs font-bold">Moderation Queue</span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">Review pending document submissions</span>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to="/library-moderation-queue" className="group block">
+              <Card className="border-border hover:border-blue-500/30 hover:shadow-md transition-all h-full">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors flex items-center justify-center">
+                    <BookOpen size={20} className="text-blue-500" />
+                  </div>
+                  <span className="text-xs font-bold">Library Moderation</span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">Academic resource approval queue</span>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to="/admin/panel" className="group block">
+              <Card className="border-border hover:border-purple-500/30 hover:shadow-md transition-all h-full">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors flex items-center justify-center">
+                    <ShieldCheck size={20} className="text-purple-500" />
+                  </div>
+                  <span className="text-xs font-bold">Role Management</span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">Manage user roles and permissions</span>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main Split Grid */}
       <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
@@ -427,10 +507,10 @@ export default function DashboardPage() {
               </Button>
 
               {isReviewer && (
-                <Button asChild variant="outline" className="w-full justify-start text-xs h-9 font-semibold hover:bg-amber-500/5 hover:text-amber-500 border-border/80">
-                  <Link to="/review-queue" className="gap-2">
-                    <ClipboardCheck size={14} className="text-amber-500" />
-                    Review Operations
+                <Button asChild variant="outline" className="w-full justify-start text-xs h-9 font-semibold hover:bg-emerald-500/5 hover:text-emerald-600 border-border/80">
+                  <Link to="/library-moderation-queue" className="gap-2">
+                    <ClipboardCheck size={14} className="text-emerald-600" />
+                    Library Moderation
                   </Link>
                 </Button>
               )}

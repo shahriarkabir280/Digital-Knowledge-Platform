@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { RESOURCE_ITEMS } from '../modules/library/data.js'
+import { useAuth } from '../app/use-auth.js'
+import { apiRequest } from '../services/api/client'
 import PDFThumbnail from '../components/library/PDFThumbnail.jsx'
+import { ResourceGridSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
 import { 
   Bookmark, 
   Trash2, 
@@ -14,17 +16,16 @@ import {
   Sparkles, 
   Quote, 
   Star,
-  ExternalLink,
   Search,
   Filter
 } from 'lucide-react'
 
 export default function LibraryBookmarksPage() {
-  // Load resources from localStorage or static data
-  const [resources, setResources] = useState(() => {
-    const saved = localStorage.getItem('dkp_academic_resources')
-    return saved ? JSON.parse(saved) : RESOURCE_ITEMS
-  })
+  const { authState } = useAuth()
+
+  // Fetch all published documents from backend
+  const [publishedDocs, setPublishedDocs] = useState([])
+  const [loadingPublished, setLoadingPublished] = useState(true)
 
   // Load bookmarks dynamically from localStorage
   const [bookmarkedIds, setBookmarkedIds] = useState(() => {
@@ -36,6 +37,65 @@ export default function LibraryBookmarksPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState('All')
 
+  // Fetch all published documents
+  useEffect(() => {
+    const fetchAllPublished = async () => {
+      if (!authState?.token) {
+        setLoadingPublished(false)
+        return
+      }
+      try {
+        setLoadingPublished(true)
+        const categories = ['textbook', 'lecture-slides', 'lab-manual', 'question-bank', 'assignment', 'lab-report', 'media', 'research-paper', 'thesis', 'dataset']
+        const docs = []
+        const seenDocIds = new Set()
+
+        for (const resourceCategory of categories) {
+          try {
+            const response = await apiRequest(`/documents/published?resourceCategory=${resourceCategory}`, {
+              authToken: authState?.token,
+            })
+
+            if (response?.data?.items?.length) {
+              for (const doc of response.data.items) {
+                const docId = `doc-${doc.id}`
+                if (seenDocIds.has(docId)) continue
+                seenDocIds.add(docId)
+
+                docs.push({
+                  id: docId,
+                  title: doc.title,
+                  type: doc.type || 'PDF',
+                  resourceCategory: doc.resourceCategory || resourceCategory,
+                  pdfUrl: `/api/repository/files/${Number(doc.id) || doc.id}/content`,
+                  updatedAt: doc.updatedAt,
+                  department: doc.department || 'CSE',
+                  course: doc.course || 'N/A',
+                  author: doc.author || 'Unknown',
+                  tags: doc.keywords || [],
+                  rating: 5.0,
+                  downloads: 0,
+                })
+              }
+            }
+          } catch (error) {
+            // silently skip categories with errors
+          }
+        }
+
+        setPublishedDocs(docs)
+        // Cache for the resource detail page
+        localStorage.setItem('dkp_published_docs_cache', JSON.stringify(docs))
+      } catch (error) {
+        console.error('Failed to fetch published documents:', error)
+      } finally {
+        setLoadingPublished(false)
+      }
+    }
+
+    fetchAllPublished()
+  }, [authState?.token])
+
   // Sync bookmarks to localStorage
   useEffect(() => {
     localStorage.setItem('dkp_bookmarked_resources', JSON.stringify(bookmarkedIds))
@@ -43,8 +103,8 @@ export default function LibraryBookmarksPage() {
 
   // Get bookmarked resource items
   const savedItems = useMemo(() => {
-    return resources.filter(item => bookmarkedIds.includes(item.id))
-  }, [resources, bookmarkedIds])
+    return publishedDocs.filter(item => bookmarkedIds.includes(item.id))
+  }, [publishedDocs, bookmarkedIds])
 
   // Filter bookmarked items
   const filteredItems = useMemo(() => {
@@ -88,6 +148,8 @@ export default function LibraryBookmarksPage() {
     }
     return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
   }
+
+  const isShowingSkeleton = loadingPublished && authState?.token
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2">
@@ -169,7 +231,9 @@ export default function LibraryBookmarksPage() {
       </div>
 
       {/* Grid List */}
-      {filteredItems.length === 0 ? (
+      {isShowingSkeleton ? (
+        <ResourceGridSkeleton count={6} />
+      ) : filteredItems.length === 0 ? (
         <Card className="p-16 text-center border-dashed border-2 border-border">
           <div className="w-12 h-12 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-4 text-muted-foreground">
             <Bookmark size={20} />

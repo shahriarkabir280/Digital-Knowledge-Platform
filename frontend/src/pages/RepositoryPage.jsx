@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../app/use-auth.js'
 import { apiRequest } from '../services/api/client'
-import { RESOURCE_ITEMS } from '../modules/library/data.js'
 import { uploadDocument } from '../services/api/documents.js'
 import PDFThumbnail from '../components/library/PDFThumbnail.jsx'
+import { ResourceGridSkeleton, SidebarSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
+import { extractFileMetadata } from '../services/metadataExtractor.js'
 import { 
   Search, 
   GraduationCap, 
@@ -38,12 +39,8 @@ export default function RepositoryPage() {
   // Published documents from backend API
   const [publishedDocs, setPublishedDocs] = useState([])
   const [loadingPublished, setLoadingPublished] = useState(true)
+  const [fetchTrigger, setFetchTrigger] = useState(0)
   
-  // Explore resources from localStorage or static data
-  const [exploreResources, setExploreResources] = useState(() => {
-    const saved = localStorage.getItem('dkp_academic_resources')
-    return saved ? JSON.parse(saved) : RESOURCE_ITEMS
-  })
   const [exploreBookmarks, setExploreBookmarks] = useState(() => {
     const saved = localStorage.getItem('dkp_bookmarked_resources')
     return saved ? JSON.parse(saved) : []
@@ -59,10 +56,11 @@ export default function RepositoryPage() {
 
   // Upload Modal States
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [showUploadSuccess, setShowUploadSuccess] = useState(false)
   const [uploadSuccessTitle, setUploadSuccessTitle] = useState('')
   const [newResource, setNewResource] = useState({
-    title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper',
+    title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper', accessTier: 'PUBLIC',
   })
   const [uploadMode, setUploadMode] = useState('url') // 'url' | 'file'
   const [selectedFile, setSelectedFile] = useState(null)
@@ -70,6 +68,7 @@ export default function RepositoryPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
+  const [isExtracting, setIsExtracting] = useState(false)
   const fileInputRef = useRef(null)
 
   // Suggested tags by domain
@@ -83,85 +82,84 @@ export default function RepositoryPage() {
     localStorage.setItem('dkp_bookmarked_resources', JSON.stringify(exploreBookmarks))
   }, [exploreBookmarks])
 
-  // Sync resources
-  useEffect(() => {
-    localStorage.setItem('dkp_academic_resources', JSON.stringify(exploreResources))
-  }, [exploreResources])
-
   // Fetch published documents from backend
-  useEffect(() => {
-    const fetchPublishedDocuments = async () => {
-      try {
-        setLoadingPublished(true)
-        // Fetch all published research documents (research-paper, thesis, dataset)
-        const categories = ['research-paper', 'thesis', 'dataset']
-        const docs = []
-        const seenDocIds = new Set()
+  const fetchPublishedDocuments = useCallback(async () => {
+    const isGuest = !authState?.token
+    try {
+      setLoadingPublished(true)
+      // Fetch all published research documents (research-paper, thesis, dataset)
+      const categories = ['research-paper', 'thesis', 'dataset']
+      const docs = []
+      const seenDocIds = new Set()
 
-        for (const resourceCategory of categories) {
-          try {
-            const response = await apiRequest(`/documents/my-uploads?state=published&resourceCategory=${resourceCategory}`, {
-              authToken: authState?.token,
-            })
+      for (const resourceCategory of categories) {
+        try {
+          // Guests only fetch PUBLIC resources; authenticated users fetch all
+          const accessTierParam = isGuest ? '&accessTier=PUBLIC' : ''
+          const response = await apiRequest(`/documents/my-uploads?state=published&resourceCategory=${resourceCategory}${accessTierParam}`, {
+            authToken: authState?.token,
+          })
 
-            if (response?.data?.items?.length) {
-              for (const doc of response.data.items) {
-                const numericDocId = Number(doc.id)
-                let signedUrl = `/api/repository/files/${numericDocId || doc.id}/content`
+          if (response?.data?.items?.length) {
+            for (const doc of response.data.items) {
+              const numericDocId = Number(doc.id)
+              let signedUrl = `/api/repository/files/${numericDocId || doc.id}/content`
 
-                try {
-                  const signedUrlResponse = await apiRequest(`/repository/files/${numericDocId || doc.id}/signed-url`, {
-                    authToken: authState?.token,
-                  })
-                  if (signedUrlResponse?.data?.signedUrl) {
-                    signedUrl = signedUrlResponse.data.signedUrl
-                  }
-                } catch (err) {
-                  console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
-                }
-
-                const docId = `doc-${doc.id}`
-                if (seenDocIds.has(docId)) {
-                  continue
-                }
-                seenDocIds.add(docId)
-
-                docs.push({
-                  id: docId,
-                  title: doc.title,
-                  type: doc.type || 'Research Paper',
-                  resourceCategory: doc.resourceCategory || resourceCategory,
-                  format: doc.format,
-                  version: doc.version,
-                  state: doc.state,
-                  pdfUrl: signedUrl,
-                  updatedAt: doc.updatedAt,
-                  department: doc.department || 'CSE',
-                  course: doc.course || 'N/A',
-                  author: doc.author || 'Unknown',
-                  tags: doc.keywords || [],
-                  rating: 5.0,
-                  downloads: 0,
+              try {
+                const signedUrlResponse = await apiRequest(`/repository/files/${numericDocId || doc.id}/signed-url`, {
+                  authToken: authState?.token,
                 })
+                if (signedUrlResponse?.data?.signedUrl) {
+                  signedUrl = signedUrlResponse.data.signedUrl
+                }
+              } catch (err) {
+                console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
               }
+
+              const docId = `doc-${doc.id}`
+              if (seenDocIds.has(docId)) {
+                continue
+              }
+              seenDocIds.add(docId)
+
+              docs.push({
+                id: docId,
+                title: doc.title,
+                type: doc.type || 'Research Paper',
+                resourceCategory: doc.resourceCategory || resourceCategory,
+                format: doc.format,
+                version: doc.version,
+                state: doc.state,
+                pdfUrl: signedUrl,
+                updatedAt: doc.updatedAt,
+                department: doc.department || 'CSE',
+                course: doc.course || 'N/A',
+                author: doc.author || 'Unknown',
+                tags: doc.keywords || [],
+                rating: 5.0,
+                downloads: 0,
+                uploaderName: doc.uploaderName || null,
+              })
             }
-          } catch (error) {
-            console.error(`Failed to fetch published documents for ${resourceCategory}:`, error)
           }
+        } catch (error) {
+          console.error(`Failed to fetch published documents for ${resourceCategory}:`, error)
         }
-
-        setPublishedDocs(docs)
-      } catch (error) {
-        console.error('Failed to fetch published documents:', error)
-      } finally {
-        setLoadingPublished(false)
       }
-    }
 
-    if (authState?.token) {
-      fetchPublishedDocuments()
+      setPublishedDocs(docs)
+      // Cache for the resource detail page
+      localStorage.setItem('dkp_published_docs_cache', JSON.stringify(docs))
+    } catch (error) {
+      console.error('Failed to fetch published documents:', error)
+    } finally {
+      setLoadingPublished(false)
     }
   }, [authState?.token])
+
+  useEffect(() => {
+    fetchPublishedDocuments()
+  }, [fetchPublishedDocuments, fetchTrigger])
 
   // Classify types for badges and tabs
   const getResearchType = (item) => {
@@ -190,16 +188,11 @@ export default function RepositoryPage() {
 
   // Filtered lists
   const filteredExplore = useMemo(() => {
-    // Combine localStorage resources and published backend documents
-    const allResources = [...exploreResources, ...publishedDocs]
-    
-    return allResources.filter(item => {
-      // FILTER OUT PENDING DOCUMENTS - they shouldn't show in public repository
+    return publishedDocs.filter(item => {
+      // Only show published documents from backend
       if (item.state === 'pending') {
         return false
       }
-      
-      // Only show published documents from backend
       if (item.id.startsWith('doc-') && item.state !== 'published') {
         return false
       }
@@ -226,17 +219,17 @@ export default function RepositoryPage() {
       if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0)
       return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
     })
-  }, [exploreResources, publishedDocs, searchQuery, selectedType, selectedDept, selectedCourse, sortBy])
+  }, [publishedDocs, searchQuery, selectedType, selectedDept, selectedCourse, sortBy])
 
   const departments = useMemo(() => {
-    const deps = new Set(exploreResources.filter(r => ['Paper', 'Thesis', 'Dataset', 'Research Paper'].includes(r.type)).map(r => r.department).filter(Boolean))
+    const deps = new Set(publishedDocs.map(r => r.department).filter(Boolean))
     return ['All', ...Array.from(deps)]
-  }, [exploreResources])
+  }, [publishedDocs])
 
   const courses = useMemo(() => {
-    const crs = new Set(exploreResources.filter(r => ['Paper', 'Thesis', 'Dataset', 'Research Paper'].includes(r.type)).map(r => r.course).filter(Boolean))
+    const crs = new Set(publishedDocs.map(r => r.course).filter(Boolean))
     return ['All', ...Array.from(crs)]
-  }, [exploreResources])
+  }, [publishedDocs])
 
   const toggleBookmark = (id) => {
     setExploreBookmarks(prev => prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id])
@@ -250,19 +243,29 @@ export default function RepositoryPage() {
   }
 
   // Upload handlers
+  // Intercept upload clicks for guests — show login prompt instead
+  const handleUploadClick = useCallback(() => {
+    if (!authState?.token) {
+      setShowLoginPrompt(true)
+    } else {
+      setShowUploadModal(true)
+    }
+  }, [authState?.token])
+
   const resetModal = useCallback(() => {
     setShowUploadModal(false)
     setShowUploadSuccess(false)
-    setNewResource({ title: '', author: '', department: 'Computer Science and Engineering', course: 'N/A', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper' })
+    setNewResource({ title: '', author: '', department: 'Computer Science and Engineering', course: 'N/A', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper', accessTier: 'PUBLIC' })
     setUploadMode('url')
     setSelectedFile(null)
     setUploadProgress(0)
     setIsUploading(false)
     setUploadError('')
     setIsDragOver(false)
+    setIsExtracting(false)
   }, [])
 
-  const handleFileSelect = (file) => {
+  const handleFileSelect = async (file) => {
     if (!file) return
     const ext = file.name.split('.').pop().toLowerCase()
     const typeMap = { pdf: 'Research Paper', zip: 'Dataset', csv: 'Dataset', tar: 'Dataset', gz: 'Dataset' }
@@ -273,11 +276,22 @@ export default function RepositoryPage() {
 
     setSelectedFile(file)
     setUploadError('')
+    setIsExtracting(true)
+
+    // Extract metadata from file using Gemini AI
+    const fileMeta = await extractFileMetadata(file)
+    setIsExtracting(false)
+
     setNewResource(p => ({
       ...p,
       type: inferredType,
       resourceCategory: inferredCategory,
-      title: p.title || file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+      title: fileMeta.title || p.title || file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+      author: fileMeta.author || p.author,
+      summary: fileMeta.summary || p.summary,
+      tags: fileMeta.tags || p.tags,
+      _extractionError: fileMeta.success ? null : (fileMeta.error || null),
+      _extractionSuccess: fileMeta.success,
     }))
   }
 
@@ -300,9 +314,6 @@ export default function RepositoryPage() {
       return
     }
 
-    let resolvedPdfUrl = uploadMode === 'url' ? newResource.linkUrl.trim() : null
-    let uploadedDocState = 'draft' // default
-
     if (uploadMode === 'file' && selectedFile) {
       if (!authState?.token) {
         setUploadError('You must be logged in to upload research documents.')
@@ -311,12 +322,13 @@ export default function RepositoryPage() {
       setIsUploading(true)
       setUploadProgress(0)
       try {
-        const result = await uploadDocument(
+        await uploadDocument(
           selectedFile,
           { 
             title: newResource.title.trim(), 
             description: newResource.summary.trim(),
             resourceCategory: newResource.resourceCategory,
+            accessTier: newResource.accessTier || 'PUBLIC',
             keywords: newResource.tags.split(',').map(t => t.trim()).filter(Boolean),
             author: newResource.author.trim(),
             department: newResource.department,
@@ -327,13 +339,6 @@ export default function RepositoryPage() {
           ({ percent }) => setUploadProgress(percent),
           authState.token
         )
-        const docId = result?.data?.document?.id
-        const docState = result?.data?.document?.state // Get the state from backend
-        
-        if (docId) {
-          resolvedPdfUrl = `/api/repository/files/${docId}/content`
-          uploadedDocState = docState || 'pending' // Use backend state
-        }
       } catch (err) {
         setUploadError(err.message || 'Upload failed. Please try again.')
         setIsUploading(false)
@@ -342,24 +347,8 @@ export default function RepositoryPage() {
       setIsUploading(false)
     }
 
-    const created = {
-      id: `res-${Date.now()}`,
-      title: newResource.title.trim(),
-      author: newResource.author.trim(),
-      department: newResource.department,
-      course: newResource.course.trim().toUpperCase(),
-      type: newResource.type,
-      year: new Date().getFullYear(),
-      tags: newResource.tags.split(',').map(t => t.trim()).filter(Boolean),
-      rating: 5.0, reviews: 0, downloads: 0, access: 'public',
-      summary: newResource.summary.trim(),
-      pdfUrl: ['Research Paper', 'Thesis'].includes(newResource.type) ? resolvedPdfUrl : null,
-      githubUrl: newResource.type === 'Dataset' ? resolvedPdfUrl : null,
-      state: uploadedDocState, // ADD STATE HERE
-      updatedAt: new Date().toISOString()
-    }
-
-    setExploreResources(prev => [created, ...prev])
+    // Re-fetch published docs from backend so the new item appears
+    setFetchTrigger(n => n + 1)
     setShowUploadModal(false)
     setUploadSuccessTitle(newResource.title.trim())
     setShowUploadSuccess(true)
@@ -373,6 +362,8 @@ export default function RepositoryPage() {
       return { ...p, tags: nextTags }
     })
   }
+
+  const isShowingSkeleton = loadingPublished && (authState?.token || authState?.role === 'GUEST')
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2">
@@ -393,7 +384,7 @@ export default function RepositoryPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5 pt-2">
-            <Button className="text-xs font-semibold bg-accent hover:bg-accent/90 text-white border-none" onClick={() => setShowUploadModal(true)}>
+            <Button className="text-xs font-semibold bg-accent hover:bg-accent/90 text-white border-none" onClick={handleUploadClick}>
               <Plus size={15} /> Submit Research
             </Button>
           </div>
@@ -494,7 +485,9 @@ export default function RepositoryPage() {
             <span>{filteredExplore.length} items found</span>
           </div>
 
-          {filteredExplore.length === 0 ? (
+          {isShowingSkeleton ? (
+            <ResourceGridSkeleton count={4} />
+          ) : filteredExplore.length === 0 ? (
             <Card className="p-12 text-center border-dashed border-2 border-border">
               <p className="text-muted-foreground font-semibold text-sm">No research resources found.</p>
               <Button variant="outline" className="mt-4 text-xs" onClick={() => { setSearchQuery(''); setSelectedType('All'); setSelectedDept('All'); setSelectedCourse('All') }}>
@@ -557,6 +550,11 @@ export default function RepositoryPage() {
                       <p className="text-[11px] text-muted-foreground">
                         {item.author || 'Anonymous'} · <span className="font-semibold text-accent-strong">{item.department || 'CSE'}</span>
                       </p>
+                      {item.uploaderName && (
+                        <p className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-0.5">
+                          <span>Posted by <span className="font-medium text-foreground/70">{item.uploaderName}</span></span>
+                        </p>
+                      )}
                     </CardHeader>
                     
                     <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-between gap-3">
@@ -601,6 +599,9 @@ export default function RepositoryPage() {
         </div>
 
         {/* Right Column: Sidebar */}
+        {isShowingSkeleton ? (
+          <SidebarSkeleton />
+        ) : (
         <div className="grid gap-6 self-start">
           <Card className="bg-gradient-to-br from-accent/10 via-transparent to-transparent border-accent/20">
             <CardContent className="p-5 grid gap-3">
@@ -610,7 +611,7 @@ export default function RepositoryPage() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Submit your preprints, publications, or dataset archives to be indexed in the CSEDU Institutional Repository.
               </p>
-              <Button size="sm" className="w-full text-xs gap-1 py-4 font-semibold bg-accent hover:bg-accent/90 text-white border-none" onClick={() => setShowUploadModal(true)}>
+              <Button size="sm" className="w-full text-xs gap-1 py-4 font-semibold bg-accent hover:bg-accent/90 text-white border-none" onClick={handleUploadClick}>
                 <Plus size={14} /> Submit Research
               </Button>
             </CardContent>
@@ -626,7 +627,7 @@ export default function RepositoryPage() {
               {exploreBookmarks.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground italic">No bookmarked items yet.</p>
               ) : (
-                exploreResources.filter(r => exploreBookmarks.includes(r.id)).map(r => (
+                publishedDocs.filter(r => exploreBookmarks.includes(r.id)).map(r => (
                   <div key={r.id} className="group flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
                     <div className="grid gap-0.5 min-w-0">
                       <Link to={`/library/resource/${r.id}`} className="text-xs font-bold text-foreground truncate hover:text-accent transition-colors">
@@ -643,7 +644,41 @@ export default function RepositoryPage() {
             </CardContent>
           </Card>
         </div>
+        )}
       </div>
+
+      {/* Login Prompt Modal for Guests */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-sm border-border shadow-2xl">
+            <CardContent className="p-8 flex flex-col items-center text-center gap-5">
+              <div className="w-14 h-14 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
+                <GraduationCap size={28} className="text-accent" />
+              </div>
+              <div className="grid gap-1.5">
+                <h3 className="text-base font-bold">Login Required</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  You need to sign in or register to submit research publications to the repository.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 w-full">
+                <Button asChild className="w-full gap-2 text-xs font-semibold">
+                  <Link to="/login">Log In</Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full gap-2 text-xs font-semibold">
+                  <Link to="/register">Create an Account</Link>
+                </Button>
+              </div>
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+              >
+                Continue as Guest
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Upload Research Modal */}
       {showUploadModal && (
@@ -725,6 +760,20 @@ export default function RepositoryPage() {
                   </div>
                 </div>
 
+                {/* ── Access Tier ── */}
+                <div className="grid gap-1.5">
+                  <Label htmlFor="repo-access-tier" className="text-xs font-semibold">Access Level</Label>
+                  <select
+                    id="repo-access-tier"
+                    value={newResource.accessTier || 'PUBLIC'}
+                    onChange={e => setNewResource(p => ({ ...p, accessTier: e.target.value }))}
+                    className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1"
+                  >
+                    <option value="PUBLIC">Public — Visible to everyone (including guests)</option>
+                    <option value="REGISTERED">Registered — Visible only to logged-in members</option>
+                  </select>
+                </div>
+
                 {/* Source toggle */}
                 <div className="grid gap-2">
                   <Label className="text-xs font-semibold">Document Source</Label>
@@ -769,13 +818,27 @@ export default function RepositoryPage() {
                           </div>
                         </div>
                       ) : (
+                        /* Selected file display — show AI extraction loading while analyzing */
                         <div className="flex items-center gap-3 p-3 rounded-xl border border-accent/30 bg-accent/5">
                           <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                            {newResource.type === 'Dataset' ? <Database size={18} className="text-accent" /> : <FileText size={18} className="text-accent" />}
+                            {isExtracting ? (
+                              <Loader2 size={18} className="text-accent animate-spin" />
+                            ) : newResource.type === 'Dataset' ? (
+                              <Database size={18} className="text-accent" />
+                            ) : (
+                              <FileText size={18} className="text-accent" />
+                            )}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold text-foreground truncate">{selectedFile.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                            {isExtracting ? (
+                              <p className="text-[10px] text-accent font-semibold flex items-center gap-1">
+                                <Sparkles size={10} className="animate-pulse" />
+                                AI analyzing document...
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                            )}
                           </div>
                           <Button type="button" size="icon" variant="ghost" className="w-7 h-7 text-muted-foreground hover:text-red-500 shrink-0"
                             onClick={() => { setSelectedFile(null); setUploadProgress(0) }}>
@@ -802,6 +865,22 @@ export default function RepositoryPage() {
                     </div>
                   )}
                 </div>
+
+                {/* AI Extraction status message */}
+                {newResource._extractionError && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600">
+                    <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Auto-fill note:</strong> {newResource._extractionError}
+                    </span>
+                  </div>
+                )}
+                {newResource._extractionSuccess && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600">
+                    <Sparkles size={13} />
+                    <span>Fields auto-populated from document analysis. Review and adjust if needed.</span>
+                  </div>
+                )}
 
                 {/* Tags input with domain suggestions */}
                 <div className="grid gap-1.5">

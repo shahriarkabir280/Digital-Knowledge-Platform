@@ -37,9 +37,10 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../app/use-auth.js'
 import { apiRequest } from '../services/api/client'
-import { RESOURCE_ITEMS } from '../modules/library/data.js'
 import { uploadDocument } from '../services/api/documents.js'
 import PDFThumbnail from '../components/library/PDFThumbnail.jsx'
+import { ResourceGridSkeleton, SidebarSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
+import { extractFileMetadata } from '../services/metadataExtractor.js'
 
 export default function LibraryPage() {
   const { authState } = useAuth()
@@ -47,11 +48,8 @@ export default function LibraryPage() {
   // Published documents from backend API
   const [publishedDocs, setPublishedDocs] = useState([])
   const [loadingPublished, setLoadingPublished] = useState(true)
+  const [fetchTrigger, setFetchTrigger] = useState(0)
   
-  const [resources, setResources] = useState(() => {
-    const saved = localStorage.getItem('dkp_academic_resources')
-    return saved ? JSON.parse(saved) : RESOURCE_ITEMS
-  })
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [filterDepartment, setFilterDepartment] = useState('All')
@@ -60,14 +58,15 @@ export default function LibraryPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [bookmarks, setBookmarks] = useState(() => {
     const saved = localStorage.getItem('dkp_bookmarked_resources')
-    return saved ? JSON.parse(saved) : ['res-001', 'res-008']
+    return saved ? JSON.parse(saved) : []
   })
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [newResource, setNewResource] = useState({
-    title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook',
+    title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook', accessTier: 'PUBLIC',
   })
   // Upload-specific state
-  const [uploadMode, setUploadMode] = useState('url') // 'url' | 'file'
+  const [uploadMode, setUploadMode] = useState('file') // 'url' | 'file'
   const [selectedFile, setSelectedFile] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
@@ -75,88 +74,90 @@ export default function LibraryPage() {
   const [isDragOver, setIsDragOver] = useState(false)
   const [showUploadSuccess, setShowUploadSuccess] = useState(false)
   const [uploadSuccessTitle, setUploadSuccessTitle] = useState('')
+  const [isExtracting, setIsExtracting] = useState(false)
   const fileInputRef = useRef(null)
 
-  useEffect(() => {
-    localStorage.setItem('dkp_academic_resources', JSON.stringify(resources))
-  }, [resources])
   useEffect(() => {
     localStorage.setItem('dkp_bookmarked_resources', JSON.stringify(bookmarks))
   }, [bookmarks])
 
   // Fetch published documents from backend by academic-resource category
-  useEffect(() => {
-    const fetchPublishedDocuments = async () => {
-      try {
-        setLoadingPublished(true)
-        const categories = ['textbook', 'lecture-slides', 'lab-manual', 'question-bank', 'assignment', 'lab-report', 'media']
-        const docs = []
-        const seenDocIds = new Set()
+  const fetchPublishedDocuments = useCallback(async () => {
+    const isGuest = !authState?.token
+    try {
+      setLoadingPublished(true)
+      const categories = ['textbook', 'lecture-slides', 'lab-manual', 'question-bank', 'assignment', 'lab-report', 'media']
+      const docs = []
+      const seenDocIds = new Set()
 
-        for (const resourceCategory of categories) {
-          try {
-            const response = await apiRequest(`/documents/published?resourceCategory=${resourceCategory}`, {
-              authToken: authState?.token,
-            })
+      for (const resourceCategory of categories) {
+        try {
+          // Guests only fetch PUBLIC resources; authenticated users fetch all
+          const accessTierParam = isGuest ? '&accessTier=PUBLIC' : ''
+          const response = await apiRequest(`/documents/published?resourceCategory=${resourceCategory}${accessTierParam}`, {
+            authToken: authState?.token,
+          })
 
-            if (response?.data?.items?.length) {
-              for (const doc of response.data.items) {
-                const numericDocId = Number(doc.id)
-                let signedUrl = `/api/repository/files/${numericDocId || doc.id}/content`
+          if (response?.data?.items?.length) {
+            for (const doc of response.data.items) {
+              const numericDocId = Number(doc.id)
+              let signedUrl = `/api/repository/files/${numericDocId || doc.id}/content`
 
-                try {
-                  const signedUrlResponse = await apiRequest(`/repository/files/${numericDocId || doc.id}/signed-url`, {
-                    authToken: authState?.token,
-                  })
-                  if (signedUrlResponse?.data?.signedUrl) {
-                    signedUrl = signedUrlResponse.data.signedUrl
-                  }
-                } catch (err) {
-                  console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
-                }
-
-                const docId = `doc-${doc.id}`
-                if (seenDocIds.has(docId)) {
-                  continue
-                }
-                seenDocIds.add(docId)
-
-                docs.push({
-                  id: docId,
-                  title: doc.title,
-                  type: doc.type || 'Lecture Notes',
-                  format: doc.format,
-                  version: doc.version,
-                  state: doc.state,
-                  resourceCategory: doc.resourceCategory || resourceCategory,
-                  pdfUrl: signedUrl,
-                  updatedAt: doc.updatedAt,
-                  department: doc.department || 'CSE',
-                  course: doc.course || 'N/A',
-                  author: doc.author || 'Unknown',
-                  tags: doc.keywords || [],
-                  rating: 5.0,
-                  downloads: 0,
+              try {
+                const signedUrlResponse = await apiRequest(`/repository/files/${numericDocId || doc.id}/signed-url`, {
+                  authToken: authState?.token,
                 })
+                if (signedUrlResponse?.data?.signedUrl) {
+                  signedUrl = signedUrlResponse.data.signedUrl
+                }
+              } catch (err) {
+                console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
               }
+
+              const docId = `doc-${doc.id}`
+              if (seenDocIds.has(docId)) {
+                continue
+              }
+              seenDocIds.add(docId)
+
+              docs.push({
+                id: docId,
+                title: doc.title,
+                type: doc.type || 'Lecture Notes',
+                format: doc.format,
+                version: doc.version,
+                state: doc.state,
+                resourceCategory: doc.resourceCategory || resourceCategory,
+                pdfUrl: signedUrl,
+                updatedAt: doc.updatedAt,
+                department: doc.department || 'CSE',
+                course: doc.course || 'N/A',
+                author: doc.author || 'Unknown',
+                tags: doc.keywords || [],
+                rating: 5.0,
+                downloads: 0,
+                uploaderName: doc.uploaderName || null,
+              })
             }
-          } catch (error) {
-            console.error(`Failed to fetch published documents for ${resourceCategory}:`, error)
           }
+        } catch (error) {
+          console.error(`Failed to fetch published documents for ${resourceCategory}:`, error)
         }
-
-        setPublishedDocs(docs)
-      } catch (error) {
-        console.error('Failed to fetch published documents:', error)
-      } finally {
-        setLoadingPublished(false)
       }
-    }
 
-    if (authState?.token) {
-      fetchPublishedDocuments()
+      setPublishedDocs(docs)
+      // Cache for the resource detail page
+      localStorage.setItem('dkp_published_docs_cache', JSON.stringify(docs))
+    } catch (error) {
+      console.error('Failed to fetch published documents:', error)
+    } finally {
+      setLoadingPublished(false)
     }
   }, [authState?.token])
+
+  useEffect(() => {
+    fetchPublishedDocuments()
+  }, [fetchPublishedDocuments, fetchTrigger])
 
   const getResourceType = (item) => {
     const category = String(item.resourceCategory || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
@@ -222,14 +223,14 @@ export default function LibraryPage() {
   }
 
   const departments = useMemo(() => {
-    const deps = new Set(resources.map(r => r.department).filter(Boolean))
+    const deps = new Set(publishedDocs.map(r => r.department).filter(Boolean))
     return ['All', ...Array.from(deps)]
-  }, [resources])
+  }, [publishedDocs])
 
   const courses = useMemo(() => {
-    const crs = new Set(resources.map(r => r.course).filter(c => c && c.includes('-')))
+    const crs = new Set(publishedDocs.map(r => r.course).filter(c => c && c.includes('-')))
     return ['All', ...Array.from(crs)]
-  }, [resources])
+  }, [publishedDocs])
 
   const toggleBookmark = (id) => {
     setBookmarks(prev => prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id])
@@ -244,18 +245,28 @@ export default function LibraryPage() {
 
   const resetModal = useCallback(() => {
     setShowUploadModal(false)
-    setNewResource({ title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook' })
-    setUploadMode('url')
+    setNewResource({ title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook', accessTier: 'PUBLIC' })
+    setUploadMode('file')
     setSelectedFile(null)
     setUploadProgress(0)
     setIsUploading(false)
     setUploadError('')
     setIsDragOver(false)
+    setIsExtracting(false)
     // Switch to All so the newly uploaded card is always visible
     setSelectedCategory('All')
   }, [])
 
-  const handleFileSelect = (file) => {
+  // Intercept upload clicks for guests — show login prompt instead
+  const handleUploadClick = useCallback(() => {
+    if (!authState?.token) {
+      setShowLoginPrompt(true)
+    } else {
+      setShowUploadModal(true)
+    }
+  }, [authState?.token])
+
+  const handleFileSelect = async (file) => {
     if (!file) return
     // Infer resource type from file extension
     const ext = file.name.split('.').pop().toLowerCase()
@@ -269,6 +280,12 @@ export default function LibraryPage() {
 
     setSelectedFile(file)
     setUploadError('')
+    setIsExtracting(true)
+
+    // Extract metadata from file using Gemini AI
+    const fileMeta = await extractFileMetadata(file)
+    setIsExtracting(false)
+
     setNewResource(p => {
       const hasExplicitCategory = Boolean(p.resourceCategory) && p.resourceCategory !== 'textbook'
       const nextCategory = hasExplicitCategory ? p.resourceCategory : inferredCategory
@@ -277,7 +294,12 @@ export default function LibraryPage() {
         ...p,
         type: inferredType,
         resourceCategory: nextCategory,
-        title: p.title || file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+        title: fileMeta.title || p.title || file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+        author: fileMeta.author || p.author,
+        summary: fileMeta.summary || p.summary,
+        tags: fileMeta.tags || p.tags,
+        _extractionError: fileMeta.success ? null : (fileMeta.error || null),
+        _extractionSuccess: fileMeta.success,
       }
     })
   }
@@ -301,23 +323,6 @@ export default function LibraryPage() {
       return
     }
 
-    let resolvedPdfUrl = uploadMode === 'url' ? newResource.linkUrl.trim() : null
-    let youtubeId = null
-
-    // Parse YouTube ID if type is Video
-    if (newResource.type === 'Video') {
-      if (uploadMode === 'url' && newResource.linkUrl) {
-        const url = newResource.linkUrl.trim()
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
-        const match = url.match(regExp)
-        if (match && match[2].length === 11) {
-          youtubeId = match[2]
-        } else {
-          youtubeId = url
-        }
-      }
-    }
-
     // --- File upload path ---
     if (uploadMode === 'file' && selectedFile) {
       if (!authState?.token) {
@@ -329,20 +334,15 @@ export default function LibraryPage() {
       try {
         const result = await uploadDocument(
           selectedFile,
-          { 
-            title: newResource.title.trim(), 
+          {
+            title: newResource.title.trim(),
             description: newResource.summary.trim(),
-            resourceCategory: newResource.resourceCategory || 'textbook'
+            resourceCategory: newResource.resourceCategory || 'textbook',
+            accessTier: newResource.accessTier || 'PUBLIC',
           },
           ({ percent }) => setUploadProgress(percent),
           authState.token
         )
-        // Build streaming content URL from the returned document ID
-        const docId = result?.data?.document?.id
-        if (docId) {
-          // Use relative /api path — works through Vite proxy in dev and nginx in prod
-          resolvedPdfUrl = `/api/repository/files/${docId}/content`
-        }
       } catch (err) {
         setUploadError(err.message || 'Upload failed. Please try again.')
         setIsUploading(false)
@@ -351,16 +351,15 @@ export default function LibraryPage() {
       setIsUploading(false)
     }
 
+    // Re-fetch published docs from backend so the new item appears
+    setFetchTrigger(n => n + 1)
     setUploadSuccessTitle(newResource.title.trim())
     setShowUploadSuccess(true)
     resetModal()
   }
 
   const filteredResources = useMemo(() => {
-    // Combine localStorage resources and published backend documents
-    const allResources = [...resources, ...publishedDocs]
-    
-    return allResources.filter(item => {
+    return publishedDocs.filter(item => {
       const type = getResourceType(item)
       const tabKey = getResourceTabKey(item)
       
@@ -389,7 +388,9 @@ export default function LibraryPage() {
       if (sortBy === 'recent') return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
       return 0
     })
-  }, [resources, publishedDocs, searchQuery, selectedCategory, filterDepartment, filterCourse, sortBy])
+  }, [publishedDocs, searchQuery, selectedCategory, filterDepartment, filterCourse, sortBy])
+
+  const isShowingSkeleton = loadingPublished && (authState?.token || authState?.role === 'GUEST')
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2">
@@ -411,7 +412,7 @@ export default function LibraryPage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-slate-700/50 pt-4 mt-2">
             <div>
-              <p className="text-xl font-bold text-white">{resources.length}+</p>
+              <p className="text-xl font-bold text-white">{publishedDocs.length}+</p>
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">Total Assets</p>
             </div>
             <div>
@@ -446,7 +447,7 @@ export default function LibraryPage() {
             <Button variant="outline" className="gap-1 text-xs h-10 border-border" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>
               <Filter size={14} /> Filters
             </Button>
-            <Button className="gap-1 text-xs h-10" onClick={() => setShowUploadModal(true)}>
+            <Button className="gap-1 text-xs h-10" onClick={handleUploadClick}>
               <Plus size={15} /> Add Resource
             </Button>
           </div>
@@ -516,7 +517,9 @@ export default function LibraryPage() {
             <span>{filteredResources.length} items found</span>
           </div>
 
-          {filteredResources.length === 0 ? (
+          {isShowingSkeleton ? (
+            <ResourceGridSkeleton count={4} />
+          ) : filteredResources.length === 0 ? (
             <Card className="p-12 text-center border-dashed border-2 border-border">
               <p className="text-muted-foreground font-semibold text-sm">No resources found.</p>
               <Button variant="outline" className="mt-4 text-xs" onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setFilterDepartment('All'); setFilterCourse('All') }}>
@@ -642,6 +645,11 @@ export default function LibraryPage() {
                       <p className="text-[11px] text-muted-foreground">
                         {item.author || 'Anonymous'} · <span className="font-semibold text-accent-strong">{item.course || 'General'}</span>
                       </p>
+                      {item.uploaderName && (
+                        <p className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-0.5">
+                          <span>Posted by <span className="font-medium text-foreground/70">{item.uploaderName}</span></span>
+                        </p>
+                      )}
                     </CardHeader>
                     
                     <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-between gap-3">
@@ -686,6 +694,9 @@ export default function LibraryPage() {
         </div>
 
         {/* Sidebar */}
+        {isShowingSkeleton ? (
+          <SidebarSkeleton />
+        ) : (
         <div className="grid gap-6 self-start">
           <Card className="bg-gradient-to-br from-accent/10 via-transparent to-transparent border-accent/20">
             <CardContent className="p-5 grid gap-3">
@@ -695,7 +706,7 @@ export default function LibraryPage() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Have verified lecture slides, lab manuals, or textbook links? Upload them to the department directory.
               </p>
-              <Button onClick={() => setShowUploadModal(true)} size="sm" className="w-full text-xs gap-1 py-4 font-semibold">
+              <Button onClick={handleUploadClick} size="sm" className="w-full text-xs gap-1 py-4 font-semibold">
                 <Plus size={14} /> Upload Resource
               </Button>
             </CardContent>
@@ -711,7 +722,7 @@ export default function LibraryPage() {
               {bookmarks.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground italic">No bookmarked items yet.</p>
               ) : (
-                resources.filter(r => bookmarks.includes(r.id)).map(r => (
+                publishedDocs.filter(r => bookmarks.includes(r.id)).map(r => (
                   <div key={r.id} className="group flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
                     <div className="grid gap-0.5 min-w-0">
                       <Link to={`/library/resource/${r.id}`} className="text-xs font-bold text-foreground truncate hover:text-accent transition-colors">
@@ -735,7 +746,41 @@ export default function LibraryPage() {
             </CardContent>
           </Card>
         </div>
+        )}
       </div>
+
+      {/* Login Prompt Modal for Guests */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-sm border-border shadow-2xl">
+            <CardContent className="p-8 flex flex-col items-center text-center gap-5">
+              <div className="w-14 h-14 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
+                <GraduationCap size={28} className="text-accent" />
+              </div>
+              <div className="grid gap-1.5">
+                <h3 className="text-base font-bold">Login Required</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  You need to sign in or register to upload academic resources to the library.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 w-full">
+                <Button asChild className="w-full gap-2 text-xs font-semibold">
+                  <Link to="/login">Log In</Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full gap-2 text-xs font-semibold">
+                  <Link to="/register">Create an Account</Link>
+                </Button>
+              </div>
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+              >
+                Continue as Guest
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Upload Success Modal */}
       {showUploadSuccess && (
@@ -846,6 +891,19 @@ export default function LibraryPage() {
                       <option value="Link">External Online Resource</option>
                     </select>
                   </div>
+                </div>        
+                {/* ── Access Tier ── */}
+                <div className="grid gap-1.5">
+                  <Label htmlFor="res-access-tier" className="text-xs font-semibold">Access Level</Label>
+                  <select
+                    id="res-access-tier"
+                    value={newResource.accessTier || 'PUBLIC'}
+                    onChange={e => setNewResource(p => ({ ...p, accessTier: e.target.value }))}
+                    className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1"
+                  >
+                    <option value="PUBLIC">Public — Visible to everyone (including guests)</option>
+                    <option value="REGISTERED">Registered — Visible only to logged-in members</option>
+                  </select>
                 </div>
 
                 {/* ── Source: URL toggle or File upload ── */}
@@ -919,16 +977,27 @@ export default function LibraryPage() {
                           </div>
                         </div>
                       ) : (
-                        /* Selected file display */
+                        /* Selected file display — show AI extraction loading while analyzing */
                         <div className="flex items-center gap-3 p-3 rounded-xl border border-accent/30 bg-accent/5">
                           <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                            <FileText size={18} className="text-accent" />
+                            {isExtracting ? (
+                              <Loader2 size={18} className="text-accent animate-spin" />
+                            ) : (
+                              <FileText size={18} className="text-accent" />
+                            )}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold text-foreground truncate">{selectedFile.name}</p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
+                            {isExtracting ? (
+                              <p className="text-[10px] text-accent font-semibold flex items-center gap-1">
+                                <Sparkles size={10} className="animate-pulse" />
+                                AI analyzing document...
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground">
+                                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            )}
                           </div>
                           <Button type="button" size="icon" variant="ghost" className="w-7 h-7 text-muted-foreground hover:text-red-500 shrink-0"
                             onClick={() => { setSelectedFile(null); setUploadProgress(0) }}>
@@ -962,6 +1031,22 @@ export default function LibraryPage() {
                     </div>
                   )}
                 </div>
+
+                {/* AI Extraction status message */}
+                {newResource._extractionError && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600">
+                    <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Auto-fill note:</strong> {newResource._extractionError}
+                    </span>
+                  </div>
+                )}
+                {newResource._extractionSuccess && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600">
+                    <Sparkles size={13} />
+                    <span>Fields auto-populated from document analysis. Review and adjust if needed.</span>
+                  </div>
+                )}
 
                 {/* Tags */}
                 <div className="grid gap-1.5">

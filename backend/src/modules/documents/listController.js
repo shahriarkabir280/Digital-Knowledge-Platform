@@ -52,7 +52,7 @@ function normalizeDocumentRow(row, resourceCategory = null) {
   return {
     id: row.id,
     title: row.title,
-    type: row.resource_type || row.type || null,
+    type: row.type || null,
     format: row.format,
     version: row.version,
     state: row.state,
@@ -69,6 +69,8 @@ function normalizeDocumentRow(row, resourceCategory = null) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     uploaderId: row.uploader_id,
+    uploaderName: row.uploader_name || null,
+    uploaderEmail: row.uploader_email || null,
   };
 }
 
@@ -120,26 +122,30 @@ function getCategoryValueAliases(resourceCategory) {
 }
 
 function buildResourceQuery(table, filters = {}) {
-  let query = db(table).select(
-    "id",
-    "title",
-    "resource_type",
-    "format",
-    "version",
-    "state",
-    "access_tier",
-    "file_path",
-    "author",
-    "abstract",
-    "keywords",
-    "language",
-    "published_year",
-    "department",
-    "course",
-    "created_at",
-    "updated_at",
-    "uploader_id",
-  );
+  let query = db(table)
+    .leftJoin("users as u", `${table}.uploader_id`, "u.id")
+    .select(
+      `${table}.id as id`,
+      `${table}.title as title`,
+      `${table}.resource_type as type`,
+      `${table}.format as format`,
+      `${table}.version as version`,
+      `${table}.state as state`,
+      `${table}.access_tier as access_tier`,
+      `${table}.file_path as file_path`,
+      `${table}.author as author`,
+      `${table}.abstract as abstract`,
+      `${table}.keywords as keywords`,
+      `${table}.language as language`,
+      `${table}.published_year as published_year`,
+      `${table}.department as department`,
+      `${table}.course as course`,
+      `${table}.created_at as created_at`,
+      `${table}.updated_at as updated_at`,
+      `${table}.uploader_id as uploader_id`,
+      db.raw("u.name as uploader_name"),
+      db.raw("u.email as uploader_email"),
+    );
 
   if (filters.state) {
     query = query.where({ state: filters.state });
@@ -529,12 +535,12 @@ async function getReviewQueue(req, res, next) {
 async function getPendingDocuments(req, res, next) {
   const userRole = req.user?.role;
 
-  // Only admins can view pending documents
-  if (userRole !== "ADMIN") {
+  // Staff and privileged reviewers can view pending documents
+  if (!["STAFF", "LAB_MANAGER", "REVIEWER", "ADMIN"].includes(userRole)) {
     return next({
       statusCode: 403,
       code: "FORBIDDEN",
-      message: "Admin access is required to view pending documents",
+      message: "Staff access is required to view pending documents",
     });
   }
 

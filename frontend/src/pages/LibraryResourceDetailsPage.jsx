@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { RESOURCE_ITEMS, REVIEW_FEED } from '../modules/library/data.js'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,9 +19,11 @@ import {
   Code2,
   Calendar,
   User,
+  Upload,
   HelpCircle,
   ClipboardCheck,
-  FilePlus
+  FilePlus,
+  Loader2
 } from 'lucide-react'
 
 function StarRating({ rating, onRate, readonly = false }) {
@@ -52,7 +53,8 @@ export default function LibraryResourceDetailsPage() {
   const [activeTab, setActiveTab] = useState('preview')
   const [userComment, setUserComment] = useState('')
   const [userRating, setUserRating] = useState(5)
-  const [reviews, setReviews] = useState(REVIEW_FEED)
+  const [reviews, setReviews] = useState([])
+  const [loading, setLoading] = useState(true)
 
   // Load bookmarks from localStorage
   useEffect(() => {
@@ -63,16 +65,62 @@ export default function LibraryResourceDetailsPage() {
     }
   }, [resourceId])
 
+  // Try to find the resource in published docs from localStorage cache
+  // In a real app, this would be fetched from the backend API by ID
   const resource = useMemo(() => {
-    // Check localStorage first (user-uploaded resources live there)
     try {
-      const saved = localStorage.getItem('dkp_academic_resources')
-      const all = saved ? JSON.parse(saved) : RESOURCE_ITEMS
-      return all.find(item => item.id === resourceId) || RESOURCE_ITEMS.find(item => item.id === resourceId) || RESOURCE_ITEMS[0]
+      // Check localStorage for cached published docs list
+      // This is a simplification — ideally we'd fetch /documents/:id from the backend
+      const stored = localStorage.getItem('dkp_published_docs_cache')
+      if (stored) {
+        const docs = JSON.parse(stored)
+        const found = docs.find(item => item.id === resourceId || item.id === `doc-${resourceId}`)
+        if (found) return found
+      }
+      return null
     } catch {
-      return RESOURCE_ITEMS.find(item => item.id === resourceId) || RESOURCE_ITEMS[0]
+      return null
     }
   }, [resourceId])
+
+  useEffect(() => {
+    // Simulate loading — in production, fetch from /api/documents/:id
+    const timer = setTimeout(() => setLoading(false), 300)
+    return () => clearTimeout(timer)
+  }, [resourceId])
+
+  // If resource not found
+  if (loading) {
+    return (
+      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2 min-h-[60vh] place-items-center">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 size={24} className="animate-spin" />
+          <p className="text-xs font-semibold">Loading resource...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!resource) {
+    return (
+      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2 min-h-[60vh] place-items-center">
+        <div className="text-center grid gap-4 max-w-md">
+          <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mx-auto">
+            <FileText size={24} className="text-muted-foreground" />
+          </div>
+          <h2 className="text-lg font-bold">Resource Not Found</h2>
+          <p className="text-sm text-muted-foreground">
+            The resource you're looking for could not be found. It may have been removed or the link might be incorrect.
+          </p>
+          <Link to="/library">
+            <Button variant="outline" className="gap-1.5 text-sm">
+              <ArrowLeft size={16} /> Back to Academic Resources
+            </Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   const hasPdf = Boolean(resource.pdfUrl) && !['Video', 'PPT'].includes(resource.type)
   const hasPpt = resource.type === 'PPT' && Boolean(resource.pptUrl)
@@ -81,7 +129,6 @@ export default function LibraryResourceDetailsPage() {
   const hasGithub = Boolean(resource.githubUrl)
 
   // Detect if the pdfUrl is a backend auth-gated API URL (not publicly accessible)
-  // Matches: relative /api/... paths AND absolute localhost/127.x URLs
   const isLocalApiUrl = resource.pdfUrl
     ? /^\/api\/|\/api\/|localhost|127\.0\.0\.1/.test(resource.pdfUrl)
     : false
@@ -109,7 +156,7 @@ export default function LibraryResourceDetailsPage() {
     if (hasPdf || hasVideo || hasPpt) setActiveTab('preview')
     else if (hasReadme) setActiveTab('readme')
     else setActiveTab('reviews')
-  }, [resourceId])
+  }, [resourceId, hasPdf, hasVideo, hasPpt, hasReadme])
 
 
   const toggleBookmark = () => {
@@ -202,6 +249,11 @@ export default function LibraryResourceDetailsPage() {
               <span className="flex items-center gap-1"><BookOpen size={12} /> {resource.course}</span>
               <span className="flex items-center gap-1"><GraduationCap size={12} /> {resource.department}</span>
               <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(resource.updatedAt || Date.now()).toLocaleDateString()}</span>
+              {resource.uploaderName && (
+                <span className="flex items-center gap-1 text-muted-foreground/70">
+                  <Upload size={12} /> Posted by <span className="font-medium text-foreground/70">{resource.uploaderName}</span>
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5 text-amber-500 font-bold">
@@ -411,7 +463,7 @@ export default function LibraryResourceDetailsPage() {
                         </div>
                         <div className="p-3 border-t border-border bg-muted/10 flex items-center justify-between">
                           <p className="text-[10px] text-muted-foreground">
-                            Powered by Google Docs Viewer · If the preview fails, use "Open in Browser" above.
+                            Powered by Google Docs Viewer · If the preview fails, use \"Open in Browser\" above.
                           </p>
                           <Button asChild size="sm" variant="ghost" className="text-[10px] gap-1 h-7">
                             <a href={googleDocsViewerUrl} target="_blank" rel="noreferrer">
@@ -548,6 +600,9 @@ export default function LibraryResourceDetailsPage() {
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Community Reviews ({reviews.length})
                   </h4>
+                  {reviews.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No reviews yet. Be the first to review!</p>
+                  )}
                   {reviews.map(rev => (
                     <div key={rev.id} className="flex gap-3 p-3.5 rounded-lg bg-muted/15 border border-border/50">
                       <div className="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs shrink-0">
@@ -641,33 +696,10 @@ export default function LibraryResourceDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Related Resources Preview */}
-          <Card className="border-border">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">From Same Course</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 grid gap-2.5">
-              {RESOURCE_ITEMS
-                .filter(r => r.id !== resource.id && r.course === resource.course)
-                .slice(0, 3)
-                .map(r => (
-                  <Link to={`/library/resource/${r.id}`} key={r.id}
-                    className="group flex gap-2.5 p-2 rounded-md hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
-                    <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
-                      {r.youtubeId
-                        ? <PlayCircle size={14} className="text-red-500" />
-                        : <FileText size={14} className="text-muted-foreground" />}
-                    </div>
-                    <div className="grid gap-0.5 min-w-0">
-                      <p className="text-[11px] font-bold text-foreground line-clamp-1 group-hover:text-accent transition-colors">{r.title}</p>
-                      <p className="text-[10px] text-muted-foreground">{r.type} · {r.year}</p>
-                    </div>
-                  </Link>
-                ))
-              }
-              {RESOURCE_ITEMS.filter(r => r.id !== resource.id && r.course === resource.course).length === 0 && (
-                <p className="text-[11px] text-muted-foreground italic">No other resources for this course.</p>
-              )}
+          {/* Related Resources section removed — will be fetched from backend in future */}
+          <Card className="border-border bg-muted/10">
+            <CardContent className="p-4 text-center">
+              <p className="text-[11px] text-muted-foreground italic">Related resources will be shown when available.</p>
             </CardContent>
           </Card>
 

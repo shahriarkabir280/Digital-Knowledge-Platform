@@ -1,9 +1,33 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { Check, X, AlertCircle, Loader2 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertCircle,
+  Check,
+  Clock3,
+  FileText,
+  Loader2,
+  Sparkles,
+  User,
+  X,
+} from 'lucide-react'
 import { apiRequest } from '../services/api/client'
 import { useAuth } from '../app/use-auth.js'
 
@@ -21,9 +45,40 @@ export default function LibraryModerationPage() {
 
   useEffect(() => {
     fetchPendingResources()
-  }, [])
+  }, [authState.token])
+
+  const stats = useMemo(() => {
+    const byType = pendingResources.reduce((accumulator, resource) => {
+      const type = String(resource.type || 'unknown').toLowerCase()
+      accumulator[type] = (accumulator[type] || 0) + 1
+      return accumulator
+    }, {})
+
+    return [
+      {
+        label: 'Pending items',
+        value: pendingResources.length,
+        helper: 'Ready for staff review',
+      },
+      {
+        label: 'Research papers',
+        value: byType['research-paper'] || 0,
+        helper: 'Research uploads awaiting approval',
+      },
+      {
+        label: 'Academic Resources',
+        value: pendingResources.length - (byType['research-paper'] || 0),
+        helper: 'Reports, datasets, and media',
+      },
+    ]
+  }, [pendingResources])
 
   async function fetchPendingResources() {
+    if (!authState?.token) {
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError('')
     setMessage('')
@@ -103,149 +158,268 @@ export default function LibraryModerationPage() {
     setError('')
   }
 
+  const getResourceBadgeTone = (resourceType) => {
+    const normalized = String(resourceType || '').toLowerCase()
+
+    if (normalized === 'research-paper') {
+      return 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
+    }
+
+    if (normalized === 'thesis') {
+      return 'bg-violet-500/10 text-violet-700 dark:text-violet-300'
+    }
+
+    if (normalized === 'dataset') {
+      return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+    }
+
+    return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+  }
+
+  const getResourceTypeLabel = (resourceType) => {
+    const normalized = String(resourceType || '').toLowerCase()
+
+    if (!normalized) return 'Resource'
+    return normalized.replace(/-/g, ' ')
+  }
+
   if (loading) {
     return (
-      <section className="mx-auto grid w-full max-w-6xl gap-4">
-        <header className="grid gap-4 rounded-lg border border-border bg-card p-5">
-          <div className="grid gap-2">
-            <p className="brand-kicker">Library Management</p>
-            <h2 className="text-2xl font-semibold tracking-tight">Pending Resource Review</h2>
-            <p className="text-sm text-muted-foreground">
-              Review academic resources submitted for library publication
-            </p>
-          </div>
-        </header>
-        <div className="flex items-center justify-center rounded-lg border border-border bg-card p-12">
+      <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-2">
+        <Card className="bg-card/90 shadow-none">
+          <CardHeader className="gap-3 bg-muted/20 text-foreground">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200">
+              <Sparkles className="h-4 w-4" />
+              Library Moderation
+            </div>
+            <CardTitle className="text-3xl font-semibold tracking-tight text-foreground">
+              Pending Resource Publish Queue
+            </CardTitle>
+            <CardDescription className="max-w-2xl text-sm text-muted-foreground">
+              Review academic resources, verify metadata, and publish them directly or send them back to the archive.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center p-10">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+          </CardContent>
+        </Card>
       </section>
     )
   }
 
   return (
-    <section className="mx-auto grid w-full max-w-6xl gap-4">
-      <header className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-[1fr_200px] md:items-start">
-        <div className="grid gap-2">
-          <p className="brand-kicker">Library Management</p>
-          <h2 className="text-2xl font-semibold tracking-tight">Pending Resource Review</h2>
-          <p className="text-sm text-muted-foreground">
-            Review and approve educational resources for library publication. Check metadata and content quality.
-          </p>
-        </div>
-        <div className="rounded-lg border border-border bg-muted/30 p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Pending</p>
-          <p className="text-3xl font-bold">{pendingResources.length}</p>
-        </div>
-      </header>
+    <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-2">
+      <Card className="overflow-hidden bg-card/90 shadow-none">
+        <CardHeader className="gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="grid gap-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-emerald-700 dark:text-emerald-300">
+                Library Management
+              </span>
+              <span>Moderation Queue</span>
+            </div>
+            <div className="grid gap-2">
+              <CardTitle className="text-3xl tracking-tight">Pending Resource Review</CardTitle>
+              <CardDescription className="max-w-2xl text-sm leading-relaxed">
+                Review and approve educational resources for library publication. Check metadata, skim the abstract, and decide quickly.
+              </CardDescription>
+            </div>
+          </div>
+
+          <div className="grid min-w-[220px] gap-2 rounded-2xl bg-muted/30 p-4 shadow-sm">
+            <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+              <span>Pending</span>
+              <Clock3 className="h-4 w-4" />
+            </div>
+            <div className="text-4xl font-black tracking-tight">{pendingResources.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Items waiting for staff moderation
+            </p>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="bg-card/90 shadow-none">
+            <CardContent className="flex items-start justify-between gap-4 p-5">
+              <div className="grid gap-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {stat.label}
+                </p>
+                <p className="text-3xl font-black tracking-tight">{stat.value}</p>
+                <p className="text-xs text-muted-foreground">{stat.helper}</p>
+              </div>
+              <div className="rounded-2xl bg-muted/40 p-3 text-muted-foreground">
+                <FileText className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-700 flex items-start gap-2">
-          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          {error}
-        </div>
+        <Card className="bg-red-500/10 shadow-none">
+          <CardContent className="flex items-start gap-3 p-4 text-sm text-red-700 dark:text-red-300">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            <div className="grid gap-1">
+              <p className="font-semibold">Could not load pending resources</p>
+              <p>{error}</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {message && (
-        <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4 text-sm text-green-700 flex items-start gap-2">
-          <Check className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          {message}
-        </div>
+        <Card className="bg-emerald-500/10 shadow-none">
+          <CardContent className="flex items-start gap-3 p-4 text-sm text-emerald-700 dark:text-emerald-300">
+            <Check className="mt-0.5 h-5 w-5 shrink-0" />
+            <div className="grid gap-1">
+              <p className="font-semibold">Decision saved</p>
+              <p>{message}</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {pendingResources.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-12">
-            <Check className="h-12 w-12 text-green-500" />
-            <h3 className="text-lg font-semibold">All caught up!</h3>
-            <p className="text-sm text-muted-foreground">No pending resources to review</p>
+        <Card className="border-dashed bg-card/80 shadow-none">
+          <CardContent className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">
+              <Check className="h-8 w-8" />
+            </div>
+            <div className="grid gap-1">
+              <h3 className="text-xl font-semibold tracking-tight">All caught up</h3>
+              <p className="text-sm text-muted-foreground">
+                No pending resources are waiting for moderation right now.
+              </p>
+            </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           {pendingResources.map((resource) => (
-            <Card key={resource.id} className="overflow-hidden">
-              <CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_auto]">
+            <Card key={resource.id} className="overflow-hidden bg-card/90 shadow-none transition-all hover:-translate-y-0.5 hover:shadow-sm">
+
+              <CardHeader className="gap-4 pb-4 md:flex-row md:items-start md:justify-between">
                 <div className="grid gap-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="grid gap-1">
-                      <h3 className="font-semibold">{resource.title}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Submitted by <strong>{resource.uploaderName || resource.uploaderEmail}</strong> on{' '}
-                        {new Date(resource.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Badge variant="outline">pending</Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                      Pending
+                    </Badge>
+                    <Badge className={getResourceBadgeTone(resource.type)}>
+                      {getResourceTypeLabel(resource.type)}
+                    </Badge>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-                    <div>
-                      <p className="text-muted-foreground">Type</p>
-                      <p className="font-medium capitalize">{resource.type}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Format</p>
-                      <p className="font-medium uppercase">{resource.format}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Department</p>
-                      <p className="font-medium">{resource.department || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Year</p>
-                      <p className="font-medium">{resource.year || 'N/A'}</p>
-                    </div>
+                  <div className="grid gap-1">
+                    <CardTitle className="text-xl tracking-tight">{resource.title}</CardTitle>
+                    <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                      <span className="inline-flex items-center gap-1.5">
+                        <User className="h-4 w-4" />
+                        {resource.uploaderName || resource.uploaderEmail || 'Unknown'}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock3 className="h-4 w-4" />
+                        Submitted {new Date(resource.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </CardDescription>
                   </div>
+                </div>
 
-                  {resource.author && (
-                    <div className="text-xs">
-                      <p className="text-muted-foreground">Author</p>
-                      <p className="font-medium">{resource.author}</p>
-                    </div>
-                  )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 shrink-0"
+                  onClick={() => {
+                    if (resource.id) {
+                      window.open(`/viewer/${resource.id}`, '_blank')
+                    }
+                  }}
+                >
+                  <FileText className="h-4 w-4" />
+                  Preview
+                </Button>
+              </CardHeader>
 
-                  {resource.abstract && (
-                    <div className="text-xs">
-                      <p className="text-muted-foreground">Description</p>
-                      <p className="line-clamp-2 text-sm">{resource.abstract}</p>
-                    </div>
-                  )}
+              <CardContent className="grid gap-4 pb-4">
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="rounded-2xl bg-muted/30 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Format
+                    </p>
+                    <p className="mt-1 text-sm font-semibold uppercase">{resource.format || 'N/A'}</p>
+                  </div>
+                  <div className="rounded-2xl bg-muted/30 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Department
+                    </p>
+                    <p className="mt-1 text-sm font-semibold">{resource.department || 'N/A'}</p>
+                  </div>
+                  <div className="rounded-2xl bg-muted/30 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Course
+                    </p>
+                    <p className="mt-1 text-sm font-semibold">{resource.course || 'N/A'}</p>
+                  </div>
+                  <div className="rounded-2xl bg-muted/30 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Year
+                    </p>
+                    <p className="mt-1 text-sm font-semibold">{resource.year || 'N/A'}</p>
+                  </div>
+                </div>
 
-                  {resource.keywords && resource.keywords.length > 0 && (
+                {resource.author && (
+                  <div className="rounded-2xl bg-muted/20 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Author
+                    </p>
+                    <p className="mt-1 text-sm font-medium">{resource.author}</p>
+                  </div>
+                )}
+
+                {resource.abstract && (
+                  <div className="rounded-2xl bg-slate-950/[0.03] p-4 dark:bg-white/[0.03]">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Description
+                    </p>
+                    <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-muted-foreground">
+                      {resource.abstract}
+                    </p>
+                  </div>
+                )}
+
+                {resource.keywords && resource.keywords.length > 0 && (
+                  <div className="grid gap-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Keywords
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       {resource.keywords.map((keyword, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
+                        <Badge key={idx} variant="secondary" className="rounded-full px-3 py-1 text-[11px] font-medium">
                           {keyword}
                         </Badge>
                       ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+              </CardContent>
 
-                <div className="flex flex-col gap-2">
+              <CardFooter className="flex flex-col gap-3 bg-muted/20 p-4 sm:flex-row sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Published decisions are recorded in the audit log automatically.
+                </p>
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="secondary"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => {
-                      if (resource.id) {
-                        window.open(`/viewer/${resource.id}`, '_blank')
-                      }
-                    }}
-                  >
-                    👁️ View
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-2"
+                    className="gap-2 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-800 dark:text-emerald-300"
                     onClick={() => openApprovalDialog(resource)}
                   >
                     <Check className="h-4 w-4" />
-                    Approve
+                    Publish
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant="destructive"
                     className="gap-2"
                     onClick={() => openRejectionDialog(resource)}
                   >
@@ -253,87 +427,77 @@ export default function LibraryModerationPage() {
                     Reject
                   </Button>
                 </div>
-              </CardContent>
+              </CardFooter>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Modal/Dialog */}
-      {showDialog && selectedResource && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="fixed inset-0 bg-black/50"
-            onClick={closeDialog}
-          />
-          <div className="relative z-50 rounded-lg border border-border bg-background p-6 shadow-lg max-w-md w-full">
-            <div className="flex items-center gap-2 mb-4">
+      <Dialog open={showDialog} onOpenChange={(open) => !open && closeDialog()}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
               {action === 'approve' ? (
-                <>
-                  <Check className="h-5 w-5 text-green-500" />
-                  <h3 className="text-lg font-semibold">Approve Resource</h3>
-                </>
+                <Check className="h-5 w-5 text-emerald-600" />
               ) : (
-                <>
-                  <X className="h-5 w-5 text-red-500" />
-                  <h3 className="text-lg font-semibold">Reject Resource</h3>
-                </>
+                <X className="h-5 w-5 text-red-600" />
               )}
-            </div>
+              {action === 'approve' ? 'Publish resource' : 'Reject resource'}
+            </DialogTitle>
+            <DialogDescription>
+              Add a short note explaining the decision before publishing or sending the resource back to the uploader.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="rounded-lg bg-muted/50 p-3 mb-4">
-              <p className="text-sm font-medium">{selectedResource.title}</p>
+          {selectedResource && (
+            <div className="grid gap-2 rounded-2xl bg-muted/30 p-4">
+              <p className="text-sm font-semibold">{selectedResource.title}</p>
               <p className="text-xs text-muted-foreground">
-                by {selectedResource.uploaderName || selectedResource.uploaderEmail}
+                by {selectedResource.uploaderName || selectedResource.uploaderEmail || 'Unknown'}
               </p>
             </div>
+          )}
 
-            <div className="grid gap-2 mb-4">
-              <label className="text-sm font-medium">
-                {action === 'approve' ? 'Approval Note' : 'Rejection Reason'}
-                <span className="text-red-500">*</span>
-              </label>
-              <Textarea
-                placeholder={
-                  action === 'approve'
-                    ? 'e.g., Good quality material, well-formatted...'
-                    : 'e.g., Missing metadata, unclear content...'
-                }
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                className="resize-none"
-                rows={4}
-              />
-              <p className="text-xs text-muted-foreground">Max 1000 characters</p>
-            </div>
-
-            {error && (
-              <div className="text-xs text-red-600 mb-3 flex items-center gap-1">
-                <AlertCircle className="h-4 w-4" />
-                {error}
-              </div>
-            )}
-
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={closeDialog}
-                disabled={processing}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAction}
-                disabled={processing}
-                variant={action === 'approve' ? 'default' : 'destructive'}
-              >
-                {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {action === 'approve' ? 'Approve' : 'Reject'}
-              </Button>
-            </div>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">
+              {action === 'approve' ? 'Publish note' : 'Rejection reason'}
+              <span className="text-red-500">*</span>
+            </label>
+            <Textarea
+              placeholder={
+                action === 'approve'
+                  ? 'e.g., Good quality material, complete metadata, and ready for publication.'
+                  : 'e.g., Missing metadata, unclear content, or not aligned with the collection.'
+              }
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="min-h-[140px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">Max 1000 characters</p>
           </div>
-        </div>
-      )}
+
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog} disabled={processing}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAction}
+              disabled={processing}
+              variant={action === 'approve' ? 'default' : 'destructive'}
+            >
+              {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {action === 'approve' ? 'Approve' : 'Reject'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

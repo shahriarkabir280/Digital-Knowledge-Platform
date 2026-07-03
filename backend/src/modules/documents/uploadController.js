@@ -11,6 +11,7 @@ const { validateDocumentId } = require('./metadataValidator');
 const { versionIncrementExpression } = require('./versionService');
 const { sameDocumentOwner } = require('./ownership');
 const { createResourceRecord, findResourceById, parseResourceId } = require('./resourceStorage');
+const metadataExtractionService = require('../../services/metadataExtractionService');
 
 const PRIVILEGED_REPOSITORY_ROLES = new Set(['STAFF', 'LAB_MANAGER', 'REVIEWER', 'ADMIN']);
 const RESOURCE_CATEGORY_ALIASES = {
@@ -260,6 +261,19 @@ async function uploadFile(req, res, next) {
     const resourceId = resourceRecord.id;
     const resourceTable = resourceRecord.table;
 
+    // Fire-and-forget: extract metadata from document text using local heuristics
+    // Only run for PDF and DOCX files where we can extract text
+    if (['pdf', 'docx'].includes(ext) && req.file.buffer) {
+      metadataExtractionService.extractAndSaveMetadata(
+        resourceId,
+        req.file.buffer,
+        ext,
+        req.file.originalname
+      ).catch((err) => {
+        console.warn('[uploadController] Background metadata extraction failed:', err.message);
+      });
+    }
+
     try {
       const adminUsers = await db('users').where({ role: 'ADMIN' }).select('id');
       if (adminUsers.length > 0) {
@@ -268,7 +282,7 @@ async function uploadFile(req, res, next) {
           document_id: null,
           event_type: 'document_pending',
           title: 'New resource pending approval',
-          message: `"${resourceRecord.title || 'Untitled'}" uploaded by ${authorName} is pending admin review.`,
+          message: `"${resourceRecord.title || 'Untitled'}" uploaded by ${authorName} is pending moderation review.`,
           is_read: false,
           created_at: db.fn.now(),
         }));

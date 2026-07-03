@@ -17,6 +17,8 @@ import {
   saveDocumentMetadata,
   uploadDocument,
 } from '../services/api/documents.js'
+import { extractFileMetadata } from '../services/metadataExtractor.js'
+import { Sparkles } from 'lucide-react'
 
 const steps = [
   { id: 1, title: 'File Upload', description: 'Choose a document to start the submission.' },
@@ -82,6 +84,7 @@ export default function SubmissionWizardPage() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [pendingFileMeta, setPendingFileMeta] = useState(null)
   const [pendingFileStatus, setPendingFileStatus] = useState('idle')
+  const [isExtracting, setIsExtracting] = useState(false)
   const [uploadedDocument, setUploadedDocument] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -212,7 +215,7 @@ export default function SubmissionWizardPage() {
     setDraftState('saved')
   }
 
-  const handleFileSelected = (files) => {
+  const handleFileSelected = async (files) => {
     const [file] = files
     if (!file) return
 
@@ -226,8 +229,14 @@ export default function SubmissionWizardPage() {
       type: file.type,
     })
 
-    // Start upload immediately after selecting a file to avoid a stuck "Pending" state.
-    uploadSelectedFile(file)
+    // Extract metadata using Gemini AI (runs in parallel with upload)
+    setIsExtracting(true)
+    const fileMeta = extractFileMetadata(file)
+
+    // Start upload immediately after selecting a file
+    await uploadSelectedFile(file, fileMeta)
+
+    setIsExtracting(false)
   }
 
   const handleFieldChange = (event) => {
@@ -240,7 +249,7 @@ export default function SubmissionWizardPage() {
     setError('')
   }
 
-  const uploadSelectedFile = async (fileOverride = null) => {
+  const uploadSelectedFile = async (fileOverride = null, pendingExtraction = null) => {
     const fileToUpload = fileOverride || selectedFile
 
     if (!fileToUpload) {
@@ -274,14 +283,32 @@ export default function SubmissionWizardPage() {
       setPendingFileMeta(null)
       setPendingFileStatus('idle')
       await loadDocumentContext(document.id, form)
-      setCurrentStep(2)
-      
+
       // Update message based on document state
-      if (document.state === 'pending') {
-        setMessage(`Document #${document.id} uploaded and is awaiting admin approval before appearing in the repository.`)
-      } else {
-        setMessage(`File uploaded successfully as document #${document.id}.`)
+      let uploadMsg = document.state === 'pending'
+        ? `Document #${document.id} uploaded and is awaiting admin approval before appearing in the repository.`
+        : `File uploaded successfully as document #${document.id}.`
+
+      // Merge AI-extracted metadata into the form if available
+      if (pendingExtraction) {
+        const meta = await pendingExtraction
+        if (meta.success && (meta.title || meta.author || meta.summary || meta.tags)) {
+          setForm(current => ({
+            ...current,
+            title: meta.title || current.title || '',
+            author: meta.author || current.author || authState.name || '',
+            abstract: meta.summary || current.abstract || '',
+            keywords: meta.tags || current.keywords || '',
+          }))
+          uploadMsg = 'Document uploaded and fields auto-populated from AI analysis. Review the metadata and continue.'
+        } else if (meta.error) {
+          uploadMsg += ` Auto-fill note: ${meta.error}`
+        }
       }
+
+      setMessage(uploadMsg)
+
+      setCurrentStep(2)
     } catch (uploadError) {
       setPendingFileStatus('error')
       setError(uploadError.message || 'Failed to upload file.')
@@ -510,6 +537,12 @@ export default function SubmissionWizardPage() {
                           <p className="text-muted-foreground">
                             {formatFileSize(pendingFileMeta.size)}{pendingFileMeta.type ? ` • ${pendingFileMeta.type}` : ''}
                           </p>
+                          {isExtracting && (
+                            <p className="flex items-center gap-1.5 text-xs text-accent font-semibold mt-1">
+                              <Sparkles size={12} className="animate-pulse" />
+                              AI analyzing document for auto-fill...
+                            </p>
+                          )}
                         </div>
                       ) : null}
 

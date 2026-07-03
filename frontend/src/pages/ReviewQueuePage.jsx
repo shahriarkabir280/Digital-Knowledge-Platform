@@ -31,6 +31,11 @@ export default function ReviewQueuePage() {
   const [selectedDocumentForDialog, setSelectedDocumentForDialog] = useState(null)
 
   const loadQueue = async (nextType = type) => {
+    if (!authState?.token) {
+      setStatus('loading')
+      return
+    }
+
     try {
       setStatus('loading')
       setError('')
@@ -46,7 +51,7 @@ export default function ReviewQueuePage() {
 
   useEffect(() => {
     loadQueue()
-  }, [])
+  }, [authState.token])
 
   const onOpenDocument = async (documentId) => {
     try {

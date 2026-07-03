@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label'
 const actionConfig = {
   publish: {
     title: 'Publish Document',
-    subtitle: 'Approval note',
-    placeholder: 'e.g., "Approved for publication - meets all quality criteria."',
+    subtitle: 'Publish note',
+    placeholder: 'e.g., "Ready for publication - meets all quality criteria."',
     confirmLabel: 'Publish',
     variant: 'secondary',
     required: true,
@@ -53,8 +53,8 @@ export default function StateTransitionDialog({
 
     if (config.required && !note.trim()) {
       setError(
-        config.subtitle === 'Approval note'
-          ? 'Please provide an approval note'
+        config.subtitle === 'Publish note'
+          ? 'Please provide a publish note'
           : 'Please provide a reason for this action'
       )
       return

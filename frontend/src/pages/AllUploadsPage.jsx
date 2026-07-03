@@ -202,9 +202,8 @@ export default function AllUploadsPage() {
   }
 
   const renderStateActions = (item) => {
-    if (item.state === 'review') {
+    if (item.state !== 'published') {
       const publishingKey = `${item.id}:published`
-      const rejectingKey = `${item.id}:draft`
 
       return (
         <>
@@ -214,16 +213,22 @@ export default function AllUploadsPage() {
             onClick={() => onTransition(item.id, 'published')}
             disabled={Boolean(transitioning[publishingKey])}
           >
-            {transitioning[publishingKey] ? 'Publishing...' : 'Publish'}
+            {transitioning[publishingKey]
+              ? 'Publishing...'
+              : item.state === 'archived'
+                ? 'Republish'
+                : 'Publish'}
           </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => onTransition(item.id, 'draft')}
-            disabled={Boolean(transitioning[rejectingKey])}
-          >
-            {transitioning[rejectingKey] ? 'Rejecting...' : 'Reject to Draft'}
-          </Button>
+          {item.state === 'review' && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => onTransition(item.id, 'draft')}
+              disabled={Boolean(transitioning[`${item.id}:draft`])}
+            >
+              {transitioning[`${item.id}:draft`] ? 'Rejecting...' : 'Reject to Draft'}
+            </Button>
+          )}
         </>
       )
     }

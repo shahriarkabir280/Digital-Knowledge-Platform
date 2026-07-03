@@ -117,7 +117,7 @@ export default function LibraryPage() {
 
                 const docId = `doc-${doc.id}`
                 if (seenDocIds.has(docId)) {
-                  return
+                  continue
                 }
                 seenDocIds.add(docId)
 
@@ -159,14 +159,14 @@ export default function LibraryPage() {
   }, [authState?.token])
 
   const getResourceType = (item) => {
-    const category = String(item.resourceCategory || '').toLowerCase()
+    const category = String(item.resourceCategory || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
     if (category === 'textbook') return 'Textbook'
-    if (category === 'lecture-slides') return 'Lecture Slides'
-    if (category === 'lab-manual') return 'Lab Manual'
-    if (category === 'question-bank') return 'Question Bank'
+    if (category === 'lecture-slides' || category === 'slides') return 'Lecture Slides'
+    if (category === 'lab-manual' || category === 'manual') return 'Lab Manual'
+    if (category === 'question-bank' || category === 'qbank') return 'Question Bank'
     if (category === 'assignment') return 'Assignment'
     if (category === 'lab-report') return 'Lab Report'
-    if (category === 'media') return 'Video'
+    if (category === 'media' || category === 'video' || category === 'videos') return 'Video'
 
     const tags = (item.tags || []).map(t => t.toLowerCase())
     const type = String(item.type || '').toLowerCase()
@@ -184,14 +184,14 @@ export default function LibraryPage() {
   }
 
   const getResourceTabKey = (item) => {
-    const category = String(item.resourceCategory || '').toLowerCase()
+    const category = String(item.resourceCategory || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
     if (category === 'textbook') return 'Textbooks'
-    if (category === 'lecture-slides') return 'Slides'
-    if (category === 'lab-manual') return 'Manuals'
-    if (category === 'question-bank') return 'QuestionBanks'
+    if (category === 'lecture-slides' || category === 'slides') return 'Slides'
+    if (category === 'lab-manual' || category === 'manual') return 'Manuals'
+    if (category === 'question-bank' || category === 'qbank') return 'QuestionBanks'
     if (category === 'assignment') return 'Assignments'
     if (category === 'lab-report') return 'LabReports'
-    if (category === 'media') return 'Videos'
+    if (category === 'media' || category === 'video' || category === 'videos') return 'Videos'
 
     const tags = (item.tags || []).map(t => t.toLowerCase())
     const type = String(item.type || '').toLowerCase()
@@ -560,7 +560,11 @@ export default function LibraryPage() {
                       /* Document type visual preview */
                       (() => {
                         // Types that can be rendered from an actual PDF page
-                        const isPdfRenderable = ['PDF', 'Paper', 'Thesis', 'Question Bank', 'Assignment', 'Lab Report'].includes(item.type) && Boolean(item.pdfUrl)
+                        const isPdfRenderable = Boolean(item.pdfUrl) && (
+                          item.format?.toLowerCase() === 'pdf' ||
+                          ['pdf', 'paper', 'thesis', 'question bank', 'assignment', 'lab report'].includes(String(item.type).toLowerCase()) ||
+                          ['PDF', 'Paper', 'Thesis', 'Question Bank', 'Assignment', 'Lab Report', 'Lecture Notes', 'Textbook', 'Lecture Slides', 'Lab Manual'].includes(type)
+                        )
 
                         // Static fallback thumbnails by type
                         const thumbMap = {

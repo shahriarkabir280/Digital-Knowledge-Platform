@@ -79,6 +79,10 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
     formData.append('language', metadata.language)
   }
 
+  if (metadata.state) {
+    formData.append('state', metadata.state)
+  }
+
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.timeout = 120000

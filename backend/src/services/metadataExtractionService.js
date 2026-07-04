@@ -4,6 +4,8 @@ const mammoth = require('mammoth');
 const db = require('../db');
 const { findResourceById } = require('../modules/documents/resourceStorage');
 
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://python-service:8000';
+
 const STOP_WORDS = new Set([
   'the', 'of', 'and', 'to', 'in', 'is', 'for', 'that', 'on', 'with', 'as', 'by', 'an', 'at', 'this', 'from', 'it', 'which', 'or', 'be', 'are', 'was', 'were', 'has', 'have', 'had', 'been', 'but', 'not', 'we', 'they', 'our', 'their', 'more', 'about', 'can', 'will', 'would', 'should', 'other', 'some', 'than', 'into', 'its', 'these', 'those', 'also', 'such', 'only', 'new', 'first', 'two', 'has', 'more', 'how', 'any', 'who', 'very', 'many'
 ]);
@@ -218,6 +220,47 @@ function extractMetadataLocally(text, filename) {
 }
 
 /**
+ * Calls the Python microservice to extract metadata from raw text.
+ * Falls back to null if the service is unavailable.
+ */
+async function extractWithPythonService(text) {
+  try {
+    const response = await fetch(`${PYTHON_SERVICE_URL}/extract`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) {
+      console.warn(`[MetadataExtractionService] Python service returned ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      console.warn(`[MetadataExtractionService] Python service extraction failed: ${data.error}`);
+      return null;
+    }
+
+    return {
+      title: data.title,
+      author: data.author,
+      abstract: data.abstract,
+      keywords: data.keywords || [],
+      language: null,
+      published_year: null,
+      department: data.department,
+      resourceCategory: null,
+      _source: 'python-service',
+    };
+  } catch (error) {
+    console.warn(`[MetadataExtractionService] Python service unavailable: ${error.message}`);
+    return null;
+  }
+}
+
+/**
  * Extracts text from document buffer and runs heuristics to save metadata back to DB.
  * @param {number} resourceId - Document / Resource ID
  * @param {Buffer} buffer - File buffer
@@ -229,8 +272,14 @@ async function extractAndSaveMetadata(resourceId, buffer, ext, filename) {
   try {
     console.log(`[MetadataExtractionService] Starting extraction for resource #${resourceId} (${filename})...`);
     const text = await extractTextFromBuffer(buffer, ext);
-    const metadata = extractMetadataLocally(text, filename);
-    console.log(`[MetadataExtractionService] Extracted metadata:`, JSON.stringify(metadata, null, 2));
+
+    // Try Python service first, fall back to local heuristics
+    let metadata = await extractWithPythonService(text);
+    if (!metadata) {
+      metadata = extractMetadataLocally(text, filename);
+      metadata._source = 'local-heuristics';
+    }
+    console.log(`[MetadataExtractionService] Extracted metadata (source=${metadata._source}):`, JSON.stringify(metadata, null, 2));
 
     const resourceLookup = await findResourceById(resourceId);
     if (!resourceLookup) {
@@ -273,5 +322,6 @@ async function extractAndSaveMetadata(resourceId, buffer, ext, filename) {
 module.exports = {
   extractTextFromBuffer,
   extractMetadataLocally,
+  extractWithPythonService,
   extractAndSaveMetadata
 };

@@ -16,7 +16,8 @@ const lifecycleSchema = z.object({
 
 const allowedTransitions = {
   // New uploads start in pending - awaiting moderation review
-  [DOCUMENT_STATES.PENDING]: [DOCUMENT_STATES.PUBLISHED, DOCUMENT_STATES.ARCHIVED],
+  // Can also be moved to draft by the owner or staff
+  [DOCUMENT_STATES.PENDING]: [DOCUMENT_STATES.PUBLISHED, DOCUMENT_STATES.ARCHIVED, DOCUMENT_STATES.DRAFT],
   // Members can move draft to review for submission
   [DOCUMENT_STATES.DRAFT]: [DOCUMENT_STATES.REVIEW, DOCUMENT_STATES.PUBLISHED],
   // Reviewers can approve (publish) or request revision (back to draft)
@@ -159,6 +160,15 @@ function canMoveToReview(document, user) {
   return allowedRoles.includes(user.role);
 }
 
+function canMoveToDraft(document, user) {
+  if (sameDocumentOwner(document, user)) {
+    return true;
+  }
+
+  const allowedRoles = rolePolicyByTargetState[DOCUMENT_STATES.DRAFT] || [];
+  return allowedRoles.includes(user.role);
+}
+
 function validateRolePermission(document, user, nextState) {
   if (nextState === DOCUMENT_STATES.REVIEW) {
     if (canMoveToReview(document, user)) {
@@ -171,6 +181,21 @@ function validateRolePermission(document, user, nextState) {
         statusCode: 403,
         code: "FORBIDDEN_STATE_TRANSITION",
         message: "You are not allowed to move this document to review",
+      },
+    };
+  }
+
+  if (nextState === DOCUMENT_STATES.DRAFT) {
+    if (canMoveToDraft(document, user)) {
+      return { ok: true };
+    }
+
+    return {
+      ok: false,
+      error: {
+        statusCode: 403,
+        code: "FORBIDDEN_STATE_TRANSITION",
+        message: "You are not allowed to move this document to draft",
       },
     };
   }

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
+import { toast } from 'sonner'
 import { useAuth } from '../app/use-auth.js'
 import { ROLES } from '../app/rbac.js'
 import {
@@ -84,8 +85,9 @@ export default function MemberDashboardPage() {
     try {
       await patchDocumentState(documentId, 'review', authState.token)
       await loadMyUploads()
+      toast.success('Submitted for review')
     } catch (err) {
-      alert(err.message || 'Failed to move document to review')
+      toast.error(err.message || 'Failed to submit document for review')
     }
   }
 

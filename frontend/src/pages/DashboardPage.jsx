@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
 import { useAuth } from '../app/use-auth.js'
 import { ROLES } from '../app/rbac.js'
+import { toast } from 'sonner'
 import { apiRequest } from '../services/api/client'
 import {
   fetchMyUploads,
@@ -136,8 +137,9 @@ export default function DashboardPage() {
       await patchDocumentState(documentId, 'review', authState.token)
       await loadMyUploads()
       if (isReviewer) loadReviewQueue()
+      toast.success('Submitted for review')
     } catch (err) {
-      alert(err.message || 'Failed to submit document for review')
+      toast.error(err.message || 'Failed to submit document for review')
     }
   }
 
@@ -503,6 +505,13 @@ export default function DashboardPage() {
                 <Link to="/library/bookmarks" className="gap-2">
                   <Bookmark size={14} className="text-accent" />
                   My Bookmarks
+                </Link>
+              </Button>
+
+              <Button asChild variant="outline" className="w-full justify-start text-xs h-9 font-semibold hover:bg-amber-500/5 hover:text-amber-600 border-border/80">
+                <Link to="/dashboard" className="gap-2">
+                  <FileEdit size={14} className="text-amber-500" />
+                  My Drafts
                 </Link>
               </Button>
 

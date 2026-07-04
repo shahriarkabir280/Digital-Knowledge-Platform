@@ -22,7 +22,8 @@ import {
   ClipboardCheck,
   FilePlus,
   HelpCircle,
-  PlayCircle
+  PlayCircle,
+  FileEdit
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,6 +35,7 @@ import { uploadDocument } from '../services/api/documents.js'
 import { ResourceGridSkeleton, SidebarSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
 import ResourceCard from '../components/library/ResourceCard.jsx'
 import { extractFileMetadata } from '../services/metadataExtractor.js'
+import { toast } from 'sonner'
 
 export default function LibraryPage() {
   const { authState } = useAuth()
@@ -66,6 +68,7 @@ export default function LibraryPage() {
   const [uploadError, setUploadError] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
   const [showUploadSuccess, setShowUploadSuccess] = useState(false)
+  const uploadIntentRef = useRef('pending')
   const [uploadSuccessTitle, setUploadSuccessTitle] = useState('')
   const [isExtracting, setIsExtracting] = useState(false)
   const fileInputRef = useRef(null)
@@ -220,6 +223,7 @@ export default function LibraryPage() {
 
   const resetModal = useCallback(() => {
     setShowUploadModal(false)
+    uploadIntentRef.current = 'pending'
     setNewResource({ title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'PDF', tags: '', summary: '', linkUrl: '', resourceCategory: 'textbook', accessTier: 'PUBLIC' })
     setUploadMode('file')
     setSelectedFile(null)
@@ -286,8 +290,9 @@ export default function LibraryPage() {
     if (file) handleFileSelect(file)
   }, [])
 
-  const handleUploadSubmit = async (e) => {
-    e.preventDefault()
+  const handleUploadSubmit = async (e, intentOverride) => {
+    if (e?.preventDefault) e.preventDefault()
+    const intent = intentOverride || uploadIntentRef.current
     setUploadError('')
     if (!newResource.title.trim() || !newResource.author.trim() || !newResource.course.trim()) {
       setUploadError('Please fill in Title, Author, and Course Code.')
@@ -307,17 +312,18 @@ export default function LibraryPage() {
       setIsUploading(true)
       setUploadProgress(0)
       try {
-        const result = await uploadDocument(
-          selectedFile,
-          {
-            title: newResource.title.trim(),
-            description: newResource.summary.trim(),
-            resourceCategory: newResource.resourceCategory || 'textbook',
-            accessTier: newResource.accessTier || 'PUBLIC',
-          },
-          ({ percent }) => setUploadProgress(percent),
-          authState.token
-        )
+          await uploadDocument(
+            selectedFile,
+            {
+              title: newResource.title.trim(),
+              description: newResource.summary.trim(),
+              resourceCategory: newResource.resourceCategory || 'textbook',
+              accessTier: newResource.accessTier || 'PUBLIC',
+              state: intent,
+            },
+            ({ percent }) => setUploadProgress(percent),
+            authState.token
+          )
       } catch (err) {
         setUploadError(err.message || 'Upload failed. Please try again.')
         setIsUploading(false)
@@ -326,8 +332,18 @@ export default function LibraryPage() {
       setIsUploading(false)
     }
 
-    // Re-fetch published docs from backend so the new item appears
     setFetchTrigger(n => n + 1)
+
+    if (intent === 'draft') {
+      setShowUploadModal(false)
+      setUploadSuccessTitle('')
+      uploadIntentRef.current = 'pending'
+      toast.success('Saved as draft', {
+        description: `"${newResource.title.trim()}" — submit from the Dashboard when ready.`,
+      })
+      return
+    }
+
     setUploadSuccessTitle(newResource.title.trim())
     setShowUploadSuccess(true)
     resetModal()
@@ -620,7 +636,7 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {/* Upload Success Modal */}
+      {/* Upload Success Modal (submissions only) */}
       {showUploadSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-md border-border shadow-2xl">
@@ -914,7 +930,12 @@ export default function LibraryPage() {
               {/* Footer */}
               <div className="flex gap-2 justify-end p-4 border-t border-border bg-muted/10">
                 <Button type="button" variant="outline" size="sm" onClick={resetModal} disabled={isUploading}>Cancel</Button>
-                <Button type="submit" size="sm" className="gap-1.5 min-w-[120px]" disabled={isUploading}>
+                <Button type="button" size="sm" variant="outline" className="gap-1.5 min-w-[120px]" disabled={isUploading}
+                  onClick={() => handleUploadSubmit(null, 'draft')}>
+                  {isUploading ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><FileEdit size={13} /> Save as Draft</>}
+                </Button>
+                <Button type="button" size="sm" className="gap-1.5 min-w-[120px]" disabled={isUploading}
+                  onClick={() => handleUploadSubmit(null, 'pending')}>
                   {isUploading
                     ? <><Loader2 size={13} className="animate-spin" /> Uploading...</>
                     : <><CloudUpload size={13} /> Add Resource</>

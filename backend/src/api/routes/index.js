@@ -32,4 +32,32 @@ router.use("/repository", documentsRouter);
 router.use("/documents", documentsRouter);
 router.use("/library", libraryRouter);
 
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://python-service:8000";
+
+router.post("/extract-metadata", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || typeof text !== "string" || text.trim().length < 20) {
+      return res.json({ success: false, error: "Not enough text (minimum 20 characters)." });
+    }
+
+    const response = await fetch(`${PYTHON_SERVICE_URL}/extract`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text.trim() }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      return res.status(502).json({ success: false, error: `Python service error (${response.status}): ${errorBody}` });
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error("[extract-metadata] Proxy error:", error.message);
+    res.status(502).json({ success: false, error: "Metadata extraction service unavailable." });
+  }
+});
+
 module.exports = router;

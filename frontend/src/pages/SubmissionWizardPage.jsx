@@ -18,6 +18,7 @@ import {
   uploadDocument,
 } from '../services/api/documents.js'
 import { extractFileMetadata } from '../services/metadataExtractor.js'
+import { toast } from 'sonner'
 import { Sparkles } from 'lucide-react'
 
 const steps = [
@@ -404,15 +405,60 @@ export default function SubmissionWizardPage() {
       await saveDocumentMetadata(uploadedDocument.id, payload, authState.token)
       await patchDocumentState(uploadedDocument.id, 'review', authState.token)
       clearDraft()
-      navigate('/repository', {
-        replace: true,
-        state: {
-          submissionSuccess: true,
-          message: `Document #${uploadedDocument.id} submitted for review.`,
-        },
+      toast.success('Submitted for review', {
+        description: `Document #${uploadedDocument.id} is now in the review queue.`,
       })
+      navigate('/dashboard', { replace: true })
     } catch (submitError) {
       setError(submitError.message || 'Failed to submit the document for review.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveAsDraft = async () => {
+    if (!uploadedDocument?.id) {
+      setCurrentStep(1)
+      setError('Upload a file first.')
+      return
+    }
+
+    if (!canContinueFromMetadata) {
+      setCurrentStep(2)
+      setError('Please complete the metadata fields before saving.')
+      return
+    }
+
+    if (!canContinueFromTier) {
+      setCurrentStep(3)
+      setError('Please choose an access tier before saving.')
+      return
+    }
+
+    const payload = {
+      title: form.title.trim(),
+      author: form.author.trim(),
+      abstract: form.abstract.trim(),
+      keywords: keywordList,
+      language: form.language,
+      year: Number(form.year),
+      department: form.department,
+      accessTier: form.accessTier,
+    }
+
+    try {
+      setSaving(true)
+      setError('')
+      setMessage('')
+      await saveDocumentMetadata(uploadedDocument.id, payload, authState.token)
+      await patchDocumentState(uploadedDocument.id, 'draft', authState.token)
+      clearDraft()
+      toast.success('Saved as draft', {
+        description: `Document #${uploadedDocument.id} — submit for review from the Dashboard when ready.`,
+      })
+      navigate('/dashboard', { replace: true })
+    } catch (saveError) {
+      setError(saveError.message || 'Failed to save the document as draft.')
     } finally {
       setSaving(false)
     }
@@ -758,9 +804,12 @@ export default function SubmissionWizardPage() {
                     <Button type="button" variant="outline" onClick={handlePrevious} disabled={saving}>
                       Back
                     </Button>
-                    <Button type="button" onClick={submitForReview} disabled={saving || !uploadedDocument?.id}>
-                      {saving ? 'Submitting...' : 'Submit for Review'}
-                    </Button>
+      <Button type="button" variant="outline" onClick={saveAsDraft} disabled={saving || !uploadedDocument?.id}>
+        {saving ? 'Saving...' : 'Save as Draft'}
+      </Button>
+      <Button type="button" onClick={submitForReview} disabled={saving || !uploadedDocument?.id}>
+        {saving ? 'Submitting...' : 'Submit for Review'}
+      </Button>
                     <Button
                       type="button"
                       variant="outline"

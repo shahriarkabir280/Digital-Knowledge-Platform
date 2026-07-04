@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import Navbar from '../navigation/Navbar.jsx'
 import Sidebar from '../navigation/Sidebar.jsx'
 import { LayoutProvider, useLayout } from '../../app/layout-context.jsx'
@@ -32,6 +33,8 @@ function AppLayoutContent() {
           aria-hidden="true"
         />
       )}
+
+      <Toaster position="bottom-right" richColors />
     </div>
   )
 }

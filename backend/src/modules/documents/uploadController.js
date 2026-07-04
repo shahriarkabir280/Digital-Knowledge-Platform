@@ -236,6 +236,8 @@ async function uploadFile(req, res, next) {
       condition: req.body.course && req.body.course.trim() ? 'WILL_STORE' : 'WILL_BE_NULL'
     });
 
+    const initialState = req.body.state === 'draft' ? 'draft' : 'pending';
+
     const resourceRecord = await createResourceRecord({
       resourceType,
       uploaderId: userId,
@@ -243,7 +245,7 @@ async function uploadFile(req, res, next) {
       description,
       filePath: fileData.relativePath,
       format,
-      state: 'pending',
+      state: initialState,
       accessTier: 'REGISTERED',
       metadata: {
         author: authorName,
@@ -274,25 +276,28 @@ async function uploadFile(req, res, next) {
       });
     }
 
-    try {
-      const adminUsers = await db('users').where({ role: 'ADMIN' }).select('id');
-      if (adminUsers.length > 0) {
-        const notifications = adminUsers.map((admin) => ({
-          user_id: admin.id,
-          document_id: null,
-          event_type: 'document_pending',
-          title: 'New resource pending approval',
-          message: `"${resourceRecord.title || 'Untitled'}" uploaded by ${authorName} is pending moderation review.`,
-          is_read: false,
-          created_at: db.fn.now(),
-        }));
+    // Only notify admins for direct submissions (pending state), not drafts
+    if (initialState === 'pending') {
+      try {
+        const adminUsers = await db('users').where({ role: 'ADMIN' }).select('id');
+        if (adminUsers.length > 0) {
+          const notifications = adminUsers.map((admin) => ({
+            user_id: admin.id,
+            document_id: null,
+            event_type: 'document_pending',
+            title: 'New resource pending approval',
+            message: `"${resourceRecord.title || 'Untitled'}" uploaded by ${authorName} is pending moderation review.`,
+            is_read: false,
+            created_at: db.fn.now(),
+          }));
 
-        await db('notifications').insert(notifications).catch((err) => {
-          console.warn('Failed to create notifications:', err.message);
-        });
+          await db('notifications').insert(notifications).catch((err) => {
+            console.warn('Failed to create notifications:', err.message);
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to notify admins:', err.message);
       }
-    } catch (err) {
-      console.warn('Failed to notify admins:', err.message);
     }
 
     return res.status(201).json({
@@ -304,7 +309,7 @@ async function uploadFile(req, res, next) {
           type: resourceRecord.type,
           format,
           version: 1,
-          state: 'pending',
+          state: initialState,
           accessTier: 'REGISTERED',
           uploadedBy: userId,
           uploadedAt: new Date().toISOString(),

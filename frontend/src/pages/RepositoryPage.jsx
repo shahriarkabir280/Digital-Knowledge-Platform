@@ -10,6 +10,7 @@ import { uploadDocument } from '../services/api/documents.js'
 import { ResourceGridSkeleton, SidebarSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
 import ResourceCard from '../components/library/ResourceCard.jsx'
 import { extractFileMetadata } from '../services/metadataExtractor.js'
+import { toast } from 'sonner'
 import { 
   Search, 
   GraduationCap, 
@@ -27,7 +28,8 @@ import {
   Loader2,
   FileText,
   Database,
-  Tag
+  Tag,
+  FileEdit
 } from 'lucide-react'
 
 export default function RepositoryPage() {
@@ -56,6 +58,7 @@ export default function RepositoryPage() {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [showUploadSuccess, setShowUploadSuccess] = useState(false)
   const [uploadSuccessTitle, setUploadSuccessTitle] = useState('')
+  const uploadIntentRef = useRef('pending')
   const [newResource, setNewResource] = useState({
     title: '', author: '', department: 'Computer Science and Engineering', course: '', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper', accessTier: 'PUBLIC',
   })
@@ -241,6 +244,7 @@ export default function RepositoryPage() {
   const resetModal = useCallback(() => {
     setShowUploadModal(false)
     setShowUploadSuccess(false)
+    uploadIntentRef.current = 'pending'
     setNewResource({ title: '', author: '', department: 'Computer Science and Engineering', course: 'N/A', type: 'Research Paper', tags: '', summary: '', linkUrl: '', resourceCategory: 'research-paper', accessTier: 'PUBLIC' })
     setUploadMode('url')
     setSelectedFile(null)
@@ -288,8 +292,9 @@ export default function RepositoryPage() {
     if (file) handleFileSelect(file)
   }, [])
 
-  const handleUploadSubmit = async (e) => {
-    e.preventDefault()
+  const handleUploadSubmit = async (e, intentOverride) => {
+    if (e?.preventDefault) e.preventDefault()
+    const intent = intentOverride || uploadIntentRef.current
     setUploadError('')
     if (!newResource.title.trim() || !newResource.author.trim()) {
       setUploadError('Please fill in Title and Author(s).')
@@ -321,6 +326,7 @@ export default function RepositoryPage() {
             course: newResource.course.trim(),
             year: new Date().getFullYear(),
             language: 'English',
+            state: intent,
           },
           ({ percent }) => setUploadProgress(percent),
           authState.token
@@ -333,9 +339,16 @@ export default function RepositoryPage() {
       setIsUploading(false)
     }
 
-    // Re-fetch published docs from backend so the new item appears
     setFetchTrigger(n => n + 1)
     setShowUploadModal(false)
+
+    if (intent === 'draft') {
+      toast.success('Saved as draft', {
+        description: `"${newResource.title.trim()}" — submit from the Dashboard when ready.`,
+      })
+      return
+    }
+
     setUploadSuccessTitle(newResource.title.trim())
     setShowUploadSuccess(true)
   }
@@ -829,7 +842,12 @@ export default function RepositoryPage() {
               {/* Footer */}
               <div className="flex gap-2 justify-end p-4 border-t border-border bg-muted/10">
                 <Button type="button" variant="outline" size="sm" onClick={resetModal} disabled={isUploading}>Cancel</Button>
-                <Button type="submit" size="sm" className="gap-1.5 min-w-[120px]" disabled={isUploading}>
+                <Button type="button" size="sm" variant="outline" className="gap-1.5 min-w-[120px]" disabled={isUploading}
+                  onClick={() => handleUploadSubmit(null, 'draft')}>
+                  {isUploading ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><FileEdit size={13} /> Save as Draft</>}
+                </Button>
+                <Button type="button" size="sm" className="gap-1.5 min-w-[120px]" disabled={isUploading}
+                  onClick={() => handleUploadSubmit(null, 'pending')}>
                   {isUploading ? <><Loader2 size={13} className="animate-spin" /> Uploading...</> : <><CloudUpload size={13} /> Submit Research</>}
                 </Button>
               </div>
@@ -838,7 +856,7 @@ export default function RepositoryPage() {
         </div>
       )}
 
-      {/* Upload Success Modal */}
+      {/* Upload Success Modal (submissions only) */}
       {showUploadSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-md border-border shadow-2xl">

@@ -465,7 +465,7 @@ export default function DashboardPage() {
                     <div className="grid gap-0.5 min-w-0">
                       <span className="text-[10px] text-muted-foreground font-semibold uppercase">{item.type}</span>
                       <h4 className="text-xs font-bold text-foreground truncate">{item.title}</h4>
-                      <p className="text-xs text-muted-foreground">Uploaded by ID: {item.uploaderId} · Format: {item.format}</p>
+                      <p className="text-xs text-muted-foreground">Uploaded by {item.uploaderName || 'a contributor'} · Format: {item.format}</p>
                     </div>
                     <Button asChild size="sm" variant="secondary" className="h-7 text-[10px] px-2.5 font-bold shrink-0">
                       <Link to={`/review-queue`}>Start Review</Link>

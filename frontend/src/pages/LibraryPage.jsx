@@ -404,7 +404,7 @@ export default function LibraryPage() {
               <p className="text-xs text-slate-400 uppercase tracking-wider">Bookmarked</p>
             </div>
             <div>
-              <p className="text-xl font-bold text-white">4.8 ★</p>
+              <p className="text-xl font-bold text-white">—</p>
               <p className="text-xs text-slate-400 uppercase tracking-wider">Avg Rating</p>
             </div>
           </div>
@@ -433,7 +433,7 @@ export default function LibraryPage() {
           </div>
         </div>
 
-        {showAdvancedFilters && (
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showAdvancedFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <Card className="border-border bg-muted/10">
             <CardContent className="p-4 grid gap-4 sm:grid-cols-3">
               <div className="grid gap-1.5">
@@ -458,7 +458,7 @@ export default function LibraryPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
 
         {/* Category Tabs */}
         <div className="flex flex-wrap gap-1.5 border-b border-border pb-2">

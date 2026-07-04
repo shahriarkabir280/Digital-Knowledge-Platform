@@ -434,7 +434,7 @@ export default function RepositoryPage() {
         </div>
 
         {/* Advanced Filters */}
-        {showAdvancedFilters && (
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showAdvancedFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <Card className="border-border bg-muted/10">
             <CardContent className="p-4 grid gap-4 sm:grid-cols-3">
               <div className="grid gap-1.5">
@@ -459,7 +459,7 @@ export default function RepositoryPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
       </div>
 
       {/* Main Grid View */}

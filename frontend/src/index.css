@@ -48,7 +48,7 @@ a { color: var(--accent-strong); }
 
 /* ─── Top navigation bar ─────────────────────────────────────────────────── */
 .topbar {
-  background: #ffffff;
+  background: hsl(var(--card));
   border-bottom: 1px solid var(--line);
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
   padding: 0 24px;
@@ -74,7 +74,7 @@ a { color: var(--accent-strong); }
   height: 36px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: #ffffff;
+  background: hsl(var(--card));
   cursor: pointer;
   color: var(--ink);
   transition: background 0.12s ease, border-color 0.12s ease;
@@ -231,6 +231,8 @@ a { color: var(--accent-strong); }
   right: 12px;
   top: 72px;
   width: min(360px, calc(100vw - 24px));
+  max-height: min(400px, 60vh);
+  overflow-y: auto;
   border: 1px solid hsl(var(--border));
   border-radius: 12px;
   background: hsl(var(--card));
@@ -337,7 +339,7 @@ a { color: var(--accent-strong); }
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-width, 256px);
-  background: #ffffff;
+  background: hsl(var(--card));
   border-right: 1px solid var(--line);
   padding: 20px 12px;
   display: flex;
@@ -675,7 +677,7 @@ a { color: var(--accent-strong); }
   border-radius: 14px;
   text-decoration: none;
   color: inherit;
-  background: #fff;
+  background: hsl(var(--card));
   box-shadow: var(--shadow);
   transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
@@ -711,17 +713,17 @@ a { color: var(--accent-strong); }
   color: var(--accent-strong);
 }
 
-.dashboard-card--teal { background: linear-gradient(160deg, #fff 0%, #eef7f8 100%); }
-.dashboard-card--gold { background: linear-gradient(160deg, #fff 0%, #fef9ec 100%); }
-.dashboard-card--sage { background: linear-gradient(160deg, #fff 0%, #edf4e9 100%); }
-.dashboard-card--ink  { background: linear-gradient(160deg, #fff 0%, #edf1f4 100%); }
+.dashboard-card--teal { background: linear-gradient(160deg, hsl(var(--card)) 0%, #eef7f8 100%); }
+.dashboard-card--gold { background: linear-gradient(160deg, hsl(var(--card)) 0%, #fef9ec 100%); }
+.dashboard-card--sage { background: linear-gradient(160deg, hsl(var(--card)) 0%, #edf4e9 100%); }
+.dashboard-card--ink  { background: linear-gradient(160deg, hsl(var(--card)) 0%, #edf1f4 100%); }
 
 .dashboard-hero--admin {
-  background: linear-gradient(135deg, rgba(30,138,150,.1) 0%, rgba(212,236,238,.5) 100%), #fff;
+  background: linear-gradient(135deg, rgba(30,138,150,.1) 0%, rgba(212,236,238,.5) 100%), hsl(var(--card));
 }
 
 .dashboard-hero--staff {
-  background: linear-gradient(135deg, rgba(180,83,9,.08) 0%, rgba(255,246,227,.7) 100%), #fff;
+  background: linear-gradient(135deg, rgba(180,83,9,.08) 0%, rgba(255,246,227,.7) 100%), hsl(var(--card));
 }
 
 /* ─── Role management table ──────────────────────────────────────────────── */
@@ -732,7 +734,7 @@ a { color: var(--accent-strong); }
   border: 1px solid var(--line);
   border-radius: 12px;
   overflow: auto;
-  background: #fff;
+  background: hsl(var(--card));
 }
 
 .role-table {
@@ -780,7 +782,7 @@ a { color: var(--accent-strong); }
   padding: 14px;
   text-decoration: none;
   color: inherit;
-  background: #fff;
+  background: hsl(var(--card));
   transition: border-color .12s, background .12s;
 }
 
@@ -852,7 +854,7 @@ select.styled-select:focus-visible {
     box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
     border-right: 1px solid var(--line);
     padding: 24px 16px !important;
-    background: #ffffff !important;
+    background: hsl(var(--card)) !important;
   }
 
   .sidebar.mobile-open {
@@ -957,6 +959,13 @@ select.styled-select:focus-visible {
     min-height: 30px;
   }
 
+  .notification-dropdown {
+    top: 60px;
+    right: 8px;
+    width: calc(100vw - 16px);
+    max-height: min(350px, 50vh);
+  }
+
   .logout-btn-mobile {
     padding: 0 8px !important;
     min-width: 30px !important;
@@ -1001,7 +1010,7 @@ textarea.styled-textarea,
   width: 100%;
   border-radius: 8px;
   border: 1px solid hsl(var(--input));
-  background: #fff;
+  background: hsl(var(--background));
   padding: 10px 12px;
   font-size: .875rem;
   color: hsl(var(--foreground));

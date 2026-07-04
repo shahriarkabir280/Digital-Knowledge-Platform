@@ -31,19 +31,6 @@ export function ResourceCardSkeleton() {
           <Skeleton className="h-4 w-16 rounded-full" />
           <Skeleton className="h-4 w-12 rounded-full" />
         </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-border/50 pt-2.5 mt-1">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-3 w-3 rounded-full" />
-            <Skeleton className="h-3 w-14" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Skeleton className="h-6 w-10" />
-            <Skeleton className="h-6 w-12" />
-          </div>
-        </div>
       </div>
     </Card>
   )

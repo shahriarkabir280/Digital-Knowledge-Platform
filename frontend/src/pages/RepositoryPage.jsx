@@ -4,12 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../app/use-auth.js'
 import { apiRequest } from '../services/api/client'
 import { uploadDocument } from '../services/api/documents.js'
-import PDFThumbnail from '../components/library/PDFThumbnail.jsx'
 import { ResourceGridSkeleton, SidebarSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
+import ResourceCard from '../components/library/ResourceCard.jsx'
 import { extractFileMetadata } from '../services/metadataExtractor.js'
 import { 
   Search, 
@@ -17,9 +16,7 @@ import {
   Bookmark, 
   Plus, 
   X, 
-  Star, 
   Filter, 
-  Quote, 
   BookOpen, 
   Sparkles,
   CloudUpload,
@@ -177,15 +174,6 @@ export default function RepositoryPage() {
     return 'Research Paper'
   }
 
-  const getTypeBadgeStyles = (type) => {
-    switch (type) {
-      case 'Research Paper': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-      case 'Thesis': return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
-      case 'Dataset': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
-      default: return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
-    }
-  }
-
   // Filtered lists
   const filteredExplore = useMemo(() => {
     return publishedDocs.filter(item => {
@@ -231,15 +219,13 @@ export default function RepositoryPage() {
     return ['All', ...Array.from(crs)]
   }, [publishedDocs])
 
+  const visibleBookmarks = useMemo(() =>
+    exploreBookmarks.filter(id => publishedDocs.some(doc => doc.id === id)),
+    [exploreBookmarks, publishedDocs]
+  )
+
   const toggleBookmark = (id) => {
     setExploreBookmarks(prev => prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id])
-  }
-
-  const copyCitation = (resource) => {
-    const year = resource.year || new Date(resource.updatedAt || Date.now()).getFullYear()
-    const citation = `${resource.author || 'Anonymous'}. (${year}). ${resource.title}. Department of ${resource.department || 'CSE'}, Research Repository.`
-    navigator.clipboard.writeText(citation)
-    alert('APA citation copied to clipboard!')
   }
 
   // Upload handlers
@@ -498,100 +484,20 @@ export default function RepositoryPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               {filteredExplore.map(item => {
                 const type = getResearchType(item)
-                const isBookmarked = exploreBookmarks.includes(item.id)
-                const isPdfRenderable = ['Research Paper', 'Thesis'].includes(type) && Boolean(item.pdfUrl)
-                const fallbackSrc = type === 'Dataset' ? '/thumbs/thumb_dataset.png' : '/thumbs/thumb_paper.png'
-                const badgeColor = type === 'Dataset' ? 'bg-purple-600' : type === 'Thesis' ? 'bg-indigo-600' : 'bg-blue-600'
+                const viewerLink = item.id.startsWith('doc-')
+                  ? `/viewer/${item.id.replace('doc-', '')}`
+                  : `/library/resource/${item.id}`
 
                 return (
-                  <Card key={item.id} className="group hover:shadow-md transition-all border-border flex flex-col overflow-hidden">
-                    
-                    {/* Thumbnail section */}
-                    <Link to={item.id.startsWith('doc-') ? `/viewer/${item.id.replace('doc-', '')}` : `/library/resource/${item.id}`} className="relative block h-40 overflow-hidden group">
-                      {isPdfRenderable ? (
-                        <PDFThumbnail
-                          pdfUrl={item.pdfUrl}
-                          fallbackSrc={fallbackSrc}
-                          badgeColor={badgeColor}
-                          badgeLabel={type}
-                        />
-                      ) : (
-                        <div className="relative w-full h-40 overflow-hidden bg-muted">
-                          <img
-                            src={fallbackSrc}
-                            alt={item.title}
-                            className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all duration-200 flex items-center justify-center">
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
-                              Click to View Details
-                            </span>
-                          </div>
-                          <span className={`absolute bottom-2 left-2 ${badgeColor} text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded`}>
-                            {type}
-                          </span>
-                        </div>
-                      )}
-                    </Link>
-
-                    <CardHeader className="p-4 pb-1">
-                      <div className="flex justify-between items-start gap-2">
-                        <Badge className={`text-[10px] font-bold px-2 py-0.5 border uppercase ${getTypeBadgeStyles(type)}`}>
-                          {type}
-                        </Badge>
-                        <Button size="icon" variant="ghost" className="w-7 h-7 hover:text-accent rounded-full -mt-0.5 -mr-1"
-                          onClick={() => toggleBookmark(item.id)}>
-                          <Bookmark size={14} className={isBookmarked ? 'fill-accent text-accent' : 'text-muted-foreground'} />
-                        </Button>
-                      </div>
-                      <CardTitle className="text-sm font-bold leading-snug mt-2 line-clamp-2 group-hover:text-accent transition-colors">
-                        {item.title}
-                      </CardTitle>
-                      <p className="text-[11px] text-muted-foreground">
-                        {item.author || 'Anonymous'} · <span className="font-semibold text-accent-strong">{item.department || 'CSE'}</span>
-                      </p>
-                      {item.uploaderName && (
-                        <p className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-0.5">
-                          <span>Posted by <span className="font-medium text-foreground/70">{item.uploaderName}</span></span>
-                        </p>
-                      )}
-                    </CardHeader>
-                    
-                    <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-between gap-3">
-                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                        {item.summary || 'No summary description provided.'}
-                      </p>
-
-                      <div className="flex flex-wrap gap-1">
-                        {(item.tags || []).slice(0, 3).map(tag => (
-                          <Badge key={tag} variant="outline" className="text-[9px] py-0 px-1.5 bg-muted/10 text-muted-foreground border-muted/35">
-                            #{tag}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-border/50 pt-2.5 mt-1 text-[10px] text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center gap-0.5 text-amber-500"><Star size={11} className="fill-amber-500" /> {item.rating || '5.0'}</span>
-                          <span>·</span>
-                          <span>{item.downloads || 0} DLs</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" className="h-7 text-[10px] px-2 gap-1 font-semibold text-muted-foreground hover:text-foreground"
-                            onClick={() => copyCitation(item)}>
-                            <Quote size={10} /> Cite
-                          </Button>
-                          <Button asChild variant="secondary" size="sm" className="h-7 text-[10px] px-2.5 font-bold">
-                            {item.id.startsWith('doc-') ? (
-                              <Link to={`/viewer/${item.id.replace('doc-', '')}`}>Open →</Link>
-                            ) : (
-                              <Link to={`/library/resource/${item.id}`}>Open →</Link>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ResourceCard
+                    key={item.id}
+                    item={item}
+                    type={type}
+                    isBookmarked={exploreBookmarks.includes(item.id)}
+                    onBookmark={toggleBookmark}
+                    viewerLink={viewerLink}
+                    pdfUrl={item.pdfUrl}
+                  />
                 )
               })}
             </div>
@@ -620,26 +526,30 @@ export default function RepositoryPage() {
           <Card className="border-border">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Bookmark size={13} className="text-accent" /> Bookmarks ({exploreBookmarks.length})
+                <Bookmark size={13} className="text-accent" /> Bookmarks ({visibleBookmarks.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0 grid gap-2.5">
-              {exploreBookmarks.length === 0 ? (
+              {visibleBookmarks.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground italic">No bookmarked items yet.</p>
               ) : (
-                publishedDocs.filter(r => exploreBookmarks.includes(r.id)).map(r => (
-                  <div key={r.id} className="group flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
-                    <div className="grid gap-0.5 min-w-0">
-                      <Link to={`/library/resource/${r.id}`} className="text-xs font-bold text-foreground truncate hover:text-accent transition-colors">
-                        {r.title}
-                      </Link>
-                      <p className="text-[10px] text-muted-foreground truncate">{r.author}</p>
+                visibleBookmarks.map(id => {
+                  const r = publishedDocs.find(doc => doc.id === id)
+                  if (!r) return null
+                  return (
+                    <div key={r.id} className="group flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                      <div className="grid gap-0.5 min-w-0">
+                        <Link to={`/library/resource/${r.id}`} className="text-xs font-bold text-foreground truncate hover:text-accent transition-colors">
+                          {r.title}
+                        </Link>
+                        <p className="text-[10px] text-muted-foreground truncate">{r.author}</p>
+                      </div>
+                      <Button size="icon" variant="ghost" className="w-6 h-6 hover:text-red-500 shrink-0" onClick={() => toggleBookmark(r.id)}>
+                        <X size={12} />
+                      </Button>
                     </div>
-                    <Button size="icon" variant="ghost" className="w-6 h-6 hover:text-red-500 shrink-0" onClick={() => toggleBookmark(r.id)}>
-                      <X size={12} />
-                    </Button>
-                  </div>
-                ))
+                  )
+                })
               )}
             </CardContent>
           </Card>

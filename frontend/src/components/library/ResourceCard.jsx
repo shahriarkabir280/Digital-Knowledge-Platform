@@ -1,0 +1,130 @@
+import { Link } from 'react-router-dom'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Bookmark, PlayCircle } from 'lucide-react'
+import PDFThumbnail from './PDFThumbnail.jsx'
+
+const typeBadgeClass = 'bg-accent/10 text-accent border-accent/20'
+
+const fallbackThumb = {
+  'Research Paper': '/thumbs/thumb_paper.png',
+  'Thesis': '/thumbs/thumb_paper.png',
+  'Dataset': '/thumbs/thumb_dataset.png',
+  'Textbook': '/thumbs/thumb_pdf.png',
+  'Lecture Slides': '/thumbs/thumb_ppt.png',
+  'Lab Manual': '/thumbs/thumb_pdf.png',
+  'Question Bank': '/thumbs/thumb_qbank.png',
+  'Assignment': '/thumbs/thumb_assignment.png',
+  'Lab Report': '/thumbs/thumb_lab_report.png',
+}
+
+export default function ResourceCard({
+  item,
+  type,
+  isBookmarked,
+  onBookmark,
+  viewerLink,
+  pdfUrl,
+  hasVideo,
+  youtubeId,
+}) {
+  const fallbackSrc = fallbackThumb[type] || '/thumbs/thumb_pdf.png'
+
+  const thumbnail = hasVideo ? (
+    <Link to={viewerLink} className="relative block h-40 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 group">
+      <img
+        src={`https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`}
+        alt={item.title}
+        className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity"
+        onError={(e) => { e.currentTarget.style.display = 'none' }}
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+          <PlayCircle size={28} className="text-white fill-white" />
+        </div>
+      </div>
+      <span className="absolute top-2 left-2 bg-accent text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">
+        {type}
+      </span>
+    </Link>
+  ) : (
+    <Link to={viewerLink} className="relative block h-40 overflow-hidden group">
+      {pdfUrl ? (
+        <PDFThumbnail
+          pdfUrl={pdfUrl}
+          fallbackSrc={fallbackSrc}
+          badgeColor="bg-accent"
+          badgeLabel={type}
+        />
+      ) : (
+        <div className="relative w-full h-40 overflow-hidden bg-muted">
+          <img
+            src={fallbackSrc}
+            alt={item.title}
+            className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all duration-200 flex items-center justify-center">
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
+              Click to View Details
+            </span>
+          </div>
+          <span className="absolute bottom-2 left-2 bg-accent text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">
+            {type}
+          </span>
+        </div>
+      )}
+    </Link>
+  )
+
+  return (
+    <Card className="group hover:shadow-md transition-all border-border flex flex-col overflow-hidden">
+      {thumbnail}
+
+      <CardHeader className="p-4 pb-1">
+        <div className="flex justify-between items-start gap-2">
+          <Badge className={`text-[10px] font-bold px-2 py-0.5 border uppercase ${typeBadgeClass}`}>
+            {type}
+          </Badge>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="w-7 h-7 hover:text-accent rounded-full -mt-0.5 -mr-1 shrink-0"
+            onClick={(e) => { e.preventDefault(); onBookmark?.(item.id) }}
+          >
+            <Bookmark size={14} className={isBookmarked ? 'fill-accent text-accent' : 'text-muted-foreground'} />
+          </Button>
+        </div>
+        <Link to={viewerLink} className="hover:text-accent transition-colors">
+          <CardTitle className="text-sm font-bold leading-snug mt-2 line-clamp-2">
+            {item.title}
+          </CardTitle>
+        </Link>
+        <p className="text-[11px] text-muted-foreground">
+          {item.author || 'Anonymous'} · <span className="font-semibold text-accent-strong">{item.department || item.course || 'General'}</span>
+        </p>
+        {item.uploaderName && (
+          <p className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-0.5">
+            <span>Posted by <span className="font-medium text-foreground/70">{item.uploaderName}</span></span>
+          </p>
+        )}
+      </CardHeader>
+
+      <CardContent className="p-4 pt-0 flex-1 flex flex-col gap-3">
+        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+          {item.summary || 'No summary description provided.'}
+        </p>
+
+        {(item.tags || []).length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {(item.tags || []).slice(0, 3).map(tag => (
+              <Badge key={tag} variant="outline" className="text-[9px] py-0 px-1.5 bg-muted/10 text-muted-foreground border-muted/35">
+                #{tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

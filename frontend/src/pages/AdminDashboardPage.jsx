@@ -36,33 +36,46 @@ export default function AdminDashboardPage() {
   const { authState } = useAuth()
   const [researchPendingCount, setResearchPendingCount] = useState(0)
   const [libraryPendingCount, setLibraryPendingCount] = useState(0)
+  const [totalPublished, setTotalPublished] = useState(0)
 
   useEffect(() => {
-    const fetchPendingCounts = async () => {
+    const fetchCounts = async () => {
+      // Fetch total published document count (admin-specific endpoint)
       try {
-        // Fetch research papers pending count
+        const response = await apiRequest('/documents/all-uploads?state=published', {
+          authToken: authState.token,
+        })
+        setTotalPublished(response?.data?.total || 0)
+        console.log('[Admin] Total published documents:', response?.data?.total)
+      } catch (error) {
+        console.error('[Admin] Failed to fetch published count:', error)
+      }
+
+      // Fetch research papers pending count
+      try {
         const researchResponse = await apiRequest('/documents/pending?resourceCategory=research-paper', {
           authToken: authState.token,
         })
         setResearchPendingCount(researchResponse?.data?.total || 0)
+      } catch (error) {
+        console.error('Failed to fetch research pending count:', error)
+      }
 
-        // Fetch all academic resources pending count (no specific category filter to get all academic resources)
+      // Fetch all academic resources pending count
+      try {
         const libraryResponse = await apiRequest('/documents/pending', {
           authToken: authState.token,
         })
-        // Filter out research papers since we fetched them separately
         const allPending = libraryResponse?.data?.items || []
         const academicPending = allPending.filter(item => item.resourceCategory !== 'research-paper')
         setLibraryPendingCount(academicPending.length)
-
-        console.log('Research pending:', researchResponse?.data?.total, 'Academic pending:', academicPending.length)
       } catch (error) {
-        console.error('Failed to fetch pending counts:', error)
+        console.error('Failed to fetch library pending count:', error)
       }
     }
 
     if (authState?.token) {
-      fetchPendingCounts()
+      fetchCounts()
     }
   }, [authState?.token])
 
@@ -70,7 +83,7 @@ export default function AdminDashboardPage() {
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-4">
-      <header className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-[1fr_320px] md:items-start">
+      <header className="flex flex-col sm:flex-row items-start justify-between gap-4 rounded-lg border border-border bg-card p-5">
         <div className="grid gap-2">
           <p className="brand-kicker">Admin Dashboard</p>
           <h2 className="text-2xl font-semibold tracking-tight">System control center</h2>
@@ -80,26 +93,39 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="grid gap-2 text-sm">
-          <div className="rounded-md border border-border bg-muted/30 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Access tier</p>
-            <strong>Administrator</strong>
+        <div className="flex items-center gap-3 text-xs shrink-0">
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-center">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Tier</p>
+            <strong className="text-foreground">Admin</strong>
           </div>
-          <div className="rounded-md border border-border bg-muted/30 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Signed in as</p>
-            <strong>{authState.name || 'Anonymous'}</strong>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-center">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">User</p>
+            <strong className="text-foreground">{authState.name || 'Anonymous'}</strong>
           </div>
-          <div className="rounded-md border border-border bg-muted/30 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Active modules</p>
-            <strong>{adminCards.length}</strong>
-          </div>
-          <div className="rounded-md border border-border bg-yellow-500/10 p-3 border-yellow-500/20">
-            <p className="text-xs uppercase tracking-wide text-yellow-600">Pending Approvals</p>
-            <strong className="text-lg text-yellow-600">{totalPending}</strong>
-            <p className="text-xs text-yellow-600/70 mt-1">{researchPendingCount} research · {libraryPendingCount} library</p>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-center">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Modules</p>
+            <strong className="text-foreground">{adminCards.length}</strong>
           </div>
         </div>
       </header>
+
+      {/* Big metric cards — 50/50 split */}
+      <div className="flex gap-4">
+        <Card className="flex-1 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
+          <CardContent className="p-6">
+            <p className="text-xs uppercase tracking-wider text-blue-600 font-bold">Total Publications</p>
+            <span className="text-5xl font-black text-blue-600">{totalPublished}</span>
+            <p className="text-[11px] text-blue-600/60 mt-0.5">Research + Academic resources</p>
+          </CardContent>
+        </Card>
+        <Card className="flex-1 border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 to-transparent">
+          <CardContent className="p-6">
+            <p className="text-xs uppercase tracking-wider text-yellow-600 font-bold">Pending Approvals</p>
+            <span className="text-5xl font-black text-yellow-600">{totalPending}</span>
+            <p className="text-[11px] text-yellow-600/60 mt-0.5">{researchPendingCount} research · {libraryPendingCount} library</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         {adminCards.map((card) => (

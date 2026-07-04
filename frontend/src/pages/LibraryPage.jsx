@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { 
   Search, 
   BookOpen, 
@@ -39,11 +40,74 @@ import { toast } from 'sonner'
 
 export default function LibraryPage() {
   const { authState } = useAuth()
-  
-  // Published documents from backend API
-  const [publishedDocs, setPublishedDocs] = useState([])
-  const [loadingPublished, setLoadingPublished] = useState(true)
-  const [fetchTrigger, setFetchTrigger] = useState(0)
+  const queryClient = useQueryClient()
+
+  const { data: publishedDocs = [], isLoading: loadingPublished } = useQuery({
+    queryKey: ['library-docs', authState?.token || 'guest'],
+    queryFn: async ({ queryKey }) => {
+      const token = queryKey[1] === 'guest' ? null : queryKey[1]
+      const isGuest = !token
+      const categories = ['textbook', 'lecture-slides', 'lab-manual', 'question-bank', 'assignment', 'lab-report', 'media']
+      const docs = []
+      const seenDocIds = new Set()
+
+      for (const resourceCategory of categories) {
+        try {
+          const accessTierParam = isGuest ? '&accessTier=PUBLIC' : ''
+          const response = await apiRequest(`/documents/published?resourceCategory=${resourceCategory}${accessTierParam}`, {
+            authToken: token,
+          })
+
+          if (response?.data?.items?.length) {
+            for (const doc of response.data.items) {
+              const numericDocId = Number(doc.id)
+              let signedUrl = `/api/repository/files/${numericDocId || doc.id}/content`
+
+              try {
+                const signedUrlResponse = await apiRequest(`/repository/files/${numericDocId || doc.id}/signed-url`, {
+                  authToken: token,
+                })
+                if (signedUrlResponse?.data?.signedUrl) {
+                  signedUrl = signedUrlResponse.data.signedUrl
+                }
+              } catch (err) {
+                console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
+              }
+
+              const docId = `doc-${doc.id}`
+              if (seenDocIds.has(docId)) continue
+              seenDocIds.add(docId)
+
+              docs.push({
+                id: docId,
+                title: doc.title,
+                type: doc.type || 'Lecture Notes',
+                format: doc.format,
+                version: doc.version,
+                state: doc.state,
+                resourceCategory: doc.resourceCategory || resourceCategory,
+                pdfUrl: signedUrl,
+                updatedAt: doc.updatedAt,
+                department: doc.department || 'CSE',
+                course: doc.course || 'N/A',
+                author: doc.author || 'Unknown',
+                tags: doc.keywords || [],
+                rating: 5.0,
+                downloads: 0,
+                uploaderName: doc.uploaderName || null,
+              })
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch published documents for ${resourceCategory}:`, error)
+        }
+      }
+
+      localStorage.setItem('dkp_published_docs_cache', JSON.stringify(docs))
+      return docs
+    },
+    staleTime: 5 * 60 * 1000,
+  })
   
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
@@ -77,83 +141,8 @@ export default function LibraryPage() {
     localStorage.setItem('dkp_bookmarked_resources', JSON.stringify(bookmarks))
   }, [bookmarks])
 
-  // Fetch published documents from backend by academic-resource category
-  const fetchPublishedDocuments = useCallback(async () => {
-    const isGuest = !authState?.token
-    try {
-      setLoadingPublished(true)
-      const categories = ['textbook', 'lecture-slides', 'lab-manual', 'question-bank', 'assignment', 'lab-report', 'media']
-      const docs = []
-      const seenDocIds = new Set()
+  // Keep this useEffect for bookmark sync (separate from data fetching)
 
-      for (const resourceCategory of categories) {
-        try {
-          // Guests only fetch PUBLIC resources; authenticated users fetch all
-          const accessTierParam = isGuest ? '&accessTier=PUBLIC' : ''
-          const response = await apiRequest(`/documents/published?resourceCategory=${resourceCategory}${accessTierParam}`, {
-            authToken: authState?.token,
-          })
-
-          if (response?.data?.items?.length) {
-            for (const doc of response.data.items) {
-              const numericDocId = Number(doc.id)
-              let signedUrl = `/api/repository/files/${numericDocId || doc.id}/content`
-
-              try {
-                const signedUrlResponse = await apiRequest(`/repository/files/${numericDocId || doc.id}/signed-url`, {
-                  authToken: authState?.token,
-                })
-                if (signedUrlResponse?.data?.signedUrl) {
-                  signedUrl = signedUrlResponse.data.signedUrl
-                }
-              } catch (err) {
-                console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
-              }
-
-              const docId = `doc-${doc.id}`
-              if (seenDocIds.has(docId)) {
-                continue
-              }
-              seenDocIds.add(docId)
-
-              docs.push({
-                id: docId,
-                title: doc.title,
-                type: doc.type || 'Lecture Notes',
-                format: doc.format,
-                version: doc.version,
-                state: doc.state,
-                resourceCategory: doc.resourceCategory || resourceCategory,
-                pdfUrl: signedUrl,
-                updatedAt: doc.updatedAt,
-                department: doc.department || 'CSE',
-                course: doc.course || 'N/A',
-                author: doc.author || 'Unknown',
-                tags: doc.keywords || [],
-                rating: 5.0,
-                downloads: 0,
-                uploaderName: doc.uploaderName || null,
-              })
-            }
-          }
-        } catch (error) {
-          console.error(`Failed to fetch published documents for ${resourceCategory}:`, error)
-        }
-      }
-
-      setPublishedDocs(docs)
-      // Cache for the resource detail page
-      localStorage.setItem('dkp_published_docs_cache', JSON.stringify(docs))
-    } catch (error) {
-      console.error('Failed to fetch published documents:', error)
-    } finally {
-      setLoadingPublished(false)
-    }
-  }, [authState?.token])
-
-  useEffect(() => {
-    fetchPublishedDocuments()
-  }, [fetchPublishedDocuments, fetchTrigger])
 
   const getResourceType = (item) => {
     const category = String(item.resourceCategory || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
@@ -332,7 +321,7 @@ export default function LibraryPage() {
       setIsUploading(false)
     }
 
-    setFetchTrigger(n => n + 1)
+    queryClient.invalidateQueries({ queryKey: ['library-docs'] })
 
     if (intent === 'draft') {
       setShowUploadModal(false)

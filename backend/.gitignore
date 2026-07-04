@@ -41,3 +41,8 @@ build
 tmp
 temp
 *.tmp
+
+# Python microservice
+__pycache__
+*.pyc
+python-service/app/model.joblib

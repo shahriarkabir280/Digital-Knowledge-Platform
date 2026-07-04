@@ -128,6 +128,12 @@ async function extractWithLocalService(documentText) {
     }
 
     const data = await response.json()
+    if (data._debug) {
+      console.group('%c[Metadata Extraction]', 'color: #f59e0b; font-weight: bold')
+      console.log('First 20 lines:', data._debug.firstLines)
+      console.log('First 500 chars:', data._debug.first500)
+      console.groupEnd()
+    }
     return data
   } catch {
     return { title: null, author: null, abstract: null, keywords: [], success: false, error: 'Metadata extraction service unavailable. Fill fields manually.' }

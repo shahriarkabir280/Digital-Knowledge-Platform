@@ -1,5 +1,5 @@
 const path = require('path');
-const pdfParse = require('pdf-parse');
+const { PDFParse } = require('pdf-parse');
 const mammoth = require('mammoth');
 const db = require('../db');
 const { findResourceById } = require('../modules/documents/resourceStorage');
@@ -31,8 +31,9 @@ async function extractTextFromBuffer(buffer, ext) {
   const normalizedExt = ext.toLowerCase();
   try {
     if (normalizedExt === 'pdf') {
-      const parsed = await pdfParse(buffer);
-      return parsed.text || '';
+      const parser = new PDFParse({ data: buffer });
+      const result = await parser.getText();
+      return result.text || '';
     } else if (normalizedExt === 'docx') {
       const result = await mammoth.extractRawText({ buffer });
       return result.value || '';
@@ -77,38 +78,287 @@ function extractMetadataLocally(text, filename) {
   }
 
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  // Expand very long lines (common in pdfjs-dist where items join into one line)
+  const expandedLines = [];
+  for (const line of lines) {
+    if (line.length > 400) {
+      // Multi-level split: sentences, then author/affiliation boundaries
+      let parts = line.split(/(?<=[.!?])(?<![A-Z]\.)\s+(?=[A-Z0-9"'(])/);
+      const result = [];
+      for (const part of parts) {
+        if (part.length > 80) {
+          // Split on comma+space before capitalized names (author boundaries)
+          // Handles middle initials (M. M.) and hyphenated names (Hans-Peter)
+          const sub = part.split(/(?:,\s*)(?=[A-Z][a-zA-Z.\u00C0-\u024F-]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-zA-Z.\u00C0-\u024F-]+\s*(?:,|$|Institute|University|Department|College|School|Laboratory|Lab|Proc\.))/);
+          for (const s of sub) {
+            if (s.length > 150) {
+              // Further split on affiliation markers
+              const sub2 = s.split(/\s+(?=(?:Institute|Department|University|College|School|Laboratory|Lab|Proc\.|phone:|email:|http))/);
+              result.push(...sub2);
+            } else {
+              result.push(s);
+            }
+          }
+        } else {
+          result.push(part);
+        }
+      }
+      expandedLines.push(...result.map(p => p.trim()).filter(p => p.length > 0));
+    } else {
+      expandedLines.push(line);
+    }
+  }
+  if (expandedLines.length > lines.length) {
+    // Replace lines with expanded version for better title/author detection
+    lines.length = 0;
+    lines.push(...expandedLines);
+  }
   const first1000Chars = text.slice(0, 1000);
   const first3000Chars = text.slice(0, 3000);
 
-  // 1. Title Heuristics
+  let abstractMerged = false;
+  // Find the abstract heading — first standalone, then merged with body text
+  let abstractHeadingIdx = lines.findIndex(l => {
+    const stripped = l.replace(/^[\d\s\.\#\*\+†‡§¶\-—]+/, '').trim();
+    return /^(abstract|summary|executive summary)\s*:?\s*$/i.test(stripped);
+  });
+  if (abstractHeadingIdx < 0) {
+    // "Abstract" at start of line merged with body text (first 5 lines)
+    abstractHeadingIdx = lines.findIndex((l, i) => {
+      if (i >= 5) return false;
+      return /^(abstract|summary|executive summary)\s/i.test(l.trim()) && l.trim().length > 12;
+    });
+    if (abstractHeadingIdx >= 0) abstractMerged = true;
+  }
+  // Lines to search for title
+  const preAbstractLines = abstractHeadingIdx >= 3
+    ? lines.slice(0, abstractHeadingIdx)
+    : abstractHeadingIdx >= 0
+      ? lines.slice(0, Math.min(lines.length, 250))
+      : lines.slice(0, Math.min(lines.length, 15));
+  // Lines after title, before abstract (author region)
+  const authorRegion = abstractHeadingIdx >= 0
+    ? preAbstractLines
+    : lines.slice(0, Math.min(lines.length, 12));
+
+  // 1. Title Heuristics — search only in pre-abstract region
   let title = fallbackTitle;
-  // Look at the first 5 lines for a candidate title
-  for (let i = 0; i < Math.min(lines.length, 5); i++) {
-    const line = lines[i];
-    // Candidate title should be between 10 and 120 characters, not contain dates or author keywords
-    if (
-      line.length >= 10 &&
-      line.length <= 120 &&
-      !/^(page|isbn|volume|author|date|published|abstract|introduction|http)/i.test(line) &&
-      !/\d{4}/.test(line)
-    ) {
-      title = line;
-      break;
+  const nonTitleStart = /^(page|isbn|volume|issn|doi|arxiv|abstract|introduction|keywords|references|conclusion|acknowledgements|appendix|figure|table|contents|chapter|http|https|www\.|email|corresponding)/i;
+  const sectionHeading = /^(abstract|introduction|keywords|references|conclusion|acknowledgements|appendix|methodology|results|discussion|related work(?!\s+(?:on|in|by|to))|background|literature review|method|experiment|proposed)/i;
+
+  let bestScore = -10;
+  let bestTitle = null;
+
+  const maxHeadLines = abstractHeadingIdx >= 0 && abstractHeadingIdx < 3 ? 200 : 15;
+  for (let i = 0; i < Math.min(preAbstractLines.length, maxHeadLines); i++) {
+    let raw = preAbstractLines[i];
+    const startsWithDigit = /^\d/.test(raw);
+    raw = raw.replace(/^(title|paper|topic|report|article|research)\s*:\s*/i, '').trim();
+    const cleaned = raw.replace(/^[\d\s\.\#\*\+†‡§¶\-—·•●]+/, '').trim();
+    if (cleaned.length < 5 || cleaned.length > 200) continue;
+    if (nonTitleStart.test(cleaned)) continue;
+    if (sectionHeading.test(cleaned)) continue;
+    if (/^[\d\s\-—_]+$/.test(cleaned)) continue;
+    if (/^---\s/.test(cleaned)) continue;
+    if (/^[\w.-]+@[\w.-]+\.\w+/.test(cleaned)) continue;
+    if (/^https?:\/\//i.test(cleaned)) continue;
+    // Skip single words or just punctuation
+    if (!/\s/.test(cleaned) && cleaned.length < 8) continue;
+
+    // Strip trailing author name from title (e.g., "...Structure Mihael Ankerst")
+    let baseCleaned = cleaned;
+    const trailingAuthor = cleaned.match(/^(.+?[:\u2013\u2014].{10,90}?)\s+[A-Z][a-zA-Z.'-]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-zA-Z.'-]+[.,;]?$/);
+    if (trailingAuthor) baseCleaned = trailingAuthor[1].trim();
+    // Strip common non-title prefixes (e.g., "Related work on OPTICS:" → "OPTICS:")
+    baseCleaned = baseCleaned.replace(/^(related work on|the rest of the paper|work on|as follows|the paper|this paper)\s*/i, '').trim();
+
+    let score = 0;
+    if (startsWithDigit) score -= 2;
+    if (/^[A-Z]/.test(baseCleaned)) score += 5;
+    if (/\s/.test(baseCleaned)) score += 4;
+    if (baseCleaned.length > 25) score += 4;
+    else if (baseCleaned.length > 15) score += 2;
+    if (!/\.$/.test(baseCleaned)) score += 1;
+    if (baseCleaned === baseCleaned.toLowerCase()) score -= 5;
+    if (i === 0) score += 2;
+    else if (i === 1) score += 1;
+    if (/\b(authors?|by|keywords|corresponding)\s*:/i.test(baseCleaned)) score -= 10;
+    // Penalize generic headers
+    if (/^(first|second|third|next|last|page|line|section|part|introduction)\b/i.test(baseCleaned)) score -= 5;
+    // Penalize all-caps journal/conference names
+    if (baseCleaned === baseCleaned.toUpperCase() && (/\b(CONFERENCE|PROCEEDINGS|JOURNAL|WORKSHOP|SYMPOSIUM|TRANSACTIONS)\b/i.test(baseCleaned))) score -= 8;
+
+    // Penalize lines that are clearly author lists (3+ comma-separated capitalized names)
+    const nameCount = (baseCleaned.match(/,\s*[A-Z][a-zA-Z.\-]+\s+[A-Z][a-zA-Z.\-]+/g) || []).length;
+    if (nameCount >= 2) score -= 12;
+
+    // Penalty for body-text indicators
+    if (/[;.!?]$/.test(baseCleaned)) score -= 3;
+    if (/^(however|therefore|thus|hence|furthermore|moreover|consequently|nevertheless|additionally|meanwhile|in addition|on the other hand|as a result|for example|for instance|related work|the rest|work on|as follows|the paper|this paper|we present|we propose|we introduce|we describe|in this)\b/i.test(baseCleaned)) score -= 8;
+    // Bonus for colon/m-dash (academic subtitle)
+    if (/\s*[:\u2013\u2014]\s*[A-Z]/.test(baseCleaned)) score += 6;
+    // Bonus for uppercase acronyms
+    if (/[A-Z]{2,}/.test(baseCleaned)) score += 2;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestTitle = baseCleaned;
+    }
+  }
+  title = bestTitle || fallbackTitle;
+  // If still fallback, use first decent line from pre-abstract region
+  if (title === fallbackTitle) {
+    const fallback = preAbstractLines.find(l => {
+      const c = l.replace(/^[\d\s\.\#\*\+†‡§¶\-—·•●]+/, '').trim();
+      return c.length >= 8 && /\s/.test(c) && /^[A-Z]/.test(c);
+    });
+    if (fallback) title = fallback.replace(/^[\d\s\.\#\*\+†‡§¶\-—·•●]+/, '').trim();
+  }
+
+  // Second pass: search the last 50 lines for a better title candidate
+  if (title === fallbackTitle || lines.length > 20) {
+    const tailStart = Math.max(0, lines.length - 50);
+    let tailBestScore = -10;
+    let tailBestTitle = null;
+    for (let i = tailStart; i < lines.length; i++) {
+      const raw = lines[i].replace(/^(title|paper|topic|report|article|research)\s*:\s*/i, '').trim();
+      let cleaned = raw.replace(/^[\d\s\.\#\*\+†‡§¶\-—·•●]+/, '').trim();
+      if (cleaned.length < 5 || cleaned.length > 200) continue;
+      if (nonTitleStart.test(cleaned)) continue;
+      if (sectionHeading.test(cleaned)) continue;
+      if (/^[\d\s\-—_]+$/.test(cleaned)) continue;
+      if (/^[\w.-]+@[\w.-]+\.\w+/.test(cleaned)) continue;
+      if (/^https?:\/\//i.test(cleaned)) continue;
+      if (!/\s/.test(cleaned) && cleaned.length < 8) continue;
+
+      // Strip trailing author names if the line has both title and authors
+      const authorSuffixMatch = cleaned.match(/^(.+?[:\u2013\u2014].{5,90}?)(\s+[A-Z][a-zA-Z.\-]+\s+[A-Z][a-zA-Z.\-]+,.*)$/);
+      if (authorSuffixMatch) cleaned = authorSuffixMatch[1].trim();
+
+      let score = 0;
+      if (/^[A-Z]/.test(cleaned)) score += 5;
+      if (/\s/.test(cleaned)) score += 4;
+      if (cleaned.length > 25) score += 4;
+      else if (cleaned.length > 15) score += 2;
+      if (!/\.$/.test(cleaned)) score += 1;
+      if (cleaned === cleaned.toLowerCase()) score -= 5;
+      if (/\s*[:\u2013\u2014]\s*[A-Z]/.test(cleaned)) score += 6;
+      if (/['’]\w{2,}\b/.test(cleaned)) score += 2;
+      if (/[A-Z]{2,}/.test(cleaned)) score += 2;
+      if (/(?:et\s+al\.?|pp\.?\s*\d+)/i.test(cleaned)) score -= 8;
+      if (/^\d+\s/.test(cleaned)) score -= 3;
+      if (cleaned.split(/\s+/).length > 10) score += 3;
+      // Penalize lines that are clearly author lists (3+ comma-separated capitalized names)
+      const tailNameCount = (cleaned.match(/,\s*[A-Z][a-zA-Z.\-]+\s+[A-Z][a-zA-Z.\-]+/g) || []).length;
+      if (tailNameCount >= 2) score -= 12;
+
+      if (score > tailBestScore) {
+        tailBestScore = score;
+        tailBestTitle = cleaned;
+      }
+    }
+    // Only override if tail found a higher scoring candidate
+    if (tailBestTitle && tailBestScore > bestScore) {
+      title = tailBestTitle;
     }
   }
 
-  // 2. Author Heuristics
+  // 2. Author Heuristics — search in authorRegion, skipping the title line
   let author = null;
-  const authorRegex = /(?:author|by|creator)s?\s*:\s*([A-Z][a-zA-Z.\s]{3,40})/i;
-  const authorMatch = first1000Chars.match(authorRegex);
-  if (authorMatch) {
-    author = authorMatch[1].trim();
-  } else {
-    // Check if the 2nd or 3rd line looks like an author name (2-3 words, capitalized)
-    for (let i = 1; i < Math.min(lines.length, 4); i++) {
-      const line = lines[i];
-      if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2}$/.test(line) && !/^(abstract|introduction|keywords|contents)/i.test(line)) {
-        author = line;
+  const titleIdx = preAbstractLines.findIndex(l => {
+    const cleaned = l.replace(/^[\d\s\.\#\*\+†‡§¶\-—·•●]+/, '').trim();
+    return cleaned.includes(title) || title.includes(cleaned);
+  });
+  const authorStartIdx = titleIdx >= 0 ? titleIdx + 1 : 0;
+  const authorEndIdx = Math.min(authorRegion.length, authorStartIdx + 8);
+
+  const nameChar = '[A-Za-z\u00C0-\u024F\'.\u2013-]';
+  const authorPattern = new RegExp('^[A-Z\u00C0-\u024F]' + nameChar + '+(?:(?:\\s|,\\s*)[A-Z\u00C0-\u024F]' + nameChar + '+)*(?:\\s*(?:and|&)\\s*[A-Z\u00C0-\u024F]' + nameChar + '+(?:(?:\\s|,\\s*)[A-Z\u00C0-\u024F]' + nameChar + '+)*)*$');
+
+  const authorNames = [];
+  for (let i = authorStartIdx; i < authorEndIdx; i++) {
+    const line = authorRegion[i];
+    const cleaned = line.replace(/[\d\*†‡§¶\u00B9-\u00BE\u2070-\u209F\u2122]+/g, '').replace(/\s{2,}/g, ' ').trim();
+    if (cleaned.length < 6 || cleaned.length > 200) continue;
+    if (/^(abstract|introduction|keywords|references|conclusion|acknowledgements|appendix|methodology|results|discussion|department|university|college|school|institute|laboratory|lab|email|http|www\.|corresponding)/i.test(cleaned)) continue;
+    if (/^[\d\s\-—_]+$/.test(cleaned)) continue;
+    if (/^---\s/.test(cleaned)) continue;
+    if (authorPattern.test(cleaned)) {
+      authorNames.push(cleaned);
+    } else if (authorNames.length > 0) {
+      break;
+    }
+  }
+  if (authorNames.length > 0) {
+    author = authorNames.join(', ');
+  }
+
+  // Fallback: extract from the title source line + nearby lines (covers stripped trailing names)
+  if (titleIdx >= 0) {
+    const collected = [];
+    // First, extract after-title text from the title line itself
+    const titleLineText = authorRegion[titleIdx];
+    const titlePos = titleLineText ? titleLineText.indexOf(title) : -1;
+    if (titlePos >= 0) {
+      const afterTitle = titleLineText.substring(titlePos + title.length).trim();
+      // Strip institution markers to get pure author names
+      const stripped = afterTitle.replace(/\s+(Institute|University|Department|College|School|Laboratory|Lab|Proc\.).*/i, '').trim();
+      if (stripped) collected.push(stripped);
+    }
+    // Then scan subsequent lines for more author names
+    for (let i = titleIdx + 1; i < Math.min(titleIdx + 8, authorRegion.length); i++) {
+      const text = authorRegion[i];
+      const block = text.replace(/\s+(Institute|University|Department|College|School|Laboratory|Lab|Proc\.).*/i, '').trim();
+      if (block) collected.push(block);
+    }
+    // Flatten all collected text into one, split on commas, validate as names
+    const allText = collected.join(', ');
+    const names = allText.split(/,\s*/).filter(n => {
+      const t = n.trim();
+      if (!t) return false;
+      if (!/^[A-Z\u00C0-\u024F][a-zA-Z.\u00C0-\u024F'-]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-zA-Z.\u00C0-\u024F'-]+$/.test(t)) return false;
+      if (/^(institute|university|department|college|school|laboratory|lab)/i.test(t)) return false;
+      const words = t.split(/\s+/);
+      if (words.length < 2) return false;
+      // Filter out location/state abbreviations (e.g., "Philadelphia PA")
+      if (/^(PA|NY|CA|TX|FL|IL|OH|GA|NC|MI|NJ|VA|WA|AZ|MA|TN|IN|MO|MD|WI|CO|MN|SC|AL|LA|KY|OR|OK|CT|IA|MS|KS|AR|UT|NV|NM|NE|WV|ID|HI|ME|NH|MT|RI|DE|SD|ND|VT|AK|WY|DC)$/.test(words[words.length - 1])) return false;
+      return true;
+    });
+    const unique = [...new Set(names)];
+    if (unique.length > 0) {
+      author = unique.join(', ');
+    }
+  }
+
+  // Fallback: labeled "Author(s):" or "by" line (single-line only)
+  if (!author) {
+    const labeledLine = lines.find(l => /^(?:author|by|creator)s?\s*:/i.test(l));
+    if (labeledLine) {
+      const m = labeledLine.match(/^(?:author|by|creator)s?\s*:?\s*([A-Z\u00C0-\u024F][A-Za-z\u00C0-\u024F.\s,&\-]{3,80})/i);
+      if (m) author = m[1].trim();
+    }
+  }
+
+  // Fallback: search near the end of the document for author lines
+  if (!author && lines.length > 5) {
+    const tailStart = Math.max(0, lines.length - 40);
+    const nameChar = '[A-Za-z\u00C0-\u024F\'.\\-]';
+    const authorNamePattern = new RegExp('^[A-Z\u00C0-\u024F]' + nameChar + '+(?:\\s+[A-Z\u00C0-\u024F]' + nameChar + '*)*\\s+[A-Z\u00C0-\u024F]' + nameChar + '+$');
+    const bannedNameWords = /^(department|institute|university|college|school|laboratory|lab|data|bases|database|conference|proceedings|journal|transaction|symposium|workshop|international|national|association|society|center|centre|group|division|section|committee|publisher|press|book|series|volume|issue|number|pages|springer|elsevier|acm|ieee|proc|proceeding|oettingenstr)/i;
+    for (let i = tailStart; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (/^\[?\d+\]/.test(line)) continue;
+      if (/@|http|www\./i.test(line)) continue;
+      if (/^(abstract|introduction|keywords|references|conclusion|acknowledgements|appendix|methodology|results|discussion|figure|table)/i.test(line)) continue;
+      const cleaned = line.replace(/[\d\*†‡§¶\u00B9-\u00BE\u2070-\u209F\u2122]+/g, '').replace(/\s{2,}/g, ' ').trim();
+      const authorNames = cleaned.split(/\s+(?:and|&)\s+|,\s*/).filter(n => {
+        const t = n.trim();
+        if (!authorNamePattern.test(t)) return false;
+        if (t.split(/\s+/).some(w => bannedNameWords.test(w))) return false;
+        return true;
+      });
+      if (authorNames.length >= 2) {
+        author = cleaned;
         break;
       }
     }
@@ -116,16 +366,33 @@ function extractMetadataLocally(text, filename) {
 
   // 3. Abstract / Description Heuristics
   let abstract = '';
-  const abstractRegex = /(?:abstract|summary|description|introduction)\s*:?\s*([\s\S]{50,1000})/i;
-  const abstractMatch = first3000Chars.match(abstractRegex);
-  if (abstractMatch) {
-    const matchedText = abstractMatch[1].trim();
-    // Split by double newline or next heading to get the abstract paragraph
-    const paragraphs = matchedText.split(/\n\s*\n|\r\n\s*\r\n/);
-    abstract = paragraphs[0].slice(0, 500).trim();
+  // Use heading index for reliable extraction when available
+  if (abstractHeadingIdx >= 0) {
+    const abstractLines = [];
+    let startIdx = abstractHeadingIdx + 1;
+    if (abstractMerged) {
+      const mergedText = lines[abstractHeadingIdx].replace(/^(abstract|summary|executive summary)\s*:?\s*/i, '').trim();
+      if (mergedText) abstractLines.push(mergedText);
+      startIdx = abstractHeadingIdx + 1;
+    }
+    for (let j = startIdx; j < Math.min(lines.length, abstractHeadingIdx + 15); j++) {
+      const ln = lines[j];
+      if (/^(introduction|keywords|references|conclusion|acknowledgements|methodology|results|discussion|related work|background)/i.test(ln)) break;
+      if (/^[\d\s\.\#\*\+†‡§¶\-—]+$/.test(ln)) continue;
+      abstractLines.push(ln);
+    }
+    if (abstractLines.length > 0) {
+      abstract = abstractLines.join(' ').slice(0, 1200).replace(/\s+(?![\s\S]*\.)[^.]+$/, '').trim();
+    }
   }
-  if (!abstract || abstract.length < 30) {
-    // Fallback to the first 300 characters of the document text
+  if (!abstract || abstract.length < 20) {
+    const abstractRegex = /(?:abstract|summary)\s*:?\s*([\s\S]{50,1200})/i;
+    const abstractMatch = first3000Chars.match(abstractRegex);
+    if (abstractMatch) {
+      abstract = abstractMatch[1].trim().split(/\n\s*\n|\r\n\s*\r\n/)[0].slice(0, 1200).replace(/\s+(?![\s\S]*\.)[^.]+$/, '').trim();
+    }
+  }
+  if (!abstract || abstract.length < 20) {
     abstract = text.slice(0, 300).replace(/\s+/g, ' ').trim() + '...';
   }
 
@@ -205,6 +472,19 @@ function extractMetadataLocally(text, filename) {
     resourceCategory = 'question-bank';
   } else if (textSample.includes('research paper') || textSample.includes('journal') || textSample.includes('proceedings')) {
     resourceCategory = 'research-paper';
+  }
+
+  // Last resort: flat-text regex fallback for pdfjs-dist output (one long line)
+  if (!title || title === 'Untitled Resource') {
+    const flatRegex = /([A-Z][A-Za-z\u00C0-\u024F\s]+:\s*[A-Z][A-Za-z\u00C0-\u024F\s,()'\u2013\u2014-]+?)\s+([A-Z][a-zA-Z.'-]+\s+[A-Z][a-zA-Z.'-]+(?:,\s*[A-Z][a-zA-Z.'-]+\s+[A-Z][a-zA-Z.'-]+)*(?:\s+(?:and|&)\s+[A-Z][a-zA-Z.'-]+\s+[A-Z][a-zA-Z.'-]+)?)\s+(Institute|University|Department|School|College|Laboratory|Lab|Proc\.)/;
+    const m = text.match(flatRegex);
+    if (m) {
+      const candidate = m[1].trim();
+      if (!/^(abstract|introduction|keywords|references|conclusion|acknowledgements|page|http)/i.test(candidate) && candidate.length > 10) {
+        title = candidate;
+        if (!author) author = m[2].trim();
+      }
+    }
   }
 
   return {

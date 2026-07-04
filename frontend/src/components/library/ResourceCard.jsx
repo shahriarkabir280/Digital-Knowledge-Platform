@@ -62,7 +62,7 @@ export default function ResourceCard({
           <img
             src={fallbackSrc}
             alt={item.title}
-            className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all duration-200 flex items-center justify-center">
             <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">

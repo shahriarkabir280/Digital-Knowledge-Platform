@@ -105,22 +105,41 @@ export default function PDFThumbnail({
         const page = await pdf.getPage(1)
         if (cancelled) return
 
-        // Render at a scale that fills the 160 px card height roughly
-        // We aim for ~160 px height; calculate scale from the natural page height
-        const naturalVP = page.getViewport({ scale: 1 })
-        const targetHeight = 160
-        const scale = targetHeight / naturalVP.height
-
-        const viewport = page.getViewport({ scale })
+        // Render at the container's exact dimensions at device-pixel ratio
+        // so the thumbnail stays razor-sharp on retina displays (2×–3×).
         const canvas = canvasRef.current
         if (!canvas || cancelled) return
 
-        canvas.width  = viewport.width
-        canvas.height = viewport.height
+        const container = canvas.parentElement
+        if (!container || cancelled) return
+        const { width: displayWidth, height: displayHeight } = container.getBoundingClientRect()
+        if (displayWidth === 0 || displayHeight === 0) return
+
+        const dpr = window.devicePixelRatio || 1
+        canvas.width  = displayWidth * dpr
+        canvas.height = displayHeight * dpr
+
+        // Scale the PDF page to fill the canvas area
+        const naturalVP = page.getViewport({ scale: 1 })
+        const scale = Math.max(
+          (displayWidth * dpr) / naturalVP.width,
+          (displayHeight * dpr) / naturalVP.height
+        )
+        const viewport = page.getViewport({ scale })
+
+        // Center the page on canvas (PDF is portrait, container is landscape)
+        const ctx = canvas.getContext('2d')
+        ctx.fillStyle = '#f0f0f0'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+        const offsetX = Math.max(0, (canvas.width  - viewport.width)  / 2)
+        const offsetY = Math.max(0, (canvas.height - viewport.height) / 2)
 
         await page.render({
-          canvasContext: canvas.getContext('2d'),
+          canvasContext: ctx,
           viewport,
+          offsetX,
+          offsetY,
         }).promise
 
         if (cancelled) return
@@ -176,7 +195,7 @@ export default function PDFThumbnail({
         <img
           src={fallbackSrc}
           alt="Document preview"
-          className="absolute inset-0 w-full h-full object-cover object-top"
+          className="absolute inset-0 w-full h-full object-contain p-4"
         />
       )}
 

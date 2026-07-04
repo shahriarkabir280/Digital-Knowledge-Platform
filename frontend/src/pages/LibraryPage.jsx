@@ -418,10 +418,15 @@ export default function LibraryPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             <Input 
               placeholder="Search textbooks, authors, course codes..." 
-              className="pl-9 bg-muted/20 border-border"
+              className="pl-9 pr-8 bg-muted/20 border-border"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors">
+                <X size={15} />
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <Button variant="outline" className="gap-1 text-xs h-10 border-border" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>

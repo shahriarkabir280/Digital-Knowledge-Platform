@@ -356,7 +356,7 @@ export default function RepositoryPage() {
     <div className="mx-auto grid w-full max-w-6xl gap-6">
       
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-accent/20 p-6 md:p-8 text-white shadow-lg border border-slate-850">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-amber-900/30 p-6 md:p-8 text-white shadow-lg border border-slate-800">
         <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
           <GraduationCap size={220} />
         </div>
@@ -391,10 +391,15 @@ export default function RepositoryPage() {
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search title, author, course, tags..."
-                className="pl-9 text-xs h-9 bg-background"
+                className="pl-9 pr-8 text-xs h-9 bg-background"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors">
+                  <X size={14} />
+                </button>
+              )}
             </div>
             <Button
               variant="outline"

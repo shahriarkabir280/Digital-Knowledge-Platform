@@ -78,7 +78,7 @@ export default function ResourceCard({
   )
 
   return (
-    <Card className="group hover:shadow-md transition-all border-border flex flex-col overflow-hidden">
+    <Card className="group hover:-translate-y-1 hover:shadow-lg transition-all border-border flex flex-col overflow-hidden">
       {thumbnail}
 
       <CardHeader className="p-4 pb-1">

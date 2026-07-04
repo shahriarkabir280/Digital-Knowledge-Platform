@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '../app/use-auth.js'
 import { ROLES } from '../app/rbac.js'
 import { toast } from 'sonner'
@@ -182,7 +183,7 @@ export default function DashboardPage() {
     <div className="mx-auto grid w-full max-w-6xl gap-6">
       
       {/* Personalized Welcome Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-accent/20 p-6 md:p-8 text-white shadow-lg border border-slate-800">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900/30 p-6 md:p-8 text-white shadow-lg border border-slate-800">
         <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
           <LayoutDashboard size={240} />
         </div>
@@ -378,8 +379,20 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-5">
               {uploadsStatus === 'loading' && (
-                <div className="flex justify-center items-center py-12">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent" />
+                <div className="grid gap-3 py-2">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border">
+                      <div className="grid gap-1.5 min-w-0">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-4 w-64" />
+                        <Skeleton className="h-3 w-40" />
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Skeleton className="h-7 w-14 rounded-md" />
+                        <Skeleton className="h-7 w-12 rounded-md" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 

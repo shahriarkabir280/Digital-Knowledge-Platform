@@ -111,7 +111,7 @@ a { color: var(--accent-strong); }
 .brand-kicker {
   text-transform: uppercase;
   letter-spacing: .12em;
-  font-size: 10px;
+  font-size: .65rem;
   font-weight: 700;
   color: var(--accent);
 }
@@ -808,6 +808,30 @@ a { color: var(--accent-strong); }
 }
 
 input, select, button { font: inherit; }
+
+/* ─── Styled <select> matching Input design ──────────────────────────────── */
+select.styled-select {
+  height: 2.5rem;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--input));
+  background: hsl(var(--background));
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  transition: border-color .12s, box-shadow .12s;
+  cursor: pointer;
+  appearance: auto;
+}
+select.styled-select:hover {
+  border-color: hsl(var(--accent) / 0.5);
+}
+select.styled-select:focus-visible {
+  outline: none;
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+}
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 920px) {

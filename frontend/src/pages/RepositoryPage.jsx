@@ -353,7 +353,7 @@ export default function RepositoryPage() {
   const isShowingSkeleton = loadingPublished && (authState?.token || authState?.role === 'GUEST')
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2">
+    <div className="mx-auto grid w-full max-w-6xl gap-6">
       
       {/* Hero Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-accent/20 p-6 md:p-8 text-white shadow-lg border border-slate-850">
@@ -439,19 +439,19 @@ export default function RepositoryPage() {
             <CardContent className="p-4 grid gap-4 sm:grid-cols-3">
               <div className="grid gap-1.5">
                 <Label htmlFor="repo-dept" className="text-xs font-semibold text-muted-foreground">Department</Label>
-                <select id="repo-dept" value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                <select id="repo-dept" value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)} className="styled-select">
                   {departments.map(d => <option key={d} value={d}>{d === 'All' ? 'All Departments' : d}</option>)}
                 </select>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="repo-course" className="text-xs font-semibold text-muted-foreground">Course Code</Label>
-                <select id="repo-course" value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                <select id="repo-course" value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)} className="styled-select">
                   {courses.map(c => <option key={c} value={c}>{c === 'All' ? 'All Courses' : c}</option>)}
                 </select>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="repo-sort" className="text-xs font-semibold text-muted-foreground">Sort By</Label>
-                <select id="repo-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                <select id="repo-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="styled-select">
                   <option value="recent">Recently Added</option>
                   <option value="downloads">Most Downloaded</option>
                   <option value="rating">Highest Rated</option>
@@ -640,7 +640,7 @@ export default function RepositoryPage() {
                   <div className="grid gap-1.5">
                     <Label htmlFor="repo-dept-select" className="text-xs font-semibold">Department</Label>
                     <select id="repo-dept-select" value={newResource.department} onChange={e => setNewResource(p => ({ ...p, department: e.target.value }))}
-                      className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                      className="styled-select">
                       <option value="Computer Science and Engineering">Computer Science and Engineering</option>
                       <option value="Information Science and Library Management">Information Science and Library Management</option>
                       <option value="Electrical and Electronic Engineering">Electrical and Electronic Engineering</option>
@@ -663,7 +663,7 @@ export default function RepositoryPage() {
                         if (val === 'Dataset') category = 'dataset';
                         setNewResource(p => ({ ...p, type: val, resourceCategory: category }));
                       }}
-                      className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                      className="styled-select">
                       <option value="Research Paper">Research Paper</option>
                       <option value="Thesis">Thesis / Dissertation</option>
                       <option value="Dataset">Dataset Archive</option>
@@ -678,7 +678,7 @@ export default function RepositoryPage() {
                     id="repo-access-tier"
                     value={newResource.accessTier || 'PUBLIC'}
                     onChange={e => setNewResource(p => ({ ...p, accessTier: e.target.value }))}
-                    className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1"
+                    className="styled-select"
                   >
                     <option value="PUBLIC">Public — Visible to everyone (including guests)</option>
                     <option value="REGISTERED">Registered — Visible only to logged-in members</option>
@@ -802,7 +802,7 @@ export default function RepositoryPage() {
                   <div className="flex flex-wrap gap-1 mt-1">
                     {domainTags.map(tag => (
                       <button key={tag} type="button" onClick={() => addTag(tag.toLowerCase().replace(/\s+/g, '-'))}
-                        className="text-[9px] font-medium px-2 py-0.5 rounded-full border border-border bg-muted/30 hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all">
+                        className="text-xs font-medium px-2 py-0.5 rounded-full border border-border bg-muted/30 hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all">
                         + {tag}
                       </button>
                     ))}

@@ -179,7 +179,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2">
+    <div className="mx-auto grid w-full max-w-6xl gap-6">
       
       {/* Personalized Welcome Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-accent/20 p-6 md:p-8 text-white shadow-lg border border-slate-800">
@@ -202,7 +202,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-2 bg-slate-950/40 p-4 rounded-xl border border-white/10 shrink-0 w-full md:w-64">
             <div className="flex justify-between items-center text-[10px] uppercase tracking-wider text-slate-400">
               <span>Account Persona</span>
-              <Badge variant="outline" className="text-[9px] border-white/20 text-white font-bold bg-white/5 capitalize">
+                <Badge variant="outline" className="text-xs border-white/20 text-white font-bold bg-white/5 capitalize">
                 {authState.role}
               </Badge>
             </div>
@@ -218,7 +218,7 @@ export default function DashboardPage() {
           <Card className="border-border hover:shadow-sm transition-all">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="grid gap-0.5">
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">My Submissions</span>
+                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">My Submissions</span>
                 <span className="text-2xl font-black text-foreground">{uploadsStatus === 'success' ? uploadsItems.length : 0}</span>
               </div>
               <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
@@ -232,7 +232,7 @@ export default function DashboardPage() {
           <Card className="border-border hover:shadow-sm transition-all">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="grid gap-0.5">
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">My Bookmarks</span>
+                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">My Bookmarks</span>
                 <span className="text-2xl font-black text-foreground">{getBookmarksCount()}</span>
               </div>
               <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
@@ -465,7 +465,7 @@ export default function DashboardPage() {
                     <div className="grid gap-0.5 min-w-0">
                       <span className="text-[10px] text-muted-foreground font-semibold uppercase">{item.type}</span>
                       <h4 className="text-xs font-bold text-foreground truncate">{item.title}</h4>
-                      <p className="text-[9px] text-muted-foreground">Uploaded by ID: {item.uploaderId} · Format: {item.format}</p>
+                      <p className="text-xs text-muted-foreground">Uploaded by ID: {item.uploaderId} · Format: {item.format}</p>
                     </div>
                     <Button asChild size="sm" variant="secondary" className="h-7 text-[10px] px-2.5 font-bold shrink-0">
                       <Link to={`/review-queue`}>Start Review</Link>

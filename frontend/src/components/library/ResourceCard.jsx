@@ -44,7 +44,7 @@ export default function ResourceCard({
           <PlayCircle size={28} className="text-white fill-white" />
         </div>
       </div>
-      <span className="absolute top-2 left-2 bg-accent text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">
+      <span className="absolute top-2 left-2 bg-accent text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
         {type}
       </span>
     </Link>
@@ -69,7 +69,7 @@ export default function ResourceCard({
               Click to View Details
             </span>
           </div>
-          <span className="absolute bottom-2 left-2 bg-accent text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">
+          <span className="absolute bottom-2 left-2 bg-accent text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
             {type}
           </span>
         </div>
@@ -83,7 +83,7 @@ export default function ResourceCard({
 
       <CardHeader className="p-4 pb-1">
         <div className="flex justify-between items-start gap-2">
-          <Badge className={`text-[10px] font-bold px-2 py-0.5 border uppercase ${typeBadgeClass}`}>
+          <Badge className={`text-xs font-bold px-2 py-0.5 border uppercase ${typeBadgeClass}`}>
             {type}
           </Badge>
           <Button
@@ -100,11 +100,11 @@ export default function ResourceCard({
             {item.title}
           </CardTitle>
         </Link>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {item.author || 'Anonymous'} · <span className="font-semibold text-accent-strong">{item.department || item.course || 'General'}</span>
         </p>
         {item.uploaderName && (
-          <p className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-0.5">
+          <p className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-0.5">
             <span>Posted by <span className="font-medium text-foreground/70">{item.uploaderName}</span></span>
           </p>
         )}
@@ -118,7 +118,7 @@ export default function ResourceCard({
         {(item.tags || []).length > 0 && (
           <div className="flex flex-wrap gap-1">
             {(item.tags || []).slice(0, 3).map(tag => (
-              <Badge key={tag} variant="outline" className="text-[9px] py-0 px-1.5 bg-muted/10 text-muted-foreground border-muted/35">
+              <Badge key={tag} variant="outline" className="text-[10px] py-0 px-1.5 bg-muted/10 text-muted-foreground border-muted/35">
                 #{tag}
               </Badge>
             ))}

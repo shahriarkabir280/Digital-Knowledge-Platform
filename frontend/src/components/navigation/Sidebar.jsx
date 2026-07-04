@@ -147,7 +147,7 @@ export default function Sidebar() {
           </p>
         </div>
 
-        <div className="sidebar-footer-avatar-only" style={{ display: 'none' }}>
+        <div className="sidebar-footer-avatar-only hidden">
           <div style={{
             width: '32px',
             height: '32px',

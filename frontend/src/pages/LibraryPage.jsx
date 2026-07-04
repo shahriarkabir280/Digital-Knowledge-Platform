@@ -373,7 +373,7 @@ export default function LibraryPage() {
   const isShowingSkeleton = loadingPublished && (authState?.token || authState?.role === 'GUEST')
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2">
+    <div className="mx-auto grid w-full max-w-6xl gap-6">
       
       {/* Hero Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-accent/20 p-6 md:p-8 text-white shadow-lg border border-slate-800">
@@ -393,19 +393,19 @@ export default function LibraryPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-slate-700/50 pt-4 mt-2">
             <div>
               <p className="text-xl font-bold text-white">{publishedDocs.length}+</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Total Assets</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">Total Assets</p>
             </div>
             <div>
               <p className="text-xl font-bold text-white">{courses.length - 1}</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Active Courses</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">Active Courses</p>
             </div>
             <div>
               <p className="text-xl font-bold text-white">{bookmarks.length}</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Bookmarked</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">Bookmarked</p>
             </div>
             <div>
               <p className="text-xl font-bold text-white">4.8 ★</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Avg Rating</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">Avg Rating</p>
             </div>
           </div>
         </div>
@@ -438,19 +438,19 @@ export default function LibraryPage() {
             <CardContent className="p-4 grid gap-4 sm:grid-cols-3">
               <div className="grid gap-1.5">
                 <Label htmlFor="dept-filter" className="text-xs font-semibold text-muted-foreground">Department</Label>
-                <select id="dept-filter" value={filterDepartment} onChange={(e) => setFilterDepartment(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                <select id="dept-filter" value={filterDepartment} onChange={(e) => setFilterDepartment(e.target.value)} className="styled-select">
                   {departments.map(d => <option key={d} value={d}>{d === 'All' ? 'All Departments' : d}</option>)}
                 </select>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="course-filter" className="text-xs font-semibold text-muted-foreground">Course Code</Label>
-                <select id="course-filter" value={filterCourse} onChange={(e) => setFilterCourse(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                <select id="course-filter" value={filterCourse} onChange={(e) => setFilterCourse(e.target.value)} className="styled-select">
                   {courses.map(c => <option key={c} value={c}>{c === 'All' ? 'All Courses' : c}</option>)}
                 </select>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="sort-by" className="text-xs font-semibold text-muted-foreground">Sort By</Label>
-                <select id="sort-by" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                <select id="sort-by" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="styled-select">
                   <option value="downloads">Most Downloaded</option>
                   <option value="rating">Highest Rated</option>
                   <option value="recent">Recently Updated</option>
@@ -702,7 +702,7 @@ export default function LibraryPage() {
                   <div className="grid gap-1.5">
                     <Label htmlFor="res-dept-select" className="text-xs font-semibold">Department</Label>
                     <select id="res-dept-select" value={newResource.department} onChange={e => setNewResource(p => ({ ...p, department: e.target.value }))}
-                      className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                      className="styled-select">
                       <option value="CSE">Computer Science & Engineering</option>
                       <option value="Mathematics">Mathematics</option>
                       <option value="Physics">Physics</option>
@@ -724,7 +724,7 @@ export default function LibraryPage() {
                         if (val === 'Link') category = 'media';
                         setNewResource(p => ({ ...p, type: val, resourceCategory: category }));
                       }}
-                      className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                      className="styled-select">
                       <option value="PDF">PDF Document / E-Book</option>
                       <option value="PPT">Presentation Slides (PPT/PPTX)</option>
                       <option value="Question Bank">Question Bank</option>
@@ -742,7 +742,7 @@ export default function LibraryPage() {
                     id="res-access-tier"
                     value={newResource.accessTier || 'PUBLIC'}
                     onChange={e => setNewResource(p => ({ ...p, accessTier: e.target.value }))}
-                    className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1"
+                    className="styled-select"
                   >
                     <option value="PUBLIC">Public — Visible to everyone (including guests)</option>
                     <option value="REGISTERED">Registered — Visible only to logged-in members</option>

@@ -3,6 +3,8 @@ import { UploadCloud, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { useAuth } from '../app/use-auth.js'
 import { apiRequest } from '../services/api/client'
 import { uploadDocument } from '../services/api/documents.js'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import './LibrarySection.css'
 
 const ACCESS_OPTIONS = ['public', 'restricted', 'private']
@@ -76,6 +78,20 @@ export default function LibraryUploadPage() {
     const { id, value } = e.target
     const key = id.replace('upload-', '')
     setFormData(p => ({ ...p, [key]: value }))
+  }
+
+  const domainTags = [
+    'Machine Learning', 'Computer Vision', 'NLP', 'Data Science', 'Cybersecurity',
+    'Networking', 'Bioinformatics', 'Database Systems', 'Cloud Computing', 'Software Engineering'
+  ]
+
+  const addTag = (tag) => {
+    setFormData(p => {
+      const currentTags = p.tags ? p.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      if (currentTags.includes(tag)) return p
+      const nextTags = [...currentTags, tag].join(', ')
+      return { ...p, tags: nextTags }
+    })
   }
 
   const handleSubmit = async (e) => {
@@ -316,12 +332,7 @@ export default function LibraryUploadPage() {
             </div>
             <div className="library-form-field">
               <label htmlFor="upload-department">Department</label>
-              <select 
-                id="upload-department" 
-                className="library-select"
-                value={formData.department}
-                onChange={handleInputChange}
-              >
+              <Select id="upload-department" value={formData.department} onChange={handleInputChange}>
                 <option>Computer Science and Engineering</option>
                 <option>Information Science and Library Management</option>
                 <option>Electrical and Electronic Engineering</option>
@@ -331,7 +342,7 @@ export default function LibraryUploadPage() {
                 <option>Chemistry</option>
                 <option>Business Administration</option>
                 <option>Other</option>
-              </select>
+              </Select>
             </div>
             <div className="library-form-field">
               <label htmlFor="upload-year">Year</label>
@@ -346,13 +357,7 @@ export default function LibraryUploadPage() {
             </div>
             <div className="library-form-field">
               <label htmlFor="upload-type">Resource Type *</label>
-              <select 
-                id="upload-type" 
-                className="library-select"
-                value={formData.type}
-                onChange={handleInputChange}
-                required
-              >
+              <Select id="upload-type" value={formData.type} onChange={handleInputChange} required>
                 <option value="">Select resource type</option>
                 <option value="PDF Document / E-Book">PDF Document / E-Book</option>
                 <option value="Presentation Slides (PPT/PPTX)">Presentation Slides (PPT/PPTX)</option>
@@ -361,7 +366,7 @@ export default function LibraryUploadPage() {
                 <option value="Lab Report">Lab Report</option>
                 <option value="Video Content">Video Content</option>
                 <option value="External Online Resource">External Online Resource</option>
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -374,13 +379,21 @@ export default function LibraryUploadPage() {
               value={formData.tags}
               onChange={handleInputChange}
             />
+            <div className="flex flex-wrap gap-1 mt-1">
+              {domainTags.map(tag => (
+                <button key={tag} type="button" onClick={() => addTag(tag.toLowerCase().replace(/\s+/g, '-'))}
+                  className="text-xs font-medium px-2 py-0.5 rounded-full border border-border bg-muted/30 hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all">
+                  + {tag}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="library-form-field">
             <label htmlFor="upload-description">Description</label>
-            <textarea
+            <Textarea
               id="upload-description"
-              className="library-textarea submission-textarea"
+              className="library-textarea submission-textarea min-h-[100px]"
               placeholder="Short summary for discovery and preview."
               rows={4}
               value={formData.description}

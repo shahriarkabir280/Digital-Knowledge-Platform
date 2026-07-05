@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '../app/use-auth.js'
 import { 
   User, 
@@ -195,8 +197,8 @@ export default function LibraryProfilePage() {
 
                 <div className="grid gap-1.5">
                   <Label htmlFor="prof-bio" className="text-xs font-semibold">Short Bio</Label>
-                  <textarea id="prof-bio" rows={3} value={profileBio} onChange={e => setProfileBio(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 resize-none" />
+                  <Textarea id="prof-bio" rows={3} value={profileBio} onChange={e => setProfileBio(e.target.value)}
+                    className="resize-none" />
                 </div>
 
                 <Button type="submit" size="sm" className="w-fit ml-auto text-xs bg-accent hover:bg-accent/90 text-white">
@@ -219,19 +221,17 @@ export default function LibraryProfilePage() {
               <form onSubmit={handleRoleRequestSubmit} className="grid gap-4">
                 <div className="grid gap-1.5">
                   <Label htmlFor="req-role-select" className="text-xs font-semibold">Desired Workspace Role</Label>
-                  <select id="req-role-select" value={requestedRole} onChange={e => setRequestedRole(e.target.value)}
-                    className="h-9 rounded-md border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-1">
+                  <Select id="req-role-select" value={requestedRole} onChange={e => setRequestedRole(e.target.value)}>
                     <option value="CONTRIBUTOR">Contributor (Ability to upload resource cards directly)</option>
                     <option value="REVIEWER">Technical Reviewer (Access to Review queue desk)</option>
                     <option value="STAFF">Operations Staff (Manage circulations & operational tasks)</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div className="grid gap-1.5">
                   <Label htmlFor="req-reason" className="text-xs font-semibold">Justification / Purpose</Label>
-                  <textarea id="req-reason" placeholder="Explain why you require this role upgrade (e.g. course assignments, course supervisor verification, reviewer credentials)..." rows={3}
-                    value={requestReason} onChange={e => setRequestReason(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 resize-none" required />
+                  <Textarea id="req-reason" placeholder="Explain why you require this role upgrade (e.g. course assignments, course supervisor verification, reviewer credentials)..." rows={3}
+                    value={requestReason} onChange={e => setRequestReason(e.target.value)} required />
                 </div>
 
                 <Button type="submit" size="sm" className="w-fit ml-auto gap-1 text-xs bg-accent hover:bg-accent/90 text-white">

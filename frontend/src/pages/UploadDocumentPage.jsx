@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '../app/use-auth'
 import DragDropZone from '../components/common/DragDropZone'
 import UploadProgressBar from '../components/common/UploadProgressBar'
@@ -175,7 +176,7 @@ export default function UploadDocumentPage() {
 
             <div className="grid gap-1.5">
               <Label htmlFor="description">Description</Label>
-              <textarea
+              <Textarea
                 id="description"
                 name="description"
                 value={metadata.description}
@@ -183,7 +184,6 @@ export default function UploadDocumentPage() {
                 placeholder="Optional: Provide additional context about this document"
                 rows={4}
                 disabled={uploading}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
           </CardContent>

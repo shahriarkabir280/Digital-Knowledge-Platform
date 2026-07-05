@@ -222,8 +222,8 @@ export default function MemberDashboardPage() {
               {filteredUploads.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-4 italic">No uploads match the selected status.</p>
               ) : (
-                filteredUploads.map((item) => (
-                  <div key={item.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-lg border border-border hover:bg-muted/10 transition-colors">
+                filteredUploads.map((item, idx) => (
+                  <div key={`upload-${item.id}-${idx}`} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-lg border border-border hover:bg-muted/10 transition-colors">
                     <div className="grid gap-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge className={`text-[9px] px-1.5 py-0 border uppercase font-bold ${resolveStateBadge(item.state)}`}>

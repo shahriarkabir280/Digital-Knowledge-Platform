@@ -28,6 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Select } from '@/components/ui/select'
 import { useAuth } from '../app/use-auth.js'
 
 // Custom GitHub icon to replace missing brand icon in lucide-react
@@ -521,34 +522,24 @@ export default function StudentProjectShowcasePage() {
 
               <div className="grid gap-1.5 w-full">
                 <Label htmlFor="year" className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Academic Year</Label>
-                <select 
-                  id="year" 
-                  className="w-full h-10 rounded-md border border-input bg-muted/20 px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={filterYear}
-                  onChange={(e) => setFilterYear(e.target.value)}
-                >
+                <Select id="year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
                   {academicYears.map(year => (
                     <option key={year} value={year}>
                       {year === 'all' ? 'All Years' : year}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="grid gap-1.5 w-full">
                 <Label htmlFor="category" className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Category</Label>
-                <select 
-                  id="category" 
-                  className="w-full h-10 rounded-md border border-input bg-muted/20 px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                >
+                <Select id="category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
                   {categories.map(cat => (
                     <option key={cat} value={cat}>
                       {cat === 'all' ? 'All Categories' : cat}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </CardContent>
           </Card>
@@ -884,18 +875,13 @@ export default function StudentProjectShowcasePage() {
                       </div>
                       <div className="grid gap-1">
                         <Label htmlFor="res-type" className="text-[10px] font-semibold text-muted-foreground uppercase">Resource Type</Label>
-                        <select 
-                          id="res-type" 
-                          value={newResourceType} 
-                          onChange={e => setNewResourceType(e.target.value)}
-                          className="h-8 rounded-md border border-input bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        >
+                        <Select id="res-type" value={newResourceType} onChange={e => setNewResourceType(e.target.value)} className="h-8 text-xs">
                           <option value="Documentation">Documentation</option>
                           <option value="Tutorial">Tutorial</option>
                           <option value="Course">Course</option>
                           <option value="Video">Video</option>
                           <option value="Article">Article</option>
-                        </select>
+                        </Select>
                       </div>
                     </div>
                     <Button type="submit" size="sm" className="w-fit ml-auto text-xs gap-1 h-8">

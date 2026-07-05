@@ -29,6 +29,16 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '../app/use-auth.js'
 import { apiRequest } from '../services/api/client'
@@ -443,23 +453,23 @@ export default function LibraryPage() {
             <CardContent className="p-4 grid gap-4 sm:grid-cols-3">
               <div className="grid gap-1.5">
                 <Label htmlFor="dept-filter" className="text-xs font-semibold text-muted-foreground">Department</Label>
-                <select id="dept-filter" value={filterDepartment} onChange={(e) => setFilterDepartment(e.target.value)} className="styled-select">
+                <Select id="dept-filter" value={filterDepartment} onChange={(e) => setFilterDepartment(e.target.value)}>
                   {departments.map(d => <option key={d} value={d}>{d === 'All' ? 'All Departments' : d}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="course-filter" className="text-xs font-semibold text-muted-foreground">Course Code</Label>
-                <select id="course-filter" value={filterCourse} onChange={(e) => setFilterCourse(e.target.value)} className="styled-select">
+                <Select id="course-filter" value={filterCourse} onChange={(e) => setFilterCourse(e.target.value)}>
                   {courses.map(c => <option key={c} value={c}>{c === 'All' ? 'All Courses' : c}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="sort-by" className="text-xs font-semibold text-muted-foreground">Sort By</Label>
-                <select id="sort-by" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="styled-select">
+                <Select id="sort-by" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                   <option value="downloads">Most Downloaded</option>
                   <option value="rating">Highest Rated</option>
                   <option value="recent">Recently Updated</option>
-                </select>
+                </Select>
               </div>
             </CardContent>
           </Card>
@@ -598,160 +608,147 @@ export default function LibraryPage() {
       </div>
 
       {/* Login Prompt Modal for Guests */}
-      {showLoginPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-sm border-border shadow-2xl">
-            <CardContent className="p-8 flex flex-col items-center text-center gap-5">
-              <div className="w-14 h-14 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
-                <GraduationCap size={28} className="text-accent" />
-              </div>
-              <div className="grid gap-1.5">
-                <h3 className="text-base font-bold">Login Required</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  You need to sign in or register to upload academic resources to the library.
-                </p>
-              </div>
-              <div className="flex flex-col gap-2 w-full">
-                <Button asChild className="w-full gap-2 text-xs font-semibold">
-                  <Link to="/login">Log In</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full gap-2 text-xs font-semibold">
-                  <Link to="/register">Create an Account</Link>
-                </Button>
-              </div>
-              <button
-                onClick={() => setShowLoginPrompt(false)}
-                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-              >
-                Continue as Guest
-              </button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
+        <DialogContent className="sm:max-w-sm">
+          <div className="flex flex-col items-center text-center gap-5 py-4">
+            <div className="w-14 h-14 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
+              <GraduationCap size={28} className="text-accent" />
+            </div>
+            <div className="grid gap-1.5">
+              <DialogTitle>Login Required</DialogTitle>
+              <DialogDescription>
+                You need to sign in or register to upload academic resources to the library.
+              </DialogDescription>
+            </div>
+            <div className="flex flex-col gap-2 w-full">
+              <Button asChild className="w-full gap-2 text-xs font-semibold">
+                <Link to="/login">Log In</Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full gap-2 text-xs font-semibold">
+                <Link to="/register">Create an Account</Link>
+              </Button>
+            </div>
+            <button
+              onClick={() => setShowLoginPrompt(false)}
+              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+            >
+              Continue as Guest
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Upload Success Modal (submissions only) */}
-      {showUploadSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-md border-border shadow-2xl">
-            <CardContent className="p-8 flex flex-col items-center text-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                <CheckCircle2 size={32} className="text-green-500" />
-              </div>
-              <div className="grid gap-2">
-                <h3 className="text-lg font-bold">Submitted Successfully!</h3>
-                <p className="text-sm text-muted-foreground">
-                  Your academic resource "<strong>{uploadSuccessTitle}</strong>" has been submitted for admin review.
-                </p>
-              </div>
-              <div className="w-full rounded-lg bg-blue-500/10 border border-blue-500/20 p-4 text-left">
-                <p className="text-xs font-semibold text-blue-600 mb-2">📋 What happens next?</p>
-                <ul className="text-xs text-blue-600 space-y-1.5 list-disc list-inside">
-                  <li>An admin will review your resource</li>
-                  <li>You'll be notified once it's approved</li>
-                  <li>Once approved, it appears in the library</li>
-                </ul>
-              </div>
-              <Button onClick={() => { setShowUploadSuccess(false); setUploadSuccessTitle('') }} className="w-full gap-2 bg-green-500 hover:bg-green-600 text-white">
-                <CheckCircle2 size={16} />
-                Done
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <Dialog open={showUploadSuccess} onOpenChange={(open) => { if (!open) { setShowUploadSuccess(false); setUploadSuccessTitle('') }}}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex flex-col items-center text-center gap-4 py-4">
+            <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+              <CheckCircle2 size={32} className="text-green-500" />
+            </div>
+            <div className="grid gap-2">
+              <DialogTitle>Submitted Successfully!</DialogTitle>
+              <DialogDescription>
+                Your academic resource "<strong>{uploadSuccessTitle}</strong>" has been submitted for admin review.
+              </DialogDescription>
+            </div>
+            <div className="w-full rounded-lg bg-blue-500/10 border border-blue-500/20 p-4 text-left">
+              <p className="text-xs font-semibold text-blue-600 mb-2">📋 What happens next?</p>
+              <ul className="text-xs text-blue-600 space-y-1.5 list-disc list-inside">
+                <li>An admin will review your resource</li>
+                <li>You'll be notified once it's approved</li>
+                <li>Once approved, it appears in the library</li>
+              </ul>
+            </div>
+            <Button onClick={() => { setShowUploadSuccess(false); setUploadSuccessTitle('') }} className="w-full gap-2 bg-green-500 hover:bg-green-600 text-white">
+              <CheckCircle2 size={16} />
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Upload Resource Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-xl border-border shadow-2xl overflow-hidden">
-            
-            {/* Modal Header */}
-            <CardHeader className="p-5 border-b border-border flex flex-row items-start justify-between bg-gradient-to-r from-muted/30 to-transparent">
-              <div>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <CloudUpload size={18} className="text-accent" />
-                  Add Academic Resource
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">Share textbooks, lecture slides, or research papers with the department.</p>
+      <Dialog open={showUploadModal} onOpenChange={(open) => { if (!open) resetModal() }}>
+        <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden">
+          
+          {/* Modal Header */}
+          <DialogHeader className="p-5 border-b border-border bg-gradient-to-r from-muted/30 to-transparent">
+            <DialogTitle className="flex items-center gap-2">
+              <CloudUpload size={18} className="text-accent" />
+              Add Academic Resource
+            </DialogTitle>
+            <DialogDescription>Share textbooks, lecture slides, or research papers with the department.</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleUploadSubmit}>
+            <div className="p-5 grid gap-4 max-h-[70vh] overflow-y-auto">
+
+              {/* ── Resource Metadata ── */}
+              <div className="grid gap-1.5">
+                <Label htmlFor="res-title-input" className="text-xs font-semibold">Resource Title *</Label>
+                <Input id="res-title-input" placeholder="e.g. Introduction to Algorithms (CLRS) 4th Edition"
+                  value={newResource.title} onChange={e => setNewResource(p => ({ ...p, title: e.target.value }))} required />
               </div>
-              <Button size="icon" variant="ghost" className="w-8 h-8 rounded-full shrink-0" onClick={resetModal}>
-                <X size={16} />
-              </Button>
-            </CardHeader>
 
-            <form onSubmit={handleUploadSubmit}>
-              <CardContent className="p-5 grid gap-4 max-h-[70vh] overflow-y-auto">
-
-                {/* ── Resource Metadata ── */}
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div className="grid gap-1.5">
-                  <Label htmlFor="res-title-input" className="text-xs font-semibold">Resource Title *</Label>
-                  <Input id="res-title-input" placeholder="e.g. Introduction to Algorithms (CLRS) 4th Edition"
-                    value={newResource.title} onChange={e => setNewResource(p => ({ ...p, title: e.target.value }))} required />
+                  <Label htmlFor="res-author-input" className="text-xs font-semibold">Author / Publisher *</Label>
+                  <Input id="res-author-input" placeholder="e.g. Thomas H. Cormen"
+                    value={newResource.author} onChange={e => setNewResource(p => ({ ...p, author: e.target.value }))} required />
                 </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="res-author-input" className="text-xs font-semibold">Author / Publisher *</Label>
-                    <Input id="res-author-input" placeholder="e.g. Thomas H. Cormen"
-                      value={newResource.author} onChange={e => setNewResource(p => ({ ...p, author: e.target.value }))} required />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="res-course-input" className="text-xs font-semibold">Course Code *</Label>
-                    <Input id="res-course-input" placeholder="e.g. CSE-201"
-                      value={newResource.course} onChange={e => setNewResource(p => ({ ...p, course: e.target.value }))} required />
-                  </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="res-course-input" className="text-xs font-semibold">Course Code *</Label>
+                  <Input id="res-course-input" placeholder="e.g. CSE-201"
+                    value={newResource.course} onChange={e => setNewResource(p => ({ ...p, course: e.target.value }))} required />
                 </div>
+              </div>
 
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="res-dept-select" className="text-xs font-semibold">Department</Label>
-                    <select id="res-dept-select" value={newResource.department} onChange={e => setNewResource(p => ({ ...p, department: e.target.value }))}
-                      className="styled-select">
-                      <option value="CSE">Computer Science & Engineering</option>
-                      <option value="Mathematics">Mathematics</option>
-                      <option value="Physics">Physics</option>
-                      <option value="Engineering">General Engineering</option>
-                    </select>
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="res-type-select" className="text-xs font-semibold">Resource Type</Label>
-                    <select id="res-type-select" value={newResource.type} 
-                      onChange={e => {
-                        const val = e.target.value;
-                        let category = 'textbook';
-                        if (val === 'PPT') category = 'lecture-slides';
-                        if (val === 'Dataset') category = 'dataset';
-                        if (val === 'Question Bank') category = 'question-bank';
-                        if (val === 'Assignment') category = 'assignment';
-                        if (val === 'Lab Report') category = 'lab-report';
-                        if (val === 'Video') category = 'media';
-                        if (val === 'Link') category = 'media';
-                        setNewResource(p => ({ ...p, type: val, resourceCategory: category }));
-                      }}
-                      className="styled-select">
-                      <option value="PDF">PDF Document / E-Book</option>
-                      <option value="PPT">Presentation Slides (PPT/PPTX)</option>
-                      <option value="Question Bank">Question Bank</option>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="res-dept-select" className="text-xs font-semibold">Department</Label>
+                  <Select id="res-dept-select" value={newResource.department} onChange={e => setNewResource(p => ({ ...p, department: e.target.value }))}>
+                    <option value="CSE">Computer Science & Engineering</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Engineering">General Engineering</option>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="res-type-select" className="text-xs font-semibold">Resource Type</Label>
+                  <Select id="res-type-select" value={newResource.type} 
+                    onChange={e => {
+                      const val = e.target.value;
+                      let category = 'textbook';
+                      if (val === 'PPT') category = 'lecture-slides';
+                      if (val === 'Dataset') category = 'dataset';
+                      if (val === 'Question Bank') category = 'question-bank';
+                      if (val === 'Assignment') category = 'assignment';
+                      if (val === 'Lab Report') category = 'lab-report';
+                      if (val === 'Video') category = 'media';
+                      if (val === 'Link') category = 'media';
+                      setNewResource(p => ({ ...p, type: val, resourceCategory: category }));
+                    }}>
+                    <option value="PDF">PDF Document / E-Book</option>
+                    <option value="PPT">Presentation Slides (PPT/PPTX)</option>
+                    <option value="Question Bank">Question Bank</option>
                       <option value="Assignment">Assignment</option>
                       <option value="Lab Report">Lab Report</option>
                       <option value="Video">Video Content</option>
                       <option value="Link">External Online Resource</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>        
                 {/* ── Access Tier ── */}
                 <div className="grid gap-1.5">
                   <Label htmlFor="res-access-tier" className="text-xs font-semibold">Access Level</Label>
-                  <select
+                  <Select
                     id="res-access-tier"
                     value={newResource.accessTier || 'PUBLIC'}
                     onChange={e => setNewResource(p => ({ ...p, accessTier: e.target.value }))}
-                    className="styled-select"
                   >
                     <option value="PUBLIC">Public — Visible to everyone (including guests)</option>
                     <option value="REGISTERED">Registered — Visible only to logged-in members</option>
-                  </select>
+                  </Select>
                 </div>
 
                 {/* ── Source: URL toggle or File upload ── */}
@@ -906,9 +903,9 @@ export default function LibraryPage() {
                 {/* Summary */}
                 <div className="grid gap-1.5">
                   <Label htmlFor="res-summary-input" className="text-xs font-semibold">Short Summary</Label>
-                  <textarea id="res-summary-input" placeholder="Provide a brief description of this resource..." rows={2}
+                  <Textarea id="res-summary-input" placeholder="Provide a brief description of this resource..." rows={2}
                     value={newResource.summary} onChange={e => setNewResource(p => ({ ...p, summary: e.target.value }))}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 resize-none" />
+                    className="resize-none text-xs" />
                 </div>
 
                 {/* Error message */}
@@ -919,10 +916,10 @@ export default function LibraryPage() {
                   </div>
                 )}
 
-              </CardContent>
+              </div>
 
               {/* Footer */}
-              <div className="flex gap-2 justify-end p-4 border-t border-border bg-muted/10">
+              <DialogFooter className="p-4 border-t border-border bg-muted/10 sm:justify-end">
                 <Button type="button" variant="outline" size="sm" onClick={resetModal} disabled={isUploading}>Cancel</Button>
                 <Button type="button" size="sm" variant="outline" className="gap-1.5 min-w-[120px]" disabled={isUploading}
                   onClick={() => handleUploadSubmit(null, 'draft')}>
@@ -935,11 +932,10 @@ export default function LibraryPage() {
                     : <><CloudUpload size={13} /> Add Resource</>
                   }
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
-          </Card>
-        </div>
-      )}
+          </DialogContent>
+        </Dialog>
     </div>
   )
 }

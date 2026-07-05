@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 const actionConfig = {
   publish: {
@@ -113,7 +114,7 @@ export default function StateTransitionDialog({
                 {config.subtitle}
                 {config.required && <span className="text-red-600"> *</span>}
               </Label>
-              <textarea
+              <Textarea
                 id="state-note"
                 value={note}
                 onChange={(e) => {
@@ -123,7 +124,6 @@ export default function StateTransitionDialog({
                 placeholder={config.placeholder}
                 disabled={isSubmitting}
                 rows={4}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
               {error && <p className="text-sm text-red-600">{error}</p>}
             </div>

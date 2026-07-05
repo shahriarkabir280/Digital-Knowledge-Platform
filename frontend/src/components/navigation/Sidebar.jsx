@@ -22,6 +22,13 @@ import { useAuth } from '../../app/use-auth.js'
 import { useLayout } from '../../app/layout-context.jsx'
 import { defaultRouteForRole } from '../../app/rbac.js'
 import { navItems } from './nav-config.js'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import cseduLogo from '@/assets/CSEDULOGO.png'
 
 const iconMap = {
@@ -61,6 +68,7 @@ export default function Sidebar() {
   const items = navItems.filter((item) => item.roles.includes(authState.role))
 
   return (
+    <TooltipProvider>
     <aside className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
       {/* Mobile X close button */}
       <button
@@ -103,19 +111,38 @@ export default function Sidebar() {
               const IconComponent = iconMap[item.iconName] || fallbackIcons[item.to]
               return (
                 <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    onClick={closeMobileMenu}
-                    title={isSidebarCollapsed ? item.label : undefined}
-                    className={({ isActive }) =>
-                      isActive ? 'nav-link nav-link-active' : 'nav-link'
-                    }
-                  >
-                    <span className="nav-link-icon">
-                      {IconComponent && <IconComponent size={16} strokeWidth={2} />}
-                    </span>
-                    <span className="nav-link-text">{item.label}</span>
-                  </NavLink>
+                  {isSidebarCollapsed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <NavLink
+                          to={item.to}
+                          onClick={closeMobileMenu}
+                          className={({ isActive }) =>
+                            isActive ? 'nav-link nav-link-active' : 'nav-link'
+                          }
+                        >
+                          <span className="nav-link-icon">
+                            {IconComponent && <IconComponent size={16} strokeWidth={2} />}
+                          </span>
+                          <span className="nav-link-text">{item.label}</span>
+                        </NavLink>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">{item.label}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <NavLink
+                      to={item.to}
+                      onClick={closeMobileMenu}
+                      className={({ isActive }) =>
+                        isActive ? 'nav-link nav-link-active' : 'nav-link'
+                      }
+                    >
+                      <span className="nav-link-icon">
+                        {IconComponent && <IconComponent size={16} strokeWidth={2} />}
+                      </span>
+                      <span className="nav-link-text">{item.label}</span>
+                    </NavLink>
+                  )}
                 </li>
               )
             })}
@@ -148,25 +175,31 @@ export default function Sidebar() {
         </div>
 
         <div className="sidebar-footer-avatar-only hidden">
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            background: 'var(--accent-bg)',
-            border: '1px solid var(--accent-soft)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            color: 'var(--accent-strong)',
-            fontSize: '.85rem'
-          }}
-            title={`${authState.name || authState.email || authState.role} (${authState.role})`}
-          >
-            {(authState.name || authState.role || 'U').charAt(0).toUpperCase()}
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{
+                  background: 'var(--accent-bg)',
+                  border: '1px solid var(--accent-soft)',
+                }}
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs font-semibold" style={{
+                    background: 'var(--accent-bg)',
+                    color: 'var(--accent-strong)',
+                  }}>
+                    {(authState.name || authState.role || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {authState.name || authState.email || authState.role} ({authState.role})
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </aside>
+    </TooltipProvider>
   )
 }

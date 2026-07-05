@@ -2,6 +2,21 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Bell, LogOut, User, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import cseduLogo from '@/assets/CSEDULOGO.png'
 import { useAuth } from '../../app/use-auth.js'
 import { useLayout } from '../../app/layout-context.jsx'
@@ -37,7 +52,6 @@ export default function Navbar() {
   const { toggleMobileMenu } = useLayout()
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.isRead).length,
@@ -64,10 +78,7 @@ export default function Navbar() {
     return () => { if (intervalId) clearInterval(intervalId) }
   }, [authState.token])
 
-  const onToggleNotifications = async () => {
-    const nextOpen = !notificationsOpen
-    setNotificationsOpen(nextOpen)
-    if (!nextOpen) return
+  const onMarkNotificationsRead = async () => {
     try {
       await markAllNotificationsRead(authState.token)
       const result = await fetchNotifications(authState.token, 10)
@@ -81,19 +92,18 @@ export default function Navbar() {
   }
 
   const onOpenNotificationsPage = () => {
-    setNotificationsOpen(false)
     navigate('/notifications')
   }
 
   const onOpenNotificationTarget = (notification) => {
     const target = resolveNotificationRoute(notification, authState.role)
-    setNotificationsOpen(false)
     navigate(target)
   }
 
   const avatarLabel = (authState?.name || authState?.role || 'U').trim().charAt(0).toUpperCase()
 
   return (
+    <TooltipProvider>
     <header className="topbar">
       {/* Mobile Hamburger toggle */}
       <button
@@ -119,81 +129,80 @@ export default function Navbar() {
         <div className="topbar-controls">
 
           {/* Profile avatar */}
-          <button
-            type="button"
-            className="topbar-avatar-btn"
-            onClick={() => navigate('/library/profile')}
-            aria-label="Open profile"
-            title={authState.name || 'Profile'}
-          >
-            <span className="topbar-avatar-initial" aria-hidden="true">{avatarLabel}</span>
-            <span className="sr-only">Open profile</span>
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="topbar-avatar-btn"
+                onClick={() => navigate('/library/profile')}
+                aria-label="Open profile"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs font-semibold">{avatarLabel}</AvatarFallback>
+                </Avatar>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{authState.name || 'Profile'}</TooltipContent>
+          </Tooltip>
 
           {/* Notifications */}
-          <div className="topbar-notifications">
-            <button
-              type="button"
-              className="notification-btn"
-              onClick={onToggleNotifications}
-              aria-label="Open notifications"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0 12px',
-                height: '36px',
-                borderRadius: '8px',
-                border: '1px solid hsl(var(--border))',
-                background: 'hsl(var(--card))',
-                cursor: 'pointer',
-                fontSize: '.85rem',
-                fontWeight: 600,
-                color: 'var(--ink)',
-                transition: 'background .12s',
-                position: 'relative',
-              }}
-            >
-              <Bell size={16} strokeWidth={2} />
-              <span className="notification-bell">Notifications</span>
-              {unreadCount > 0 && (
-                <span className="notification-count">{unreadCount}</span>
-              )}
-            </button>
-
-            {notificationsOpen && (
-              <div className="notification-dropdown" role="menu">
-                <p className="notification-dropdown-title">Notifications</p>
-                {notifications.length === 0 ? (
-                  <p className="notification-dropdown-empty">No notifications yet.</p>
-                ) : (
-                  <ul className="notification-dropdown-list">
-                    {notifications.slice(0, 5).map((item) => (
-                      <li key={item.id} className="notification-dropdown-item">
-                        <button
-                          type="button"
-                          className="notification-dropdown-item-btn"
-                          onClick={() => onOpenNotificationTarget(item)}
-                        >
-                          <p className="notification-dropdown-item-title">{item.title}</p>
-                          <p className="notification-dropdown-item-time">
-                            {new Date(item.createdAt).toLocaleString()}
-                          </p>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+          <DropdownMenu onOpenChange={(open) => { if (open) onMarkNotificationsRead() }}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="notification-btn"
+                aria-label="Open notifications"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0 12px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  border: '1px solid hsl(var(--border))',
+                  background: 'hsl(var(--card))',
+                  cursor: 'pointer',
+                  fontSize: '.85rem',
+                  fontWeight: 600,
+                  color: 'var(--ink)',
+                  transition: 'background .12s',
+                  position: 'relative',
+                }}
+              >
+                <Bell size={16} strokeWidth={2} />
+                <span className="notification-bell">Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="notification-count">{unreadCount}</span>
                 )}
-                <button
-                  type="button"
-                  className="notification-dropdown-link"
-                  onClick={onOpenNotificationsPage}
-                >
-                  View all notifications
-                </button>
-              </div>
-            )}
-          </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {notifications.length === 0 ? (
+                <div className="px-2 py-6 text-center">
+                  <p className="text-xs text-muted-foreground">No notifications yet.</p>
+                </div>
+              ) : (
+                <>
+                  {notifications.slice(0, 5).map((item) => (
+                    <DropdownMenuItem key={item.id} className="flex flex-col items-start gap-0.5 py-2 px-2 cursor-pointer"
+                      onSelect={() => onOpenNotificationTarget(item)}
+                    >
+                      <p className="text-xs font-medium">{item.title}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(item.createdAt).toLocaleString()}
+                      </p>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onOpenNotificationsPage} className="text-xs font-medium justify-center cursor-pointer">
+                View all notifications
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Logout */}
           <button
@@ -226,5 +235,6 @@ export default function Navbar() {
         </div>
       </div>
     </header>
+    </TooltipProvider>
   )
 }

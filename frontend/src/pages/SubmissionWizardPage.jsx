@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '../app/use-auth.js'
 import DragDropZone from '../components/common/DragDropZone'
 import UploadProgressBar from '../components/common/UploadProgressBar'
@@ -650,14 +651,14 @@ export default function SubmissionWizardPage() {
 
                   <div className="grid gap-1.5">
                     <Label htmlFor="abstract">Abstract *</Label>
-                    <textarea
+                    <Textarea
                       id="abstract"
                       name="abstract"
                       rows={8}
                       value={form.abstract}
                       onChange={handleFieldChange}
                       placeholder="Write a short summary of the document"
-                      className="submission-textarea w-full"
+                      className="submission-textarea"
                     />
                   </div>
 

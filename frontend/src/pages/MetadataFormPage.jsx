@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '../app/use-auth.js'
 import { fetchMyUploads, saveDocumentMetadata, getDocumentMetadata } from '../services/api/documents.js'
 
@@ -299,14 +300,13 @@ export default function MetadataFormPage() {
 
             <div className="grid gap-1.5">
               <Label htmlFor="abstract">Abstract *</Label>
-              <textarea
+              <Textarea
                 id="abstract"
                 name="abstract"
                 rows={6}
                 value={form.abstract}
                 onChange={handleChange}
                 placeholder="Write a short summary of the document"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
               />
             </div>
 

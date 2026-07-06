@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react'
-import { 
-  Search, 
-  Filter, 
-  Calendar, 
-  User, 
-  BookOpen, 
-  FileText, 
-  Presentation, 
-  ExternalLink, 
-  MessageSquare, 
-  ArrowLeft, 
-  Star, 
-  Clock, 
-  Code, 
+import {
+  Search,
+  Filter,
+  Calendar,
+  User,
+  BookOpen,
+  FileText,
+  Presentation,
+  ExternalLink,
+  MessageSquare,
+  ArrowLeft,
+  Star,
+  Clock,
+  Code,
   Image as ImageIcon,
   CheckCircle,
   Plus,
@@ -80,10 +80,10 @@ const DEFAULT_PROJECTS = [
     ],
     demoUrl: 'https://crop-detect-demo.farefin.com',
     comments: [
-      { 
-        id: 'c-1', 
-        user: 'Dr. Shamim Kaiser', 
-        text: 'Excellent integration of deep learning with edge devices. Have you considered the latency on large-scale fields?', 
+      {
+        id: 'c-1',
+        user: 'Dr. Shamim Kaiser',
+        text: 'Excellent integration of deep learning with edge devices. Have you considered the latency on large-scale fields?',
         date: '2026-06-15T09:30:00Z',
         replies: [
           {
@@ -124,10 +124,10 @@ const DEFAULT_PROJECTS = [
     ],
     demoUrl: 'https://verify-credentials.farefin.com',
     comments: [
-      { 
-        id: 'c-3', 
-        user: 'Prof. Dr. Upal Mahbub', 
-        text: 'How do you handle gas fee optimizations for bulk certificate issuances?', 
+      {
+        id: 'c-3',
+        user: 'Prof. Dr. Upal Mahbub',
+        text: 'How do you handle gas fee optimizations for bulk certificate issuances?',
         date: '2025-12-01T11:00:00Z',
         replies: [
           {
@@ -258,7 +258,7 @@ const DEFAULT_PROJECTS = [
 
 export default function StudentProjectShowcasePage() {
   const { authState } = useAuth()
-  
+
   // State variables
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -332,7 +332,7 @@ export default function StudentProjectShowcasePage() {
 
   // Filtering logic
   const filteredProjects = projects.filter((project) => {
-    const matchesSearch = 
+    const matchesSearch =
       project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -502,7 +502,7 @@ export default function StudentProjectShowcasePage() {
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-2">
-      
+
       {/* ─── BROWSE VIEW ─── */}
       {!selectedProject && !showSubmitModal && (
         <>
@@ -513,255 +513,255 @@ export default function StudentProjectShowcasePage() {
             </div>
           ) : (
             <>
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border pb-4">
-            <div className="grid gap-1">
-              <p className="brand-kicker">CSEDU Showcase</p>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground">Departmental Projects</h2>
-              <p className="text-sm text-muted-foreground">
-                Discover, explore, and preserve outstanding student projects and research work.
-              </p>
-            </div>
-            <Button onClick={() => setShowSubmitModal(true)} className="w-fit gap-1">
-              <Plus size={16} /> Submit Project
-            </Button>
-          </div>
-
-          {/* Search & Filter Panel */}
-          <Card className="shadow-sm border-border">
-            <CardContent className="p-5 grid gap-4 sm:grid-cols-[1fr_200px_200px] items-end">
-              <div className="grid gap-1.5 w-full">
-                <Label htmlFor="search" className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                  <Input 
-                    id="search" 
-                    placeholder="Search by title, team, technologies..." 
-                    className="pl-9 bg-muted/20"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+              {/* Header Section */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border pb-4">
+                <div className="grid gap-1">
+                  <p className="brand-kicker">CSEDU Showcase</p>
+                  <h2 className="text-3xl font-bold tracking-tight text-foreground">Departmental Projects</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Discover, explore, and preserve outstanding student projects and research work.
+                  </p>
                 </div>
+                <Button onClick={() => setShowSubmitModal(true)} className="w-fit gap-1">
+                  <Plus size={16} /> Submit Project
+                </Button>
               </div>
 
-              <div className="grid gap-1.5 w-full">
-                <Label htmlFor="year" className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Academic Year</Label>
-                <Select id="year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
-                  {academicYears.map(year => (
-                    <option key={year} value={year}>
-                      {year === 'all' ? 'All Years' : year}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="grid gap-1.5 w-full">
-                <Label htmlFor="category" className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Category</Label>
-                <Select id="category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>
-                      {cat === 'all' ? 'All Categories' : cat}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Main Layout Grid */}
-          <div className="grid gap-6 md:grid-cols-[1fr_300px]">
-            
-            {/* Left Column: Featured & Project Grid */}
-            <div className="grid gap-6">
-              
-              {/* Featured Projects Section */}
-              {featuredProjects.length > 0 && !searchQuery && filterCategory === 'all' && filterYear === 'all' && (
-                <div className="grid gap-3">
-                  <div className="flex items-center gap-2">
-                    <Star className="text-amber-500 fill-amber-500" size={18} />
-                    <h3 className="text-lg font-bold text-foreground">Featured Work</h3>
+              {/* Search & Filter Panel */}
+              <Card className="shadow-sm border-border">
+                <CardContent className="p-5 grid gap-4 sm:grid-cols-[1fr_200px_200px] items-end">
+                  <div className="grid gap-1.5 w-full">
+                    <Label htmlFor="search" className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Search</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                      <Input
+                        id="search"
+                        placeholder="Search by title, team, technologies..."
+                        className="pl-9 bg-muted/20"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {featuredProjects.map(project => (
-                      <Card key={project.id} className="relative overflow-hidden group hover:shadow-md transition-all border-border flex flex-col">
-                        <div className="h-40 overflow-hidden relative bg-muted">
-                          <img 
-                            src={project.thumbnail} 
-                            alt={project.title} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                          <Badge className="absolute top-3 right-3 bg-amber-500 hover:bg-amber-600 text-white border-none gap-1">
-                            <Star size={10} className="fill-white" /> Featured
-                          </Badge>
-                          <Badge className="absolute bottom-3 left-3 bg-black/60 text-white border-none text-xs">
-                            {project.category}
-                          </Badge>
-                        </div>
-                        <CardHeader className="p-4 pb-1">
-                          <p className="text-xs font-semibold text-accent-strong">{project.academicYear}</p>
-                          <CardTitle className="text-base font-bold line-clamp-1 group-hover:text-accent transition-colors">{project.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-between gap-3">
-                          <p className="text-xs text-muted-foreground line-clamp-2">{project.description}</p>
-                          
-                          <div className="grid gap-1.5 border-t border-muted/50 pt-2 text-[11px] text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                              <User size={12} />
-                              <span className="truncate"><strong>By:</strong> {project.teamMembers.join(', ')}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <BookOpen size={12} />
-                              <span className="truncate"><strong>Supervised by:</strong> {project.supervisor}</span>
-                            </div>
-                          </div>
 
-                          <div className="flex flex-wrap gap-1">
-                            {project.tags.slice(0, 3).map(tag => (
-                              <Badge key={tag} variant="outline" className="text-[10px] py-0 px-1.5">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {project.tags.length > 3 && (
-                              <span className="text-[10px] text-muted-foreground self-center">+{project.tags.length - 3}</span>
-                            )}
-                          </div>
-
-                          <Button 
-                            className="w-full mt-2 text-xs" 
-                            variant="secondary"
-                            onClick={() => setSelectedProjectId(project.id)}
-                          >
-                            View Details
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <div className="grid gap-1.5 w-full">
+                    <Label htmlFor="year" className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Academic Year</Label>
+                    <Select id="year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
+                      {academicYears.map(year => (
+                        <option key={year} value={year}>
+                          {year === 'all' ? 'All Years' : year}
+                        </option>
+                      ))}
+                    </Select>
                   </div>
-                </div>
-              )}
 
-              {/* Project Grid/List */}
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-foreground">
-                    {searchQuery || filterCategory !== 'all' || filterYear !== 'all' ? 'Search Results' : 'All Projects'}
-                  </h3>
-                  <span className="text-xs text-muted-foreground font-medium bg-muted px-2.5 py-1 rounded-full">
-                    {filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'} found
-                  </span>
-                </div>
-
-                {filteredProjects.length === 0 ? (
-                  <Card className="p-8 text-center border-dashed border-2 border-border">
-                    <p className="text-muted-foreground font-medium">No projects match your search query or filters.</p>
-                    <Button variant="outline" className="mt-3 text-xs" onClick={() => { setSearchQuery(''); setFilterCategory('all'); setFilterYear('all'); }}>
-                      Reset Filters
-                    </Button>
-                  </Card>
-                ) : (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {filteredProjects.map(project => (
-                      <Card key={project.id} className="hover:shadow-md transition-all border-border flex flex-col">
-                        <div className="h-36 overflow-hidden relative bg-muted">
-                          <img src={project.thumbnail} alt={project.title} className="w-full h-full object-cover" />
-                          <Badge className="absolute top-3 right-3 bg-black/60 text-white border-none text-[11px]">
-                            {project.category}
-                          </Badge>
-                        </div>
-                        <CardHeader className="p-4 pb-1">
-                          <div className="flex justify-between items-center text-xs font-semibold text-accent-strong">
-                            <span>{project.academicYear}</span>
-                          </div>
-                          <CardTitle className="text-base font-bold line-clamp-1">{project.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-between gap-3">
-                          <p className="text-xs text-muted-foreground line-clamp-2">{project.description}</p>
-                          
-                          <div className="grid gap-1.5 border-t border-muted/50 pt-2 text-[11px] text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                              <User size={12} />
-                              <span className="truncate"><strong>Team:</strong> {project.teamMembers.join(', ')}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <BookOpen size={12} />
-                              <span className="truncate"><strong>Supervisor:</strong> {project.supervisor}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-1">
-                            {project.tags.slice(0, 4).map(tag => (
-                              <Badge key={tag} variant="outline" className="text-[10px] py-0 px-1.5">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {project.tags.length > 4 && (
-                              <span className="text-[10px] text-muted-foreground self-center">+{project.tags.length - 4}</span>
-                            )}
-                          </div>
-
-                          <Button 
-                            className="w-full mt-2 text-xs" 
-                            variant="outline"
-                            onClick={() => setSelectedProjectId(project.id)}
-                          >
-                            View Details
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <div className="grid gap-1.5 w-full">
+                    <Label htmlFor="category" className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Category</Label>
+                    <Select id="category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+                      {categories.map(cat => (
+                        <option key={cat} value={cat}>
+                          {cat === 'all' ? 'All Categories' : cat}
+                        </option>
+                      ))}
+                    </Select>
                   </div>
-                )}
-              </div>
+                </CardContent>
+              </Card>
 
-            </div>
+              {/* Main Layout Grid */}
+              <div className="grid gap-6 md:grid-cols-[1fr_300px]">
 
-            {/* Right Column: Recent Submissions & Preservation Stats */}
-            <div className="grid gap-6 self-start">
-              
-              {/* Recent Projects */}
-              <Card className="border-border">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Clock size={15} className="text-accent" /> Recent Uploads
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 grid gap-3">
-                  {recentProjects.map(proj => (
-                    <div 
-                      key={proj.id} 
-                      onClick={() => setSelectedProjectId(proj.id)}
-                      className="group cursor-pointer flex gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
-                    >
-                      <div className="w-12 h-12 rounded bg-muted overflow-hidden flex-shrink-0">
-                        <img src={proj.thumbnail} alt={proj.title} className="w-full h-full object-cover" />
+                {/* Left Column: Featured & Project Grid */}
+                <div className="grid gap-6">
+
+                  {/* Featured Projects Section */}
+                  {featuredProjects.length > 0 && !searchQuery && filterCategory === 'all' && filterYear === 'all' && (
+                    <div className="grid gap-3">
+                      <div className="flex items-center gap-2">
+                        <Star className="text-amber-500 fill-amber-500" size={18} />
+                        <h3 className="text-lg font-bold text-foreground">Featured Work</h3>
                       </div>
-                      <div className="grid gap-0.5 min-w-0">
-                        <h4 className="text-xs font-bold text-foreground line-clamp-1 group-hover:text-accent transition-colors">{proj.title}</h4>
-                        <p className="text-[10px] text-muted-foreground">{proj.category} · {proj.academicYear}</p>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {featuredProjects.map(project => (
+                          <Card key={project.id} className="relative overflow-hidden group hover:shadow-md transition-all border-border flex flex-col">
+                            <div className="h-40 overflow-hidden relative bg-muted">
+                              <img
+                                src={project.thumbnail}
+                                alt={project.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                              <Badge className="absolute top-3 right-3 bg-amber-500 hover:bg-amber-600 text-white border-none gap-1">
+                                <Star size={10} className="fill-white" /> Featured
+                              </Badge>
+                              <Badge className="absolute bottom-3 left-3 bg-black/60 text-white border-none text-xs">
+                                {project.category}
+                              </Badge>
+                            </div>
+                            <CardHeader className="p-4 pb-1">
+                              <p className="text-xs font-semibold text-accent-strong">{project.academicYear}</p>
+                              <CardTitle className="text-base font-bold line-clamp-1 group-hover:text-accent transition-colors">{project.title}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-between gap-3">
+                              <p className="text-xs text-muted-foreground line-clamp-2">{project.description}</p>
+
+                              <div className="grid gap-1.5 border-t border-muted/50 pt-2 text-[11px] text-muted-foreground">
+                                <div className="flex items-center gap-1.5">
+                                  <User size={12} />
+                                  <span className="truncate"><strong>By:</strong> {project.teamMembers.join(', ')}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <BookOpen size={12} />
+                                  <span className="truncate"><strong>Supervised by:</strong> {project.supervisor}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap gap-1">
+                                {project.tags.slice(0, 3).map(tag => (
+                                  <Badge key={tag} variant="outline" className="text-[10px] py-0 px-1.5">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {project.tags.length > 3 && (
+                                  <span className="text-[10px] text-muted-foreground self-center">+{project.tags.length - 3}</span>
+                                )}
+                              </div>
+
+                              <Button
+                                className="w-full mt-2 text-xs"
+                                variant="secondary"
+                                onClick={() => setSelectedProjectId(project.id)}
+                              >
+                                View Details
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
+                  )}
 
-              {/* Preservation Mission Box */}
-              <Card className="bg-gradient-to-br from-accent/5 to-accent/10 border-accent/20">
-                <CardContent className="p-4 grid gap-2.5">
-                  <h4 className="text-xs font-bold text-accent-strong uppercase tracking-wider">Project Preservation</h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    This archive preserves undergraduate and postgraduate research, source code, and design documentation from the Department of Computer Science & Engineering.
-                  </p>
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 dark:bg-emerald-950/30 p-2 rounded-md">
-                    <CheckCircle size={14} /> Registered in Institutional Archive
+                  {/* Project Grid/List */}
+                  <div className="grid gap-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-foreground">
+                        {searchQuery || filterCategory !== 'all' || filterYear !== 'all' ? 'Search Results' : 'All Projects'}
+                      </h3>
+                      <span className="text-xs text-muted-foreground font-medium bg-muted px-2.5 py-1 rounded-full">
+                        {filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'} found
+                      </span>
+                    </div>
+
+                    {filteredProjects.length === 0 ? (
+                      <Card className="p-8 text-center border-dashed border-2 border-border">
+                        <p className="text-muted-foreground font-medium">No projects match your search query or filters.</p>
+                        <Button variant="outline" className="mt-3 text-xs" onClick={() => { setSearchQuery(''); setFilterCategory('all'); setFilterYear('all'); }}>
+                          Reset Filters
+                        </Button>
+                      </Card>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-2 max-h-[65vh] overflow-y-auto pr-2 scrollbar-thin">
+                        {filteredProjects.map(project => (
+                          <Card key={project.id} className="hover:shadow-md transition-all border-border flex flex-col">
+                            <div className="h-36 overflow-hidden relative bg-muted">
+                              <img src={project.thumbnail} alt={project.title} className="w-full h-full object-cover" />
+                              <Badge className="absolute top-3 right-3 bg-black/60 text-white border-none text-[11px]">
+                                {project.category}
+                              </Badge>
+                            </div>
+                            <CardHeader className="p-4 pb-1">
+                              <div className="flex justify-between items-center text-xs font-semibold text-accent-strong">
+                                <span>{project.academicYear}</span>
+                              </div>
+                              <CardTitle className="text-base font-bold line-clamp-1">{project.title}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-between gap-3">
+                              <p className="text-xs text-muted-foreground line-clamp-2">{project.description}</p>
+
+                              <div className="grid gap-1.5 border-t border-muted/50 pt-2 text-[11px] text-muted-foreground">
+                                <div className="flex items-center gap-1.5">
+                                  <User size={12} />
+                                  <span className="truncate"><strong>Team:</strong> {project.teamMembers.join(', ')}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <BookOpen size={12} />
+                                  <span className="truncate"><strong>Supervisor:</strong> {project.supervisor}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap gap-1">
+                                {project.tags.slice(0, 4).map(tag => (
+                                  <Badge key={tag} variant="outline" className="text-[10px] py-0 px-1.5">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {project.tags.length > 4 && (
+                                  <span className="text-[10px] text-muted-foreground self-center">+{project.tags.length - 4}</span>
+                                )}
+                              </div>
+
+                              <Button
+                                className="w-full mt-2 text-xs"
+                                variant="outline"
+                                onClick={() => setSelectedProjectId(project.id)}
+                              >
+                                View Details
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
 
-            </div>
+                </div>
 
-          </div>
-          </>
+                {/* Right Column: Recent Submissions & Preservation Stats */}
+                <div className="grid gap-6 self-start">
+
+                  {/* Recent Projects */}
+                  <Card className="border-border">
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <Clock size={15} className="text-accent" /> Recent Uploads
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 grid gap-3">
+                      {recentProjects.map(proj => (
+                        <div
+                          key={proj.id}
+                          onClick={() => setSelectedProjectId(proj.id)}
+                          className="group cursor-pointer flex gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
+                        >
+                          <div className="w-12 h-12 rounded bg-muted overflow-hidden flex-shrink-0">
+                            <img src={proj.thumbnail} alt={proj.title} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="grid gap-0.5 min-w-0">
+                            <h4 className="text-xs font-bold text-foreground line-clamp-1 group-hover:text-accent transition-colors">{proj.title}</h4>
+                            <p className="text-[10px] text-muted-foreground">{proj.category} · {proj.academicYear}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  {/* Preservation Mission Box */}
+                  <Card className="bg-gradient-to-br from-accent/5 to-accent/10 border-accent/20">
+                    <CardContent className="p-4 grid gap-2.5">
+                      <h4 className="text-xs font-bold text-accent-strong uppercase tracking-wider">Project Preservation</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        This archive preserves undergraduate and postgraduate research, source code, and design documentation from the Department of Computer Science & Engineering.
+                      </p>
+                      <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 dark:bg-emerald-950/30 p-2 rounded-md">
+                        <CheckCircle size={14} /> Registered in Institutional Archive
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                </div>
+
+              </div>
+            </>
           )}
         </>
       )}
@@ -769,12 +769,12 @@ export default function StudentProjectShowcasePage() {
       {/* ─── PROJECT DETAILS VIEW ─── */}
       {selectedProject && (
         <div className="grid gap-6">
-          
+
           {/* Back Button */}
           <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              onClick={() => setSelectedProjectId(null)} 
+            <Button
+              variant="ghost"
+              onClick={() => setSelectedProjectId(null)}
               className="gap-1 text-sm text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft size={16} /> Back to Showcase
@@ -783,10 +783,10 @@ export default function StudentProjectShowcasePage() {
 
           {/* Details Layout */}
           <div className="grid gap-6 md:grid-cols-[1fr_320px]">
-            
+
             {/* Left Column: Content, Tech, Resources, Gallery, Discussion */}
             <div className="grid gap-6">
-              
+
               {/* Main Info */}
               <Card className="border-border shadow-sm overflow-hidden">
                 <div className="h-64 overflow-hidden relative bg-muted">
@@ -804,7 +804,7 @@ export default function StudentProjectShowcasePage() {
                     <h2 className="text-2xl font-bold text-white tracking-tight">{selectedProject.title}</h2>
                   </div>
                 </div>
-                
+
                 <CardContent className="p-6 grid gap-4">
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2">Project Overview</h3>
@@ -841,7 +841,7 @@ export default function StudentProjectShowcasePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-5 pt-0 grid gap-5">
-                  
+
                   {/* Resources List */}
                   <div className="grid gap-2.5">
                     {(!selectedProject.learningResources || selectedProject.learningResources.length === 0) ? (
@@ -879,9 +879,9 @@ export default function StudentProjectShowcasePage() {
                     <div className="grid sm:grid-cols-[1fr_1fr_130px] gap-3">
                       <div className="grid gap-1">
                         <Label htmlFor="res-title" className="text-[10px] font-semibold text-muted-foreground uppercase">Resource Title</Label>
-                        <Input 
-                          id="res-title" 
-                          placeholder="e.g. Official PyTorch Docs" 
+                        <Input
+                          id="res-title"
+                          placeholder="e.g. Official PyTorch Docs"
                           value={newResourceTitle}
                           onChange={e => setNewResourceTitle(e.target.value)}
                           required
@@ -890,9 +890,9 @@ export default function StudentProjectShowcasePage() {
                       </div>
                       <div className="grid gap-1">
                         <Label htmlFor="res-url" className="text-[10px] font-semibold text-muted-foreground uppercase">URL / Link</Label>
-                        <Input 
-                          id="res-url" 
-                          placeholder="e.g. pytorch.org/tutorials" 
+                        <Input
+                          id="res-url"
+                          placeholder="e.g. pytorch.org/tutorials"
                           value={newResourceUrl}
                           onChange={e => setNewResourceUrl(e.target.value)}
                           required
@@ -946,7 +946,7 @@ export default function StudentProjectShowcasePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-5 pt-0 grid gap-6">
-                  
+
                   {/* Threads List */}
                   <div className="grid gap-6">
                     {(!selectedProject.comments || selectedProject.comments.length === 0) ? (
@@ -954,7 +954,7 @@ export default function StudentProjectShowcasePage() {
                     ) : (
                       selectedProject.comments.map(comm => (
                         <div key={comm.id} className="grid gap-3 p-4 rounded-lg bg-muted/20 border border-border/75">
-                          
+
                           {/* Parent Question */}
                           <div className="flex gap-3">
                             <div className="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
@@ -966,8 +966,8 @@ export default function StudentProjectShowcasePage() {
                                 <span className="text-[10px] text-muted-foreground">{new Date(comm.date).toLocaleString()}</span>
                               </div>
                               <p className="text-xs text-foreground leading-normal font-semibold">{comm.text}</p>
-                              
-                              <button 
+
+                              <button
                                 type="button"
                                 onClick={() => {
                                   setReplyingToId(replyingToId === comm.id ? null : comm.id)
@@ -1015,10 +1015,10 @@ export default function StudentProjectShowcasePage() {
                                 />
                               </div>
                               <div className="flex gap-2 justify-end">
-                                <Button 
-                                  type="button" 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
                                   className="text-[11px] h-7"
                                   onClick={() => setReplyingToId(null)}
                                 >
@@ -1062,7 +1062,7 @@ export default function StudentProjectShowcasePage() {
 
             {/* Right Column: Team, Supervisor, Resources, Demo Link */}
             <div className="grid gap-6 self-start">
-              
+
               {/* Team Information */}
               <Card className="border-border shadow-sm">
                 <CardHeader className="p-5 pb-2">
@@ -1146,12 +1146,12 @@ export default function StudentProjectShowcasePage() {
       {/* ─── SUBMIT PROJECT MODAL/VIEW ─── */}
       {showSubmitModal && (
         <div className="grid gap-6">
-          
+
           {/* Back Button */}
           <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowSubmitModal(false)} 
+            <Button
+              variant="ghost"
+              onClick={() => setShowSubmitModal(false)}
               className="gap-1 text-sm text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft size={16} /> Cancel Submission
@@ -1166,9 +1166,9 @@ export default function StudentProjectShowcasePage() {
                   Fill out the form below to register and archive your project in the department repository.
                 </p>
               </CardHeader>
-              
+
               <CardContent className="p-5 grid gap-4">
-                
+
                 <div className="grid gap-1.5">
                   <Label htmlFor="title" className="text-xs font-semibold">Project Title *</Label>
                   <Input

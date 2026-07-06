@@ -544,7 +544,7 @@ export default function LibraryPage() {
       <div className="grid gap-6 md:grid-cols-[1fr_260px]">
         
         {/* Resource Cards Grid */}
-        <div className="grid gap-4">
+        <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-2 scrollbar-thin">
           <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-wider">
             <span>Archive Index</span>
             <span>{filteredResources.length} items found</span>

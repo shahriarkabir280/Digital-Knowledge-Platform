@@ -248,7 +248,7 @@ export default function LibraryBookmarksPage() {
           )}
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-h-[70vh] overflow-y-auto pr-2 scrollbar-thin">
           {filteredItems.map(item => {
             const type = getResourceType(item)
             const isExternal = item.filePath && (item.filePath.startsWith('http://') || item.filePath.startsWith('https://'))

@@ -516,7 +516,7 @@ export default function RepositoryPage() {
       <div className="grid gap-6 md:grid-cols-[1fr_260px]">
         
         {/* Left Column: Research Cards */}
-        <div className="grid gap-4">
+        <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-2 scrollbar-thin">
           <div className="flex justify-between items-center text-xs font-bold text-muted-foreground uppercase tracking-wider">
             <span>Publications Index</span>
             <span>{filteredExplore.length} items found</span>

@@ -677,7 +677,7 @@ async function getPublishedDocuments(req, res, next) {
         return rows.map((row) =>
           normalizeDocumentRow(
             row,
-            row.resource_type ||
+            row.type ||
               (table === "research_resources" ? "research-paper" : "textbook")
           )
         );

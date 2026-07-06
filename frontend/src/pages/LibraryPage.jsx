@@ -105,6 +105,7 @@ export default function LibraryPage() {
                 rating: 5.0,
                 downloads: 0,
                 uploaderName: doc.uploaderName || null,
+                filePath: doc.filePath,
               })
             }
           }
@@ -301,35 +302,72 @@ export default function LibraryPage() {
       setUploadError('Please select a file to upload.')
       return
     }
-
-    // --- File upload path ---
-    if (uploadMode === 'file' && selectedFile) {
-      if (!authState?.token) {
-        setUploadError('You must be logged in to upload files.')
+    if (uploadMode === 'url') {
+      const link = newResource.linkUrl.trim()
+      if (!link) {
+        setUploadError('Please enter a valid link/URL.')
         return
       }
-      setIsUploading(true)
-      setUploadProgress(0)
-      try {
-          await uploadDocument(
-            selectedFile,
-            {
-              title: newResource.title.trim(),
-              description: newResource.summary.trim(),
-              resourceCategory: newResource.resourceCategory || 'textbook',
-              accessTier: newResource.accessTier || 'PUBLIC',
-              state: intent,
-            },
-            ({ percent }) => setUploadProgress(percent),
-            authState.token
-          )
-      } catch (err) {
-        setUploadError(err.message || 'Upload failed. Please try again.')
-        setIsUploading(false)
+      if (!link.startsWith('http://') && !link.startsWith('https://')) {
+        setUploadError('Link/URL must start with http:// or https://')
         return
       }
-      setIsUploading(false)
     }
+
+    if (!authState?.token) {
+      setUploadError('You must be logged in to upload resources.')
+      return
+    }
+
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    try {
+      const keywords = newResource.tags ? newResource.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      if (uploadMode === 'file') {
+        await uploadDocument(
+          selectedFile,
+          {
+            title: newResource.title.trim(),
+            description: newResource.summary.trim(),
+            resourceCategory: newResource.resourceCategory || 'textbook',
+            accessTier: newResource.accessTier || 'PUBLIC',
+            author: newResource.author.trim(),
+            department: newResource.department,
+            course: newResource.course.trim(),
+            keywords,
+            year: new Date().getFullYear(),
+            state: intent,
+          },
+          ({ percent }) => setUploadProgress(percent),
+          authState.token
+        )
+      } else {
+        await uploadDocument(
+          null,
+          {
+            title: newResource.title.trim(),
+            description: newResource.summary.trim(),
+            resourceCategory: newResource.resourceCategory || 'textbook',
+            accessTier: newResource.accessTier || 'PUBLIC',
+            author: newResource.author.trim(),
+            department: newResource.department,
+            course: newResource.course.trim(),
+            keywords,
+            year: new Date().getFullYear(),
+            state: intent,
+            linkUrl: newResource.linkUrl.trim(),
+          },
+          ({ percent }) => setUploadProgress(percent),
+          authState.token
+        )
+      }
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed. Please try again.')
+      setIsUploading(false)
+      return
+    }
+    setIsUploading(false)
 
     queryClient.invalidateQueries({ queryKey: ['library-docs'] })
 
@@ -525,9 +563,12 @@ export default function LibraryPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               {filteredResources.map(item => {
                 const type = getResourceType(item)
-                const viewerLink = item.id.startsWith('doc-')
-                  ? `/viewer/${item.id.replace('doc-', '')}`
-                  : `/library/resource/${item.id}`
+                const isExternal = item.filePath && (item.filePath.startsWith('http://') || item.filePath.startsWith('https://'))
+                const viewerLink = isExternal
+                  ? item.filePath
+                  : item.id.startsWith('doc-')
+                    ? `/viewer/${item.id.replace('doc-', '')}`
+                    : `/library/resource/${item.id}`
 
                 return (
                   <ResourceCard

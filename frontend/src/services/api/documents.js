@@ -32,7 +32,9 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
   }
 
   const formData = new FormData()
-  formData.append('file', file)
+  if (file) {
+    formData.append('file', file)
+  }
   
   if (metadata.title) {
     formData.append('title', metadata.title)
@@ -81,6 +83,10 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
 
   if (metadata.state) {
     formData.append('state', metadata.state)
+  }
+
+  if (metadata.linkUrl) {
+    formData.append('linkUrl', metadata.linkUrl)
   }
 
   return new Promise((resolve, reject) => {

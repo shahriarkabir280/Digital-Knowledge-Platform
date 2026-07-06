@@ -30,9 +30,25 @@ export default function ResourceCard({
   youtubeId,
 }) {
   const fallbackSrc = fallbackThumb[type] || '/thumbs/thumb_pdf.png'
+  const isExternal = viewerLink && (viewerLink.startsWith('http://') || viewerLink.startsWith('https://'))
+
+  const CardLink = ({ children, className }) => {
+    if (isExternal) {
+      return (
+        <a href={viewerLink} target="_blank" rel="noopener noreferrer" className={className}>
+          {children}
+        </a>
+      )
+    }
+    return (
+      <Link to={viewerLink} className={className}>
+        {children}
+      </Link>
+    )
+  }
 
   const thumbnail = hasVideo ? (
-    <Link to={viewerLink} className="relative block h-40 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 group">
+    <CardLink className="relative block h-40 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 group">
       <img
         src={`https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`}
         alt={item.title}
@@ -47,10 +63,10 @@ export default function ResourceCard({
       <span className="absolute top-2 left-2 bg-accent text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
         {type}
       </span>
-    </Link>
+    </CardLink>
   ) : (
-    <Link to={viewerLink} className="relative block h-40 overflow-hidden group">
-      {pdfUrl ? (
+    <CardLink className="relative block h-40 overflow-hidden group">
+      {pdfUrl && !isExternal ? (
         <PDFThumbnail
           pdfUrl={pdfUrl}
           fallbackSrc={fallbackSrc}
@@ -66,7 +82,7 @@ export default function ResourceCard({
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all duration-200 flex items-center justify-center">
             <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
-              Click to View Details
+              {isExternal ? 'Click to Open Resource' : 'Click to View Details'}
             </span>
           </div>
           <span className="absolute bottom-2 left-2 bg-accent text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
@@ -74,7 +90,7 @@ export default function ResourceCard({
           </span>
         </div>
       )}
-    </Link>
+    </CardLink>
   )
 
   return (
@@ -95,11 +111,11 @@ export default function ResourceCard({
             <Bookmark size={14} className={isBookmarked ? 'fill-accent text-accent' : 'text-muted-foreground'} />
           </Button>
         </div>
-        <Link to={viewerLink} className="hover:text-accent transition-colors">
+        <CardLink className="hover:text-accent transition-colors">
           <CardTitle className="text-sm font-bold leading-snug mt-2 line-clamp-2">
             {item.title}
           </CardTitle>
-        </Link>
+        </CardLink>
         <p className="text-xs text-muted-foreground">
           {item.author || 'Anonymous'} · <span className="font-semibold text-accent-strong">{item.department || item.course || 'General'}</span>
         </p>

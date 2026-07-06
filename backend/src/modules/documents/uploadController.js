@@ -91,15 +91,6 @@ function normalizeResourceCategory(value) {
  */
 async function uploadFile(req, res, next) {
   try {
-    // Check if file was provided
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'No file provided',
-        code: 'NO_FILE',
-      });
-    }
-
     // Get authenticated user
     const userId = req.user?.id;
     if (!userId) {
@@ -110,23 +101,37 @@ async function uploadFile(req, res, next) {
       });
     }
 
-    // Validate uploaded file
-    const validation = uploadService.validateUploadedFile(req.file, {
-      strictMimeValidation: true,
-    });
+    // Check if file was provided or if it's a URL upload
+    const linkUrl = req.body.linkUrl;
+    const isUrlUpload = linkUrl && (linkUrl.startsWith('http://') || linkUrl.startsWith('https://'));
 
-    if (!validation.valid) {
+    if (!req.file && !isUrlUpload) {
       return res.status(400).json({
         success: false,
-        error: validation.errors[0] || 'File validation failed',
-        errors: validation.errors,
-        code: 'VALIDATION_FAILED',
+        error: 'No file or valid URL provided',
+        code: 'NO_FILE_OR_URL',
       });
     }
 
-    // Log warnings if any
-    if (validation.warnings && validation.warnings.length > 0) {
-      console.warn('Upload warnings:', validation.warnings);
+    if (req.file) {
+      // Validate uploaded file
+      const validation = uploadService.validateUploadedFile(req.file, {
+        strictMimeValidation: true,
+      });
+
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: validation.errors[0] || 'File validation failed',
+          errors: validation.errors,
+          code: 'VALIDATION_FAILED',
+        });
+      }
+
+      // Log warnings if any
+      if (validation.warnings && validation.warnings.length > 0) {
+        console.warn('Upload warnings:', validation.warnings);
+      }
     }
 
     console.log('[uploadController.uploadFile] req.body fields:', Object.keys(req.body));
@@ -176,7 +181,7 @@ async function uploadFile(req, res, next) {
       }
     }
 
-    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    const ext = isUrlUpload ? 'url' : req.file.originalname.split('.').pop().toLowerCase();
     const ALLOWED_RESOURCE_CATEGORIES = new Set([
       'documents', 'media',
       'textbook', 'lecture-slides', 'lab-manual',
@@ -195,22 +200,36 @@ async function uploadFile(req, res, next) {
     const storedResourceCategory = rawCategory || (category === 'documents' ? extractDocumentType(ext) : 'media');
     console.log('[uploadController] storedResourceCategory:', storedResourceCategory);
 
-    // Store file to Supabase Storage
-    const storeResult = await uploadService.storeUploadedFile(req.file, category);
+    let fileData;
+    let format;
 
-    if (!storeResult.success) {
-      return res.status(500).json({
-        success: false,
-        error: storeResult.error || 'Failed to store file',
-        code: 'STORAGE_ERROR',
-      });
+    if (isUrlUpload) {
+      fileData = {
+        originalFilename: req.body.title || 'Link Resource',
+        filename: 'link',
+        relativePath: linkUrl,
+        size: 0,
+        mimetype: 'text/html',
+      };
+      format = 'url';
+    } else {
+      // Store file to Supabase Storage
+      const storeResult = await uploadService.storeUploadedFile(req.file, category);
+
+      if (!storeResult.success) {
+        return res.status(500).json({
+          success: false,
+          error: storeResult.error || 'Failed to store file',
+          code: 'STORAGE_ERROR',
+        });
+      }
+
+      fileData = storeResult.data;
+      format = ext.toLowerCase();
     }
-
-    const fileData = storeResult.data;
 
     const title = req.body.title || extractTitleFromFilename(fileData.originalFilename);
     const description = req.body.description || null;
-    const format = ext.toLowerCase();
 
     const user = await db('users').where({ id: userId }).first(['name', 'email']);
     const defaultAuthorName = user?.name || user?.email || 'Unknown';
@@ -246,7 +265,7 @@ async function uploadFile(req, res, next) {
       filePath: fileData.relativePath,
       format,
       state: initialState,
-      accessTier: 'REGISTERED',
+      accessTier: req.body.accessTier || 'PUBLIC',
       metadata: {
         author: authorName,
         department: req.body.department && req.body.department.trim() ? req.body.department.trim() : null,
@@ -265,7 +284,7 @@ async function uploadFile(req, res, next) {
 
     // Fire-and-forget: extract metadata from document text using local heuristics
     // Only run for PDF and DOCX files where we can extract text
-    if (['pdf', 'docx'].includes(ext) && req.file.buffer) {
+    if (!isUrlUpload && ['pdf', 'docx'].includes(ext) && req.file.buffer) {
       metadataExtractionService.extractAndSaveMetadata(
         resourceId,
         req.file.buffer,
@@ -531,8 +550,22 @@ async function getFileInfo(req, res, next) {
       });
     }
 
-    // Get file info
-    const fileInfo = await uploadService.getFileInfo(document.file_path);
+    // Check if external link
+    const isUrl = document.file_path && (document.file_path.startsWith('http://') || document.file_path.startsWith('https://'));
+
+    let fileInfo;
+    if (isUrl) {
+      fileInfo = {
+        data: {
+          size: 0,
+          exists: true,
+          createdAt: document.created_at,
+          modifiedAt: document.updated_at,
+        }
+      };
+    } else {
+      fileInfo = await uploadService.getFileInfo(document.file_path);
+    }
 
     return res.status(200).json({
       success: true,
@@ -589,6 +622,19 @@ async function getSignedFileUrl(req, res, next) {
         success: false,
         error: 'Access denied',
         code: 'FORBIDDEN',
+      });
+    }
+
+    // Check if external link
+    const isUrl = document.file_path && (document.file_path.startsWith('http://') || document.file_path.startsWith('https://'));
+
+    if (isUrl) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          signedUrl: document.file_path,
+          expiresIn: 3600,
+        },
       });
     }
 
@@ -700,6 +746,13 @@ async function streamFileContent(req, res, next) {
         error: 'Access denied',
         code: 'FORBIDDEN',
       });
+    }
+
+    // Check if external link
+    const isUrl = document.file_path && (document.file_path.startsWith('http://') || document.file_path.startsWith('https://'));
+
+    if (isUrl) {
+      return res.redirect(302, document.file_path);
     }
 
     const signedUrl = await uploadService.getSignedUrl(document.file_path, 120);

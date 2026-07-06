@@ -20,7 +20,8 @@ import {
   BookOpen as BookIcon,
   Globe,
   CornerDownRight,
-  Reply
+  Reply,
+  Loader2
 } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select } from '@/components/ui/select'
 import { useAuth } from '../app/use-auth.js'
+import { getProjects, submitProject, addProjectComment, addProjectResource } from '../services/api/projects.js'
 
 // Custom GitHub icon to replace missing brand icon in lucide-react
 function Github({ size = 16, ...props }) {
@@ -258,10 +260,9 @@ export default function StudentProjectShowcasePage() {
   const { authState } = useAuth()
   
   // State variables
-  const [projects, setProjects] = useState(() => {
-    const saved = localStorage.getItem('dkp_showcase_projects')
-    return saved ? JSON.parse(saved) : DEFAULT_PROJECTS
-  })
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterYear, setFilterYear] = useState('all')
@@ -293,10 +294,24 @@ export default function StudentProjectShowcasePage() {
     demoUrl: '',
   })
 
-  // Sync projects with localStorage
+  // Load projects from database on mount
   useEffect(() => {
-    localStorage.setItem('dkp_showcase_projects', JSON.stringify(projects))
-  }, [projects])
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getProjects()
+        setProjects(result?.data || [])
+      } catch (err) {
+        console.error('Failed to load projects from DB:', err)
+        // Graceful fallback to DEFAULT_PROJECTS in dev environment
+        setProjects(DEFAULT_PROJECTS)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   // Scroll to top when transitioning
   useEffect(() => {
@@ -338,66 +353,64 @@ export default function StudentProjectShowcasePage() {
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
   // Actions
-  const handleAddComment = (e) => {
+  const handleAddComment = async (e) => {
     e.preventDefault()
     if (!commentText.trim() || !selectedProjectId) return
 
-    const newComment = {
-      id: `comment-${Date.now()}`,
-      user: authState.name || 'Anonymous User',
-      text: commentText.trim(),
-      date: new Date().toISOString(),
-      replies: []
-    }
+    try {
+      const result = await addProjectComment(
+        selectedProjectId,
+        { commentText: commentText.trim() },
+        authState.token
+      )
 
-    setProjects(prev => prev.map(proj => {
-      if (proj.id === selectedProjectId) {
-        return {
-          ...proj,
-          comments: [...(proj.comments || []), newComment]
+      setProjects(prev => prev.map(proj => {
+        if (proj.id === selectedProjectId) {
+          return {
+            ...proj,
+            comments: result?.data || proj.comments
+          }
         }
-      }
-      return proj
-    }))
-    setCommentText('')
+        return proj
+      }))
+      setCommentText('')
+    } catch (err) {
+      console.error('Failed to add comment:', err)
+      alert(`Failed to add comment: ${err.message}`)
+    }
   }
 
   // Handle submitting a nested reply to a comment thread
-  const handleAddReply = (e, commentId) => {
+  const handleAddReply = async (e, commentId) => {
     e.preventDefault()
     if (!replyText.trim() || !selectedProjectId) return
 
-    const newReply = {
-      id: `reply-${Date.now()}`,
-      user: authState.name || 'Anonymous User',
-      text: replyText.trim(),
-      date: new Date().toISOString()
-    }
+    try {
+      const result = await addProjectComment(
+        selectedProjectId,
+        { parentCommentId: commentId, replyText: replyText.trim() },
+        authState.token
+      )
 
-    setProjects(prev => prev.map(proj => {
-      if (proj.id === selectedProjectId) {
-        return {
-          ...proj,
-          comments: (proj.comments || []).map(comm => {
-            if (comm.id === commentId) {
-              return {
-                ...comm,
-                replies: [...(comm.replies || []), newReply]
-              }
-            }
-            return comm
-          })
+      setProjects(prev => prev.map(proj => {
+        if (proj.id === selectedProjectId) {
+          return {
+            ...proj,
+            comments: result?.data || proj.comments
+          }
         }
-      }
-      return proj
-    }))
-
-    setReplyText('')
-    setReplyingToId(null)
+        return proj
+      }))
+      setReplyText('')
+      setReplyingToId(null)
+    } catch (err) {
+      console.error('Failed to add reply:', err)
+      alert(`Failed to add reply: ${err.message}`)
+    }
   }
 
   // Share a technical resource
-  const handleAddResource = (e) => {
+  const handleAddResource = async (e) => {
     e.preventDefault()
     if (!newResourceTitle.trim() || !newResourceUrl.trim() || !selectedProjectId) return
 
@@ -406,27 +419,31 @@ export default function StudentProjectShowcasePage() {
       formattedUrl = `https://${formattedUrl}`
     }
 
-    const newResource = {
-      id: `lr-${Date.now()}`,
-      title: newResourceTitle.trim(),
-      url: formattedUrl,
-      type: newResourceType
-    }
+    try {
+      const result = await addProjectResource(
+        selectedProjectId,
+        { title: newResourceTitle.trim(), url: formattedUrl, type: newResourceType },
+        authState.token
+      )
 
-    setProjects(prev => prev.map(proj => {
-      if (proj.id === selectedProjectId) {
-        return {
-          ...proj,
-          learningResources: [...(proj.learningResources || []), newResource]
+      setProjects(prev => prev.map(proj => {
+        if (proj.id === selectedProjectId) {
+          return {
+            ...proj,
+            learningResources: result?.data || proj.learningResources
+          }
         }
-      }
-      return proj
-    }))
+        return proj
+      }))
 
-    setNewResourceTitle('')
-    setNewResourceUrl('')
-    setNewResourceType('Documentation')
-    alert('Technical resource shared and preserved successfully!')
+      setNewResourceTitle('')
+      setNewResourceUrl('')
+      setNewResourceType('Documentation')
+      alert('Technical resource shared and preserved successfully!')
+    } catch (err) {
+      console.error('Failed to share resource:', err)
+      alert(`Failed to share resource: ${err.message}`)
+    }
   }
 
   const handleFormChange = (e) => {
@@ -434,15 +451,14 @@ export default function StudentProjectShowcasePage() {
     setNewProject(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleCreateProject = (e) => {
+  const handleCreateProject = async (e) => {
     e.preventDefault()
     if (!newProject.title.trim() || !newProject.description.trim()) {
       alert('Please fill out all required fields.')
       return
     }
 
-    const createdProject = {
-      id: `proj-${Date.now()}`,
+    const projectPayload = {
       title: newProject.title.trim(),
       description: newProject.description.trim(),
       longDescription: newProject.longDescription.trim() || newProject.description.trim(),
@@ -452,35 +468,36 @@ export default function StudentProjectShowcasePage() {
       supervisor: newProject.supervisor.trim() || 'TBA',
       tags: newProject.tags.split(',').map(t => t.trim()).filter(Boolean),
       thumbnail: newProject.thumbnail.trim() || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80',
-      featured: false,
-      createdAt: new Date().toISOString(),
-      resources: {
-        reportUrl: '#',
-        slidesUrl: '#',
-        repoUrl: newProject.repoUrl.trim() || '#'
-      },
-      screenshots: [],
+      repoUrl: newProject.repoUrl.trim() || null,
       demoUrl: newProject.demoUrl.trim() || null,
-      comments: [],
-      learningResources: []
+      screenshots: []
     }
 
-    setProjects(prev => [createdProject, ...prev])
-    setShowSubmitModal(false)
-    setNewProject({
-      title: '',
-      description: '',
-      longDescription: '',
-      category: 'Artificial Intelligence',
-      academicYear: '2025-2026',
-      teamMembers: '',
-      supervisor: '',
-      tags: '',
-      thumbnail: '',
-      repoUrl: '',
-      demoUrl: '',
-    })
-    alert('Project submitted successfully and preserved locally!')
+    try {
+      await submitProject(projectPayload, authState.token)
+      alert('Project submitted successfully! It is now pending admin moderation.')
+      setShowSubmitModal(false)
+      setNewProject({
+        title: '',
+        description: '',
+        longDescription: '',
+        category: 'Artificial Intelligence',
+        academicYear: '2025-2026',
+        teamMembers: '',
+        supervisor: '',
+        tags: '',
+        thumbnail: '',
+        repoUrl: '',
+        demoUrl: '',
+      })
+
+      // Reload project list
+      const result = await getProjects()
+      setProjects(result?.data || [])
+    } catch (err) {
+      console.error('Failed to submit project:', err)
+      alert(`Failed to submit project: ${err.message}`)
+    }
   }
 
   return (
@@ -489,6 +506,13 @@ export default function StudentProjectShowcasePage() {
       {/* ─── BROWSE VIEW ─── */}
       {!selectedProject && !showSubmitModal && (
         <>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center p-12 text-muted-foreground gap-3 w-full">
+              <Loader2 className="animate-spin text-accent-strong" size={32} />
+              <p className="text-sm font-medium">Loading showcase projects...</p>
+            </div>
+          ) : (
+            <>
           {/* Header Section */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border pb-4">
             <div className="grid gap-1">
@@ -737,6 +761,8 @@ export default function StudentProjectShowcasePage() {
             </div>
 
           </div>
+          </>
+          )}
         </>
       )}
 
@@ -1152,7 +1178,9 @@ export default function StudentProjectShowcasePage() {
                     onChange={handleFormChange}
                     placeholder="e.g., Autonomous Crop Disease Detection System"
                     required
+                    minLength={3}
                   />
+                  <span className="text-[10px] text-muted-foreground">Minimum 3 characters</span>
                 </div>
 
                 <div className="grid gap-1.5">
@@ -1164,7 +1192,9 @@ export default function StudentProjectShowcasePage() {
                     onChange={handleFormChange}
                     placeholder="Brief 1-2 sentence summary of the project goals and outcome..."
                     required
+                    minLength={5}
                   />
+                  <span className="text-[10px] text-muted-foreground">Minimum 5 characters</span>
                 </div>
 
                 <div className="grid gap-1.5">
@@ -1177,8 +1207,10 @@ export default function StudentProjectShowcasePage() {
                     placeholder="Detailed explanation of the project architecture, methodology, results, and significance..."
                     rows={6}
                     required
+                    minLength={10}
                     className="w-full rounded-md border border-input bg-muted/10 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   />
+                  <span className="text-[10px] text-muted-foreground">Minimum 10 characters detailing methodology and results</span>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -1224,6 +1256,7 @@ export default function StudentProjectShowcasePage() {
                       placeholder="e.g., Tahmid Rahman, Sajid Al-Masoom"
                       required
                     />
+                    <span className="text-[10px] text-muted-foreground">At least one member name required</span>
                   </div>
 
                   <div className="grid gap-1.5">
@@ -1249,6 +1282,7 @@ export default function StudentProjectShowcasePage() {
                     placeholder="e.g., Python, PyTorch, React, OpenCV"
                     required
                   />
+                  <span className="text-[10px] text-muted-foreground">At least one tag required (e.g. Python, React)</span>
                 </div>
 
                 <div className="grid gap-1.5">

@@ -15,6 +15,7 @@ function errorHandler(err, req, res, _next) {
     error: {
       code: err.code || "INTERNAL_SERVER_ERROR",
       message: err.message || "Internal server error",
+      details: err.details || undefined,
     },
   });
 }

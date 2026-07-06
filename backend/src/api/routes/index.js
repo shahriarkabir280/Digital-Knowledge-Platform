@@ -3,6 +3,7 @@ const authRouter = require("../../modules/auth");
 const documentsRouter = require("../../modules/documents");
 const libraryRouter = require("../../modules/library");
 const usersRouter = require("../../modules/users");
+const projectsRouter = require("../../modules/projects");
 const db = require("../../db");
 const { extractMetadataLocally } = require("../../services/metadataExtractionService");
 
@@ -32,6 +33,7 @@ router.use("/users", usersRouter);
 router.use("/repository", documentsRouter);
 router.use("/documents", documentsRouter);
 router.use("/library", libraryRouter);
+router.use("/projects", projectsRouter);
 
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://python-service:8000";
 

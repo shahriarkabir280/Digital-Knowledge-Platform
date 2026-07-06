@@ -19,6 +19,12 @@ const adminCards = [
     tone: 'blue',
   },
   {
+    title: 'Project Moderation',
+    description: 'Review and approve pending student projects for the showcase.',
+    to: '/admin/project-moderation',
+    tone: 'purple',
+  },
+  {
     title: 'Role Management',
     description: 'Review user access and assign elevated roles from control panel.',
     to: '/admin/panel',
@@ -36,6 +42,7 @@ export default function AdminDashboardPage() {
   const { authState } = useAuth()
   const [researchPendingCount, setResearchPendingCount] = useState(0)
   const [libraryPendingCount, setLibraryPendingCount] = useState(0)
+  const [projectsPendingCount, setProjectsPendingCount] = useState(0)
   const [totalPublished, setTotalPublished] = useState(0)
 
   useEffect(() => {
@@ -72,6 +79,16 @@ export default function AdminDashboardPage() {
       } catch (error) {
         console.error('Failed to fetch library pending count:', error)
       }
+
+      // Fetch all pending projects count
+      try {
+        const projectsResponse = await apiRequest('/projects/pending', {
+          authToken: authState.token,
+        })
+        setProjectsPendingCount(projectsResponse?.data?.length || 0)
+      } catch (error) {
+        console.error('Failed to fetch projects pending count:', error)
+      }
     }
 
     if (authState?.token) {
@@ -79,7 +96,7 @@ export default function AdminDashboardPage() {
     }
   }, [authState?.token])
 
-  const totalPending = researchPendingCount + libraryPendingCount
+  const totalPending = researchPendingCount + libraryPendingCount + projectsPendingCount
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-4">
@@ -122,7 +139,7 @@ export default function AdminDashboardPage() {
           <CardContent className="p-6">
             <p className="text-xs uppercase tracking-wider text-yellow-600 font-bold">Pending Approvals</p>
             <span className="text-5xl font-black text-yellow-600">{totalPending}</span>
-            <p className="text-[11px] text-yellow-600/60 mt-0.5">{researchPendingCount} research · {libraryPendingCount} library</p>
+            <p className="text-[11px] text-yellow-600/60 mt-0.5">{researchPendingCount} research · {libraryPendingCount} library · {projectsPendingCount} projects</p>
           </CardContent>
         </Card>
       </div>

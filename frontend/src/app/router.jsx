@@ -15,6 +15,7 @@ import LibraryAnalyticsPage from '../pages/LibraryAnalyticsPage.jsx'
 import LibraryModerationPage from '../pages/LibraryModerationPage.jsx'
 import LoginPage from '../pages/LoginPage.jsx'
 import ModerationQueuePage from '../pages/ModerationQueuePage.jsx'
+import ProjectModerationPage from '../pages/ProjectModerationPage.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
 import NotificationsPage from '../pages/NotificationsPage.jsx'
 import RegisterPage from '../pages/RegisterPage.jsx'
@@ -117,6 +118,10 @@ export const appRouter = createBrowserRouter([
               {
                 path: '/moderation-queue',
                 element: <ModerationQueuePage />,
+              },
+              {
+                path: '/admin/project-moderation',
+                element: <ProjectModerationPage />,
               },
             ],
           },

@@ -6,18 +6,12 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '../app/use-auth.js'
 import { apiRequest } from '../services/api/client'
-import PDFThumbnail from '../components/library/PDFThumbnail.jsx'
 import { ResourceGridSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
+import ResourceCard from '../components/library/ResourceCard.jsx'
 import { 
   Bookmark, 
-  Trash2, 
-  BookOpen, 
-  GraduationCap, 
   Sparkles, 
-  Quote, 
-  Star,
-  Search,
-  Filter
+  Search
 } from 'lucide-react'
 
 export default function LibraryBookmarksPage() {
@@ -75,6 +69,7 @@ export default function LibraryBookmarksPage() {
                   tags: doc.keywords || [],
                   rating: 5.0,
                   downloads: 0,
+                  filePath: doc.filePath,
                 })
               }
             }
@@ -128,25 +123,22 @@ export default function LibraryBookmarksPage() {
     setBookmarkedIds(prev => prev.filter(item => item !== id))
   }
 
-  const copyCitation = (resource) => {
-    const year = resource.year || new Date(resource.updatedAt || Date.now()).getFullYear()
-    const citation = `${resource.author || 'Anonymous'}. (${year}). ${resource.title}. Department of ${resource.department || 'CSE'}, Library Collections.`
-    navigator.clipboard.writeText(citation)
-    alert('Citation copied in APA format!')
-  }
+  const getResourceType = (item) => {
+    const category = String(item.resourceCategory || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
+    if (category === 'textbook') return 'Textbook'
+    if (category === 'lecture-slides' || category === 'slides') return 'Lecture Slides'
+    if (category === 'lab-manual' || category === 'manual') return 'Lab Manual'
+    if (category === 'question-bank' || category === 'qbank') return 'Question Bank'
+    if (category === 'assignment') return 'Assignment'
+    if (category === 'lab-report') return 'Lab Report'
+    if (category === 'media' || category === 'video' || category === 'videos') return 'Video'
 
-  const getTypeBadgeStyles = (type) => {
-    const normType = String(type).toLowerCase()
-    if (['paper', 'research paper', 'thesis'].includes(normType)) {
-      return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-    }
-    if (normType === 'dataset') {
-      return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
-    }
-    if (normType === 'ppt') {
-      return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-    }
-    return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+    const tags = (item.tags || []).map(t => t.toLowerCase())
+    const type = String(item.type || '').toLowerCase()
+    if (type === 'paper' || type === 'research paper') return 'Research Paper'
+    if (type === 'thesis') return 'Thesis'
+    if (type === 'dataset') return 'Dataset'
+    return 'Lecture Notes'
   }
 
   const isShowingSkeleton = loadingPublished && authState?.token
@@ -258,103 +250,20 @@ export default function LibraryBookmarksPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredItems.map(item => {
-            const isPdfRenderable = ['PDF', 'Paper', 'Thesis', 'Research Paper', 'Question Bank', 'Assignment', 'Lab Report'].includes(item.type) && Boolean(item.pdfUrl)
-            
-            // Map static previews
-            const thumbMap = {
-              'PDF':           '/thumbs/thumb_pdf.png',
-              'Paper':         '/thumbs/thumb_paper.png',
-              'Research Paper':'/thumbs/thumb_paper.png',
-              'Thesis':        '/thumbs/thumb_paper.png',
-              'PPT':           '/thumbs/thumb_ppt.png',
-              'Dataset':       '/thumbs/thumb_dataset.png',
-              'Question Bank': '/thumbs/thumb_qbank.png',
-              'Assignment':    '/thumbs/thumb_assignment.png',
-              'Lab Report':    '/thumbs/thumb_lab_report.png',
-            }
-            
-            const badgeColors = {
-              'PDF':           'bg-red-600',
-              'Paper':         'bg-blue-600',
-              'Research Paper':'bg-blue-600',
-              'Thesis':        'bg-indigo-600',
-              'PPT':           'bg-amber-500',
-              'Dataset':       'bg-purple-600',
-              'Question Bank': 'bg-sky-600',
-              'Assignment':    'bg-orange-600',
-              'Lab Report':    'bg-teal-600',
-            }
-
-            const fallbackSrc = thumbMap[item.type] || '/thumbs/thumb_pdf.png'
-            const badgeColor  = badgeColors[item.type] || 'bg-slate-600'
+            const type = getResourceType(item)
+            const isExternal = item.filePath && (item.filePath.startsWith('http://') || item.filePath.startsWith('https://'))
+            const viewerLink = isExternal ? item.filePath : `/viewer/${item.id.replace('doc-', '')}`
 
             return (
-              <Card key={item.id} className="group hover:shadow-md transition-all border-border flex flex-col overflow-hidden bg-card">
-                
-                {/* Visual Thumbnail */}
-                <Link to={`/library/resource/${item.id}`} className="relative block h-36 overflow-hidden bg-muted shrink-0">
-                  {isPdfRenderable ? (
-                    <PDFThumbnail
-                      pdfUrl={item.pdfUrl}
-                      fallbackSrc={fallbackSrc}
-                      badgeColor={badgeColor}
-                      badgeLabel={item.type}
-                    />
-                  ) : (
-                    <div className="relative w-full h-full">
-                      <img
-                        src={fallbackSrc}
-                        alt={item.title}
-                        className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all duration-200 flex items-center justify-center">
-                        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-bold text-white bg-white/20 backdrop-blur-sm px-2.5 py-1.5 rounded-full border border-white/30">
-                          View Details
-                        </span>
-                      </div>
-                      <span className={`absolute bottom-2 left-2 ${badgeColor} text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded`}>
-                        {item.type}
-                      </span>
-                    </div>
-                  )}
-                </Link>
-
-                <CardHeader className="p-4 pb-1 flex-1">
-                  <div className="flex justify-between items-start gap-2">
-                    <Badge className={`text-[9px] font-bold px-2 py-0.5 border uppercase ${getTypeBadgeStyles(item.type)}`}>
-                      {item.type}
-                    </Badge>
-                    <span className="text-[10px] text-muted-foreground font-bold">{item.course}</span>
-                  </div>
-                  <CardTitle className="text-xs font-bold leading-snug mt-2 line-clamp-2 group-hover:text-accent transition-colors">
-                    {item.title}
-                  </CardTitle>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    {item.author || 'Anonymous'} · <span className="font-semibold text-accent-strong">{item.department || 'CSE'}</span>
-                  </p>
-                </CardHeader>
-
-                <CardContent className="p-4 pt-0 shrink-0 flex flex-col gap-2.5 border-t border-border/40 mt-2 bg-muted/5">
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-2">
-                    <span className="flex items-center gap-0.5 text-amber-500 font-bold"><Star size={11} className="fill-amber-500" /> {item.rating || '5.0'}</span>
-                    <span>{item.downloads || 0} Downloads</span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <Button asChild size="sm" className="h-7 text-[10px] flex-1 font-bold bg-accent hover:bg-accent/90 text-white border-none">
-                      <Link to={`/library/resource/${item.id}`}>Open</Link>
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-7 text-[10px] px-2" onClick={() => copyCitation(item)}>
-                      <Quote size={10} />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-[10px] px-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/5 border border-transparent"
-                      onClick={() => removeBookmark(item.id)}>
-                      <Trash2 size={11} />
-                    </Button>
-                  </div>
-                </CardContent>
-
-              </Card>
+              <ResourceCard
+                key={item.id}
+                item={item}
+                type={type}
+                isBookmarked={true}
+                onBookmark={removeBookmark}
+                viewerLink={viewerLink}
+                pdfUrl={item.pdfUrl}
+              />
             )
           })}
         </div>

@@ -59,7 +59,7 @@ export default function RepositoryPage() {
       for (const resourceCategory of categories) {
         try {
           const accessTierParam = isGuest ? '&accessTier=PUBLIC' : ''
-          const response = await apiRequest(`/documents/my-uploads?state=published&resourceCategory=${resourceCategory}${accessTierParam}`, {
+          const response = await apiRequest(`/documents/published?resourceCategory=${resourceCategory}${accessTierParam}`, {
             authToken: token,
           })
 
@@ -100,6 +100,7 @@ export default function RepositoryPage() {
                 rating: 5.0,
                 downloads: 0,
                 uploaderName: doc.uploaderName || null,
+                filePath: doc.filePath,
               })
             }
           }
@@ -302,15 +303,29 @@ export default function RepositoryPage() {
       setUploadError('Please select a file to upload.')
       return
     }
-
-    if (uploadMode === 'file' && selectedFile) {
-      if (!authState?.token) {
-        setUploadError('You must be logged in to upload research documents.')
+    if (uploadMode === 'url') {
+      const link = newResource.linkUrl.trim()
+      if (!link) {
+        setUploadError('Please enter a valid link/URL.')
         return
       }
-      setIsUploading(true)
-      setUploadProgress(0)
-      try {
+      if (!link.startsWith('http://') && !link.startsWith('https://')) {
+        setUploadError('Link/URL must start with http:// or https://')
+        return
+      }
+    }
+
+    if (!authState?.token) {
+      setUploadError('You must be logged in to upload resources.')
+      return
+    }
+
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    try {
+      const keywords = newResource.tags ? newResource.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      if (uploadMode === 'file') {
         await uploadDocument(
           selectedFile,
           { 
@@ -318,7 +333,7 @@ export default function RepositoryPage() {
             description: newResource.summary.trim(),
             resourceCategory: newResource.resourceCategory,
             accessTier: newResource.accessTier || 'PUBLIC',
-            keywords: newResource.tags.split(',').map(t => t.trim()).filter(Boolean),
+            keywords,
             author: newResource.author.trim(),
             department: newResource.department,
             course: newResource.course.trim(),
@@ -329,13 +344,33 @@ export default function RepositoryPage() {
           ({ percent }) => setUploadProgress(percent),
           authState.token
         )
-      } catch (err) {
-        setUploadError(err.message || 'Upload failed. Please try again.')
-        setIsUploading(false)
-        return
+      } else {
+        await uploadDocument(
+          null,
+          { 
+            title: newResource.title.trim(), 
+            description: newResource.summary.trim(),
+            resourceCategory: newResource.resourceCategory,
+            accessTier: newResource.accessTier || 'PUBLIC',
+            keywords,
+            author: newResource.author.trim(),
+            department: newResource.department,
+            course: newResource.course.trim(),
+            year: new Date().getFullYear(),
+            language: 'English',
+            state: intent,
+            linkUrl: newResource.linkUrl.trim(),
+          },
+          ({ percent }) => setUploadProgress(percent),
+          authState.token
+        )
       }
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed. Please try again.')
       setIsUploading(false)
+      return
     }
+    setIsUploading(false)
 
     queryClient.invalidateQueries({ queryKey: ['repository-docs'] })
     setShowUploadModal(false)
@@ -500,9 +535,12 @@ export default function RepositoryPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               {filteredExplore.map(item => {
                 const type = getResearchType(item)
-                const viewerLink = item.id.startsWith('doc-')
-                  ? `/viewer/${item.id.replace('doc-', '')}`
-                  : `/library/resource/${item.id}`
+                const isExternal = item.filePath && (item.filePath.startsWith('http://') || item.filePath.startsWith('https://'))
+                const viewerLink = isExternal
+                  ? item.filePath
+                  : item.id.startsWith('doc-')
+                    ? `/viewer/${item.id.replace('doc-', '')}`
+                    : `/library/resource/${item.id}`
 
                 return (
                   <ResourceCard

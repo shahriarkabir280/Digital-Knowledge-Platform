@@ -6,6 +6,7 @@
  */
 
 const uploadService = require('../../services/uploadService');
+const supabaseStorage = require('../../services/supabaseStorage');
 const db = require('../../db');
 const { validateDocumentId } = require('./metadataValidator');
 const { versionIncrementExpression } = require('./versionService');
@@ -35,6 +36,11 @@ const RESOURCE_CATEGORY_ALIASES = {
 };
 
 function canAccessDocumentContent(document, user) {
+  // If the document is published and public, anyone can access it
+  if (document.state === 'published' && document.access_tier === 'PUBLIC') {
+    return true;
+  }
+
   if (!user) {
     return false;
   }
@@ -755,8 +761,24 @@ async function streamFileContent(req, res, next) {
       return res.redirect(302, document.file_path);
     }
 
-    const signedUrl = await uploadService.getSignedUrl(document.file_path, 120);
-    return res.redirect(302, signedUrl);
+    // Stream/download file content directly from Supabase Storage to avoid CORS issues on client
+    const blob = await supabaseStorage.downloadFile('documents', document.file_path);
+    const format = (document.format || '').toLowerCase();
+    
+    let contentType = 'application/octet-stream';
+    if (format === 'pdf') contentType = 'application/pdf';
+    else if (format === 'jpg' || format === 'jpeg') contentType = 'image/jpeg';
+    else if (format === 'png') contentType = 'image/png';
+    else if (format === 'zip') contentType = 'application/zip';
+    else if (format === 'json') contentType = 'application/json';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.title)}.${format}"`);
+
+    // Convert Blob to ArrayBuffer then Buffer to send via Express
+    const arrayBuffer = await blob.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return res.send(buffer);
   } catch (error) {
     return next(error);
   }

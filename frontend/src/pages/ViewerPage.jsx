@@ -53,23 +53,18 @@ export default function ViewerPage() {
         // The /content endpoint redirects to a signed Supabase URL
         // We need to follow that redirect to get the actual file URL
         try {
-          const fileResponse = await fetch(`/api/repository/files/${docId}/content`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${authState?.token}`,
-            },
-            redirect: 'follow', // Follow redirects automatically
+          const signedUrlResponse = await apiRequest(`/repository/files/${docId}/signed-url`, {
+            authToken: authState?.token,
           })
           
-          if (fileResponse.ok) {
-            // Get the final URL after redirects
-            setFileUrl(fileResponse.url)
-            console.log('File URL obtained:', fileResponse.url)
+          if (signedUrlResponse?.data?.signedUrl) {
+            setFileUrl(signedUrlResponse.data.signedUrl)
+            console.log('File URL obtained:', signedUrlResponse.data.signedUrl)
           } else {
-            console.error('Failed to get file URL:', fileResponse.status)
+            console.error('Failed to get signed URL')
           }
         } catch (err) {
-          console.error('Error fetching file URL:', err)
+          console.error('Error fetching signed URL:', err)
         }
       } catch (err) {
         console.error('Failed to fetch document:', err)

@@ -66,18 +66,7 @@ export default function RepositoryPage() {
           if (response?.data?.items?.length) {
             for (const doc of response.data.items) {
               const numericDocId = Number(doc.id)
-              let signedUrl = `/api/repository/files/${numericDocId || doc.id}/content`
-
-              try {
-                const signedUrlResponse = await apiRequest(`/repository/files/${numericDocId || doc.id}/signed-url`, {
-                  authToken: token,
-                })
-                if (signedUrlResponse?.data?.signedUrl) {
-                  signedUrl = signedUrlResponse.data.signedUrl
-                }
-              } catch (err) {
-                console.error(`Failed to get signed URL for doc ${doc.id}:`, err)
-              }
+              const pdfUrl = `/api/repository/files/${numericDocId || doc.id}/content`
 
               const docId = `doc-${doc.id}`
               if (seenDocIds.has(docId)) continue
@@ -91,7 +80,7 @@ export default function RepositoryPage() {
                 format: doc.format,
                 version: doc.version,
                 state: doc.state,
-                pdfUrl: signedUrl,
+                pdfUrl,
                 updatedAt: doc.updatedAt,
                 department: doc.department || 'CSE',
                 course: doc.course || 'N/A',

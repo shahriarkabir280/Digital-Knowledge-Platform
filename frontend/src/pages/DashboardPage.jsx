@@ -291,39 +291,15 @@ export default function DashboardPage() {
             <ShieldCheck size={14} className="text-red-500" />
             <span>Admin Panel</span>
           </div>
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2">
             <Link to="/dashboard/admin" className="group block">
               <Card className="border-border hover:border-red-500/30 hover:shadow-md transition-all h-full">
                 <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                   <div className="w-10 h-10 rounded-xl bg-red-500/10 group-hover:bg-red-500/20 transition-colors flex items-center justify-center">
                     <LayoutDashboard size={20} className="text-red-500" />
                   </div>
-                  <span className="text-xs font-bold">Admin Dashboard</span>
-                  <span className="text-[10px] text-muted-foreground leading-tight">Full system overview and analytics</span>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link to="/moderation-queue" className="group block">
-              <Card className="border-border hover:border-amber-500/30 hover:shadow-md transition-all h-full">
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 group-hover:bg-amber-500/20 transition-colors flex items-center justify-center">
-                    <ClipboardCheck size={20} className="text-amber-500" />
-                  </div>
-                  <span className="text-xs font-bold">Moderation Queue</span>
-                  <span className="text-[10px] text-muted-foreground leading-tight">Review pending document submissions</span>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link to="/library-moderation-queue" className="group block">
-              <Card className="border-border hover:border-blue-500/30 hover:shadow-md transition-all h-full">
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors flex items-center justify-center">
-                    <BookOpen size={20} className="text-blue-500" />
-                  </div>
-                  <span className="text-xs font-bold">Library Moderation</span>
-                  <span className="text-[10px] text-muted-foreground leading-tight">Academic resource approval queue</span>
+                  <span className="text-xs font-bold">Pending Approvals</span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">Review pending research, library items, and student projects</span>
                 </CardContent>
               </Card>
             </Link>

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../app/use-auth.js'
 import { useLayout } from '../../app/layout-context.jsx'
-import { defaultRouteForRole } from '../../app/rbac.js'
+import { defaultRouteForRole, ROLES } from '../../app/rbac.js'
 import { navItems } from './nav-config.js'
 import {
   Tooltip,
@@ -65,7 +65,14 @@ export default function Sidebar() {
     toggleSidebarCollapse,
   } = useLayout()
 
-  const items = navItems.filter((item) => item.roles.includes(authState.role))
+  const items = navItems
+    .filter((item) => item.roles.includes(authState.role))
+    .map((item) => {
+      if (item.to === '/dashboard' && authState.role === ROLES.ADMIN) {
+        return { ...item, label: 'Admin Dashboard' }
+      }
+      return item
+    })
 
   return (
     <TooltipProvider>

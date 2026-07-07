@@ -24,18 +24,6 @@ const adminCards = [
     to: '/admin/project-moderation',
     tone: 'purple',
   },
-  {
-    title: 'Role Management',
-    description: 'Review user access and assign elevated roles from control panel.',
-    to: '/admin/panel',
-    tone: 'gold',
-  },
-  {
-    title: 'Repository Oversight',
-    description: 'Inspect submission health, moderation queues, and approval states.',
-    to: '/repository',
-    tone: 'sage',
-  },
 ]
 
 export default function AdminDashboardPage() {
@@ -102,11 +90,10 @@ export default function AdminDashboardPage() {
     <section className="mx-auto grid w-full max-w-6xl gap-4">
       <header className="flex flex-col sm:flex-row items-start justify-between gap-4 rounded-lg border border-border bg-card p-5">
         <div className="grid gap-2">
-          <p className="brand-kicker">Admin Dashboard</p>
-          <h2 className="text-2xl font-semibold tracking-tight">System control center</h2>
+          <p className="brand-kicker">Pending Approvals</p>
+          <h2 className="text-2xl font-semibold tracking-tight">Approvals control center</h2>
           <p className="text-sm text-muted-foreground">
-            Governance-focused workspace for administration, policy checks, and
-            operational decisions.
+            Review and manage pending research papers, library resources, and project submissions.
           </p>
         </div>
 
@@ -144,7 +131,7 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-3">
         {adminCards.map((card) => (
           <Link
             key={card.title}

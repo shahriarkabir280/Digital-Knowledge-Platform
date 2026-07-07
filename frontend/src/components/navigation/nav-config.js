@@ -44,12 +44,6 @@ export const navItems = [
     roles: ROUTE_ACCESS.allUploads,
   },
   {
-    to: '/library-moderation-queue',
-    label: 'Library Moderation',
-    iconName: 'ClipboardCheck',
-    roles: ROUTE_ACCESS.reviewQueue,
-  },
-  {
     to: '/library/settings',
     label: 'Settings',
     iconName: 'Settings2',

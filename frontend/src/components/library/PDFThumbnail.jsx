@@ -11,9 +11,10 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
+// Use the static worker file copied to public/ during prebuild.
+// This avoids Nginx MIME type issues with .mjs files in production.
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 // Module-level cache: pdfUrl → data-URL (jpeg) of the first page
 const thumbCache = new Map()

@@ -11,11 +11,9 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
-// Use CDN worker — most reliable across pdfjs-dist versions and bundlers
-// Falls back gracefully if offline; pdfjs will catch the error and we show the static thumbnail.
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
 // Module-level cache: pdfUrl → data-URL (jpeg) of the first page
 const thumbCache = new Map()

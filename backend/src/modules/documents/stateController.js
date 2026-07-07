@@ -158,7 +158,10 @@ async function patchDocumentState(req, res, next) {
 
   try {
     const documentId = idResult.data;
-    const nextState = payloadResult.data.state;
+    let nextState = payloadResult.data.state;
+    if (req.user.role === "ADMIN" && (nextState === "review" || nextState === "pending")) {
+      nextState = "published";
+    }
     const note = payloadResult.data.note ? payloadResult.data.note.trim() : null;
 
     const actor = await db("users")
@@ -183,7 +186,7 @@ async function patchDocumentState(req, res, next) {
       return next(transitionResult.error);
     }
 
-    const noteResult = validateTransitionNote(document.state, nextState, note);
+    const noteResult = validateTransitionNote(document.state, nextState, note, req.user.role);
     if (!noteResult.ok) {
       return next(noteResult.error);
     }

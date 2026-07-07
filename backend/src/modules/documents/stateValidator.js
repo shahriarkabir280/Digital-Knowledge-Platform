@@ -125,7 +125,11 @@ function validateTransition(currentState, nextState) {
   return { ok: true };
 }
 
-function validateTransitionNote(currentState, nextState, note) {
+function validateTransitionNote(currentState, nextState, note, userRole) {
+  if (userRole === "ADMIN") {
+    return { ok: true };
+  }
+
   const requiresNote =
     (currentState === DOCUMENT_STATES.PENDING &&
       (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.ARCHIVED)) ||

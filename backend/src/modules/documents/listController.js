@@ -28,6 +28,7 @@ const allUploadsQuerySchema = z.object({
     return Number.isNaN(parsed) ? value : parsed;
   }, z.number().int().positive().optional()),
   accessTier: z.enum(Object.values(AccessTier)).optional(),
+  search: z.string().optional(),
 });
 
 const REVIEW_QUEUE_ROLES = ["STAFF", "LAB_MANAGER", "REVIEWER", "ADMIN"];
@@ -251,6 +252,16 @@ function buildAllUploadsQuery(table, filters = {}) {
     query = query.andWhere(`${table}.access_tier`, filters.accessTier);
   }
 
+  if (filters.search && filters.search.trim()) {
+    const searchPattern = `%${filters.search.toLowerCase()}%`;
+    query = query.andWhere((builder) => {
+      builder.whereRaw(`LOWER(${table}.title) LIKE ?`, [searchPattern])
+             .orWhereRaw(`LOWER(${table}.author) LIKE ?`, [searchPattern])
+             .orWhereRaw(`LOWER(u.name) LIKE ?`, [searchPattern])
+             .orWhereRaw(`LOWER(u.email) LIKE ?`, [searchPattern]);
+    });
+  }
+
   return query;
 }
 
@@ -431,6 +442,7 @@ function validateAllUploadsFilters(query) {
       type: data.type ? data.type.toLowerCase() : undefined,
       uploaderId: data.uploaderId,
       accessTier: data.accessTier,
+      search: data.search,
     },
   };
 }
@@ -621,13 +633,13 @@ async function getAllUploads(req, res, next) {
   }
 
   try {
-    const { state, type, uploaderId, accessTier } = filterResult.data;
+    const { state, type, uploaderId, accessTier, search } = filterResult.data;
 
     const tables = ["research_resources", "academic_resources"];
     const rows = [];
 
     for (const table of tables) {
-      const query = buildAllUploadsQuery(table, { state, type, uploaderId, accessTier });
+      const query = buildAllUploadsQuery(table, { state, type, uploaderId, accessTier, search });
       rows.push(...(await query));
     }
 
@@ -645,6 +657,7 @@ async function getAllUploads(req, res, next) {
           type: type || null,
           uploaderId: uploaderId || null,
           accessTier: accessTier || null,
+          search: search || null,
         },
       },
       message: items.length > 0 ? "All uploads fetched" : "No uploads found",

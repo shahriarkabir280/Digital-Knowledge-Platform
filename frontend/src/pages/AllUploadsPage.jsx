@@ -13,6 +13,7 @@ import {
   fetchAllUploads,
   openDocumentInNewTab,
   patchDocumentState,
+  deleteDocument,
 } from '../services/api/documents.js'
 
 const initialFilters = {
@@ -20,6 +21,7 @@ const initialFilters = {
   type: '',
   uploaderId: '',
   accessTier: '',
+  search: '',
 }
 
 export default function AllUploadsPage() {
@@ -156,6 +158,20 @@ export default function AllUploadsPage() {
     onTransitionClick(documentId, targetState)
   }
 
+  const onDeleteDocument = async (documentId, documentTitle) => {
+    if (!window.confirm(`Are you sure you want to permanently delete "${documentTitle}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setError('')
+      await deleteDocument(documentId, authState.token)
+      await loadItems(filters)
+    } catch (err) {
+      setError(err.message || 'Failed to delete document')
+    }
+  }
+
   const toggleMetadata = (documentId) => {
     setExpandedMetadata((current) => ({
       ...current,
@@ -263,7 +279,19 @@ export default function AllUploadsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Filters</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,180px))_auto_auto] xl:items-end">
+        <CardContent className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:items-end">
+          <div className="grid gap-1.5">
+            <Label htmlFor="all-uploads-search">Search Title / Author / Uploader</Label>
+            <Input
+              id="all-uploads-search"
+              type="text"
+              name="search"
+              value={filters.search}
+              onChange={onFilterChange}
+              placeholder="Search title, author, or uploader..."
+            />
+          </div>
+
           <div className="grid gap-1.5">
             <Label htmlFor="all-uploads-state">State</Label>
             <Select id="all-uploads-state" name="state" value={filters.state} onChange={onFilterChange}>
@@ -276,14 +304,11 @@ export default function AllUploadsPage() {
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="all-uploads-type">Type</Label>
+            <Label htmlFor="all-uploads-type">Category</Label>
             <Select id="all-uploads-type" name="type" value={filters.type} onChange={onFilterChange}>
-              <option value="">All types</option>
-              <option value="research-paper">research-paper</option>
-              <option value="report">report</option>
-              <option value="presentation">presentation</option>
-              <option value="document">document</option>
-              <option value="media">media</option>
+              <option value="">All categories</option>
+              <option value="research">Research</option>
+              <option value="academic">Academic</option>
             </Select>
           </div>
 
@@ -297,25 +322,14 @@ export default function AllUploadsPage() {
             </Select>
           </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="all-uploads-uploader">Uploader ID</Label>
-            <Input
-              id="all-uploads-uploader"
-              type="number"
-              min="1"
-              name="uploaderId"
-              value={filters.uploaderId}
-              onChange={onFilterChange}
-              placeholder="Uploader ID"
-            />
+          <div className="sm:col-span-2 md:col-span-3 lg:col-span-4 flex justify-end gap-2 pt-2 border-t border-border">
+            <Button type="button" variant="secondary" onClick={onApplyFilters}>
+              Apply Filters
+            </Button>
+            <Button type="button" variant="outline" onClick={onResetFilters}>
+              Reset
+            </Button>
           </div>
-
-          <Button type="button" variant="secondary" onClick={onApplyFilters}>
-            Apply
-          </Button>
-          <Button type="button" variant="outline" onClick={onResetFilters}>
-            Reset
-          </Button>
         </CardContent>
       </Card>
 
@@ -401,6 +415,15 @@ export default function AllUploadsPage() {
                     {expandedAudit[item.id] ? 'Hide Audit Log' : 'View Audit Log'}
                   </Button>
                   {renderStateActions(item)}
+                  {authState.role === 'ADMIN' && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => onDeleteDocument(item.id, item.title)}
+                    >
+                      Remove
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

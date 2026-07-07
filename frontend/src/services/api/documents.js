@@ -257,6 +257,10 @@ export async function fetchAllUploads(filters = {}, authToken) {
     params.set('accessTier', filters.accessTier)
   }
 
+  if (filters.search) {
+    params.set('search', filters.search)
+  }
+
   const query = params.toString() ? `?${params.toString()}` : ''
 
   return apiRequest(`/documents/all-uploads${query}`, {

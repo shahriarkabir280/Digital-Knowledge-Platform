@@ -127,6 +127,8 @@ router.post("/", requireAuth, async (req, res, next) => {
 
   try {
     const uploaderId = Number(req.auth.sub);
+    const isAdminUser = req.auth.role === "ADMIN";
+    const projectState = isAdminUser ? "published" : "pending";
     const val = parsed.data;
 
     const [project] = await db("projects")
@@ -144,33 +146,37 @@ router.post("/", requireAuth, async (req, res, next) => {
         repo_url: val.repoUrl || null,
         demo_url: val.demoUrl || null,
         screenshots: JSON.stringify(val.screenshots),
-        state: "pending",
+        state: projectState,
         created_at: db.fn.now(),
         updated_at: db.fn.now(),
       })
       .returning("*");
 
-    // Send notifications to all admins
-    const submitterName = await getUserIdentifier(uploaderId);
-    const admins = await db("users").where({ role: "ADMIN" }).select("id");
-    if (admins.length > 0) {
-      const notifications = admins.map(admin => ({
-        user_id: admin.id,
-        document_id: null,
-        event_type: "project_pending",
-        title: "New student project pending approval",
-        message: `"${val.title}" submitted by ${submitterName} is pending review.`,
-        is_read: false,
-        created_at: db.fn.now(),
-      }));
-      await db("notifications").insert(notifications).catch(err => {
-        console.warn("Failed to insert admin notifications:", err.message);
-      });
+    // Send notifications to all admins (only if pending)
+    if (projectState === "pending") {
+      const submitterName = await getUserIdentifier(uploaderId);
+      const admins = await db("users").where({ role: "ADMIN" }).select("id");
+      if (admins.length > 0) {
+        const notifications = admins.map(admin => ({
+          user_id: admin.id,
+          document_id: null,
+          event_type: "project_pending",
+          title: "New student project pending approval",
+          message: `"${val.title}" submitted by ${submitterName} is pending review.`,
+          is_read: false,
+          created_at: db.fn.now(),
+        }));
+        await db("notifications").insert(notifications).catch(err => {
+          console.warn("Failed to insert admin notifications:", err.message);
+        });
+      }
     }
 
     return res.status(201).json({
       success: true,
-      message: "Project submitted successfully and is pending admin review.",
+      message: isAdminUser
+        ? "Project published successfully."
+        : "Project submitted successfully and is pending admin review.",
       data: { id: String(project.id), state: project.state },
     });
   } catch (error) {

@@ -261,7 +261,10 @@ async function uploadFile(req, res, next) {
       condition: req.body.course && req.body.course.trim() ? 'WILL_STORE' : 'WILL_BE_NULL'
     });
 
-    const initialState = req.body.state === 'draft' ? 'draft' : 'pending';
+    let initialState = req.body.state === 'draft' ? 'draft' : 'pending';
+    if (req.user?.role === 'ADMIN' && initialState !== 'draft') {
+      initialState = 'published';
+    }
 
     const resourceRecord = await createResourceRecord({
       resourceType,

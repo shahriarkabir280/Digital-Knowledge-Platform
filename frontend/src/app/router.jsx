@@ -11,6 +11,7 @@ import LibraryProfilePage from '../pages/LibraryProfilePage.jsx'
 import LibraryResourceDetailsPage from '../pages/LibraryResourceDetailsPage.jsx'
 import LibrarySettingsPage from '../pages/LibrarySettingsPage.jsx'
 import LibraryUploadPage from '../pages/LibraryUploadPage.jsx'
+import LibraryWishlistPage from '../pages/LibraryWishlistPage.jsx'
 import LibraryAnalyticsPage from '../pages/LibraryAnalyticsPage.jsx'
 import LibraryModerationPage from '../pages/LibraryModerationPage.jsx'
 import LoginPage from '../pages/LoginPage.jsx'
@@ -23,6 +24,7 @@ import RepositoryPage from '../pages/RepositoryPage.jsx'
 import ReviewQueuePage from '../pages/ReviewQueuePage.jsx'
 import RoutePage from '../pages/RoutePage.jsx'
 import SearchPage from '../pages/SearchPage.jsx'
+import CatalogCirculationPage from '../pages/CatalogCirculationPage.jsx'
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import StudentProjectShowcasePage from '../pages/StudentProjectShowcasePage.jsx'
 import ViewerPage from '../pages/ViewerPage.jsx'
@@ -75,12 +77,7 @@ export const appRouter = createBrowserRouter([
               },
               {
                 path: '/borrow-item',
-                element: (
-                  <RoutePage
-                    title="Borrow Item"
-                    description="Open the circulation workflow for requesting an available library item."
-                  />
-                ),
+                element: <Navigate to="/circulation" replace />,
               },
               {
                 path: '/library/upload',
@@ -89,6 +86,10 @@ export const appRouter = createBrowserRouter([
               {
                 path: '/library/bookmarks',
                 element: <LibraryBookmarksPage />,
+              },
+              {
+                path: '/library/wishlist',
+                element: <LibraryWishlistPage />,
               },
               {
                 path: '/library/profile',
@@ -144,11 +145,15 @@ export const appRouter = createBrowserRouter([
             ],
           },
           {
-            element: <RoleRoute allowedRoles={[ROLES.STAFF, ROLES.LAB_MANAGER]} />,
+            element: <RoleRoute allowedRoles={[ROLES.STAFF, ROLES.LAB_MANAGER, ROLES.ADMIN]} />,
             children: [
               {
                 path: '/dashboard/staff',
                 element: <StaffDashboardPage />,
+              },
+              {
+                path: '/circulation',
+                element: <CatalogCirculationPage />,
               },
             ],
           },

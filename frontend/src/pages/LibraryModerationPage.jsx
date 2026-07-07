@@ -25,9 +25,11 @@ import {
   FileText,
   Loader2,
   Sparkles,
+  Upload,
   User,
   X,
 } from 'lucide-react'
+import BulkImportPanel from '../components/library/BulkImportPanel.jsx'
 import { apiRequest } from '../services/api/client'
 import { useAuth } from '../app/use-auth.js'
 
@@ -498,6 +500,23 @@ export default function LibraryModerationPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Bulk Import Section ────────────────────────────────────── */}
+      <Card className="border-border shadow-none">
+        <CardHeader className="p-5 border-b border-border bg-gradient-to-r from-muted/20 to-transparent">
+          <div className="flex items-center gap-2">
+            <Upload className="h-4 w-4 text-accent" />
+            <CardTitle className="text-sm font-bold">Bulk Catalog Import</CardTitle>
+          </div>
+          <CardDescription className="text-xs mt-1">
+            Upload a CSV file to add multiple catalog items at once — up to 10,000 rows per file.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-5">
+          <BulkImportPanel />
+        </CardContent>
+      </Card>
+
     </section>
   )
 }

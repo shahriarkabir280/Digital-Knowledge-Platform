@@ -25,6 +25,7 @@ export const PUBLIC_ROUTES = [
 export const ROUTE_ACCESS = Object.freeze({
   library: PUBLIC_ROUTES,
   libraryBookmarks: ALL_AUTH_ROLES,
+  libraryWishlist: ALL_AUTH_ROLES,
   libraryResourceDetails: PUBLIC_ROUTES,
   libraryUpload: ALL_AUTH_ROLES,
   librarySettings: ALL_AUTH_ROLES,

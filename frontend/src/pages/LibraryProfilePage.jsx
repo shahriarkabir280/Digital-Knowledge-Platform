@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '../app/use-auth.js'
+import LibraryMemberTabs from '../components/library/LibraryMemberTabs.jsx'
 import { 
   User, 
   Mail, 
@@ -288,6 +289,17 @@ export default function LibraryProfilePage() {
 
         </div>
 
+      </div>
+
+      {/* ── Library Activity: Loans, History, Fines, Holds ─────── */}
+      <div className="border-t border-border pt-6">
+        <div className="mb-4">
+          <h3 className="text-sm font-bold text-foreground">Library Activity</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Manage your active loans, borrowing history, fines, and hold requests.
+          </p>
+        </div>
+        <LibraryMemberTabs />
       </div>
 
     </div>

@@ -33,7 +33,14 @@ function requireAuth(req, _res, next) {
   }
 
   try {
-    req.auth = jwt.verify(token, secret);
+    const payload = jwt.verify(token, secret);
+    // Normalize: JWT stores user id as 'sub' (string), expose as integer 'id'
+    req.auth = {
+      ...payload,
+      id: payload.id != null
+        ? parseInt(payload.id, 10)
+        : (payload.sub ? parseInt(payload.sub, 10) : undefined),
+    };
     return next();
   } catch (_error) {
     return next({

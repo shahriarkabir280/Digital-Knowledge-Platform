@@ -45,7 +45,9 @@ import { apiRequest } from '../services/api/client'
 import { uploadDocument } from '../services/api/documents.js'
 import { ResourceGridSkeleton, SidebarSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
 import ResourceCard from '../components/library/ResourceCard.jsx'
+import CatalogSearchFilters from '../components/library/CatalogSearchFilters.jsx'
 import { extractFileMetadata } from '../services/metadataExtractor.js'
+import { searchCatalog, getCatalogStats } from '../services/api/library.js'
 import { toast } from 'sonner'
 
 export default function LibraryPage() {
@@ -136,6 +138,30 @@ export default function LibraryPage() {
   const [uploadSuccessTitle, setUploadSuccessTitle] = useState('')
   const [isExtracting, setIsExtracting] = useState(false)
   const fileInputRef = useRef(null)
+
+  // ── Page-level tab: Digital Resources vs Physical Catalog ──────────
+  const [pageTab, setPageTab] = useState('digital') // 'digital' | 'catalog'
+
+  // ── Physical catalog state ─────────────────────────────────────────
+  const [catalogFilters, setCatalogFilters] = useState({ q: '' })
+  const [catalogSearchInput, setCatalogSearchInput] = useState('')
+  const [catalogPage, setCatalogPage] = useState(1)
+
+  const { data: catalogData, isLoading: catalogLoading } = useQuery({
+    queryKey: ['physical-catalog', catalogFilters, catalogPage],
+    queryFn: () => searchCatalog({ ...catalogFilters, page: catalogPage, limit: 20 }),
+    enabled: pageTab === 'catalog',
+    staleTime: 2 * 60 * 1000,
+  })
+
+  const { data: catalogStats } = useQuery({
+    queryKey: ['catalog-stats'],
+    queryFn: getCatalogStats,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const catalogItems = catalogData?.items || catalogData || []
+  const catalogPagination = catalogData?.pagination
 
   useEffect(() => {
     localStorage.setItem('dkp_bookmarked_resources', JSON.stringify(bookmarks))
@@ -448,7 +474,156 @@ export default function LibraryPage() {
         </div>
       </div>
 
-      {/* Search + Actions Bar */}
+      {/* ── Top-level page tab: Digital Resources vs Physical Catalog ── */}
+      <div className="flex gap-1 border-b border-border">
+        {[
+          { id: 'digital', label: '📚 Digital Resources' },
+          { id: 'catalog', label: '🏛️ Physical Catalog' },
+        ].map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setPageTab(id)}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${
+              pageTab === id
+                ? 'border-accent text-accent bg-accent/5'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Physical Catalog Panel ─────────────────────────────────── */}
+      {pageTab === 'catalog' && (
+        <div className="grid gap-5">
+          {/* Catalog stats bar */}
+          {catalogStats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Total Titles', value: catalogStats.total_titles ?? catalogStats.totalTitles },
+                { label: 'Available Now', value: catalogStats.available_titles ?? catalogStats.availableTitles, color: 'text-emerald-600' },
+                { label: 'Total Copies', value: catalogStats.total_copies ?? catalogStats.totalCopies },
+                { label: 'Checked Out', value: catalogStats.checked_out ?? catalogStats.checkedOut, color: 'text-amber-600' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="rounded-xl border border-border bg-card p-3 text-center">
+                  <p className={`text-xl font-extrabold ${color || 'text-foreground'}`}>{value ?? '—'}</p>
+                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mt-0.5">{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Search bar */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+              <Input
+                placeholder="Search by title, author, ISBN, subject…"
+                className="pl-9 pr-8"
+                value={catalogSearchInput}
+                onChange={e => setCatalogSearchInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    setCatalogFilters(f => ({ ...f, q: catalogSearchInput.trim() }))
+                    setCatalogPage(1)
+                  }
+                }}
+              />
+              {catalogSearchInput && (
+                <button
+                  onClick={() => { setCatalogSearchInput(''); setCatalogFilters(f => ({ ...f, q: '' })); setCatalogPage(1) }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <Button
+              onClick={() => { setCatalogFilters(f => ({ ...f, q: catalogSearchInput.trim() })); setCatalogPage(1) }}
+              className="gap-1.5 text-xs shrink-0"
+            >
+              <Search size={13} /> Search
+            </Button>
+          </div>
+
+          {/* Filters */}
+          <CatalogSearchFilters
+            filters={catalogFilters}
+            onChange={(newFilters) => { setCatalogFilters(newFilters); setCatalogPage(1) }}
+            compact
+          />
+
+          {/* Results */}
+          {catalogLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 size={22} className="animate-spin text-muted-foreground" />
+            </div>
+          ) : catalogItems.length === 0 ? (
+            <div className="text-center py-14 text-muted-foreground border border-dashed border-border rounded-xl">
+              <BookOpen size={32} className="mx-auto opacity-20 mb-3" />
+              <p className="text-sm font-semibold text-foreground">No catalog items found</p>
+              <p className="text-xs mt-1">Try different search terms or clear your filters.</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              <p className="text-xs text-muted-foreground font-semibold">
+                {catalogPagination?.total ?? catalogItems.length} item{(catalogPagination?.total ?? catalogItems.length) !== 1 ? 's' : ''} found
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {catalogItems.map(item => (
+                  <Link key={item.id} to={`/library/resource/${item.id}`}>
+                    <div className="rounded-xl border border-border bg-card p-4 hover:border-accent/30 hover:bg-muted/30 transition-all grid gap-2">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-12 rounded bg-accent/10 border border-border flex items-center justify-center shrink-0">
+                          <BookOpen size={16} className="text-accent/60" />
+                        </div>
+                        <div className="flex-1 min-w-0 grid gap-0.5">
+                          <p className="text-sm font-bold text-foreground line-clamp-2 leading-snug">{item.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.authors || '—'}</p>
+                          {item.isbn && <p className="text-[10px] font-mono text-muted-foreground">ISBN: {item.isbn}</p>}
+                        </div>
+                        <div className="shrink-0 text-right grid gap-1">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
+                            item.available_copies > 0
+                              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                              : 'bg-red-500/10 text-red-600 border-red-500/20'
+                          }`}>
+                            {item.available_copies > 0 ? `${item.available_copies} avail.` : 'Out'}
+                          </span>
+                          {item.location && (
+                            <span className="text-[10px] text-muted-foreground">{item.location}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {catalogPagination && catalogPagination.totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={catalogPage === 1} onClick={() => setCatalogPage(p => p - 1)}>
+                    ← Prev
+                  </Button>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    Page {catalogPage} of {catalogPagination.totalPages}
+                  </span>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={catalogPage >= catalogPagination.totalPages} onClick={() => setCatalogPage(p => p + 1)}>
+                    Next →
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Digital Resources section (hidden when catalog tab active) ── */}
+      {pageTab === 'digital' && (
+      <>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
           <div className="relative w-full sm:max-w-md">
@@ -966,6 +1141,8 @@ export default function LibraryPage() {
             </form>
           </DialogContent>
         </Dialog>
+      </> /* end pageTab === 'digital' */
+      )}
     </div>
   )
 }

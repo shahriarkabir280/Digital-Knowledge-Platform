@@ -23,8 +23,18 @@ import {
   HelpCircle,
   ClipboardCheck,
   FilePlus,
-  Loader2
+  Loader2,
+  BookCheck,
+  Heart,
+  Clock,
+  ScanLine,
+  QrCode
 } from 'lucide-react'
+import { useAuth } from '../app/use-auth.js'
+import CheckoutDialog from '../components/library/CheckoutDialog.jsx'
+import HoldRequestButton from '../components/library/HoldRequestButton.jsx'
+import { addToWishlist, removeFromWishlist, getMyWishlist } from '../services/api/library.js'
+import { toast } from 'sonner'
 
 function StarRating({ rating, onRate, readonly = false }) {
   const [hovered, setHovered] = useState(0)
@@ -49,12 +59,27 @@ function StarRating({ rating, onRate, readonly = false }) {
 
 export default function LibraryResourceDetailsPage() {
   const { resourceId } = useParams()
+  const { authState } = useAuth()
   const [bookmarked, setBookmarked] = useState(false)
   const [activeTab, setActiveTab] = useState('preview')
   const [userComment, setUserComment] = useState('')
   const [userRating, setUserRating] = useState(5)
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showCheckoutDialog, setShowCheckoutDialog] = useState(false)
+  const [inWishlist, setInWishlist] = useState(false)
+  const [wishlistItemId, setWishlistItemId] = useState(null)
+  const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false)
+  const [barcodeFormat, setBarcodeFormat] = useState('barcode') // 'barcode' | 'qr'
+
+  // Numeric catalog item ID extracted from resourceId (if it is a catalog item)
+  const numericId = resourceId?.startsWith('catalog-')
+    ? parseInt(resourceId.replace('catalog-', ''), 10)
+    : parseInt(resourceId, 10)
+  const isCatalogItem = !isNaN(numericId)
+
+  const isStaff = ['STAFF', 'LAB_MANAGER', 'ADMIN'].includes(authState?.role)
 
   // Load bookmarks from localStorage
   useEffect(() => {
@@ -170,6 +195,32 @@ export default function LibraryResourceDetailsPage() {
     localStorage.setItem('dkp_bookmarked_resources', JSON.stringify(ids))
     setBookmarked(!bookmarked)
   }
+
+  const toggleWishlist = async () => {
+    if (!authState?.token) { toast?.('Please log in to use wishlist'); return }
+    setWishlistLoading(true)
+    try {
+      if (inWishlist && wishlistItemId) {
+        await removeFromWishlist(wishlistItemId)
+        setInWishlist(false)
+        setWishlistItemId(null)
+        toast.success('Removed from wishlist')
+      } else {
+        const entry = await addToWishlist(numericId)
+        setInWishlist(true)
+        setWishlistItemId(entry?.id || null)
+        toast.success('Added to wishlist')
+      }
+    } catch (err) {
+      toast.error(err.message || 'Wishlist action failed')
+    } finally {
+      setWishlistLoading(false)
+    }
+  }
+
+  const barcodeImageUrl = isCatalogItem
+    ? `${import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/library/catalog/${numericId}/barcode?format=${barcodeFormat}&_token=${encodeURIComponent(authState?.token || '')}`
+    : null
 
   const copyCitation = () => {
     const year = resource.year || new Date(resource.updatedAt || Date.now()).getFullYear()
@@ -678,6 +729,66 @@ export default function LibraryResourceDetailsPage() {
                 <Bookmark size={13} className={bookmarked ? 'fill-accent text-accent' : ''} />
                 {bookmarked ? 'Remove from Bookmarks' : 'Add to Bookmarks'}
               </Button>
+
+              {/* Wishlist — for logged-in members */}
+              {authState?.token && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2 text-xs"
+                  onClick={toggleWishlist}
+                  disabled={wishlistLoading}
+                >
+                  <Heart size={13} className={inWishlist ? 'fill-rose-500 text-rose-500' : ''} />
+                  {wishlistLoading ? 'Updating…' : inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                </Button>
+              )}
+
+              {/* Hold request — show when logged in and item is catalog item */}
+              {authState?.token && isCatalogItem && (
+                <div className="w-full">
+                  <HoldRequestButton catalogItemId={numericId} />
+                </div>
+              )}
+
+              {/* Checkout — staff only */}
+              {isStaff && isCatalogItem && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2 text-xs text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                  onClick={() => setShowCheckoutDialog(true)}
+                >
+                  <BookCheck size={13} />
+                  Checkout to Member
+                </Button>
+              )}
+
+              {/* Barcode / QR — staff only */}
+              {isStaff && isCatalogItem && (
+                <div className="grid gap-1.5 mt-1 pt-2 border-t border-border/60">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Item Barcode</p>
+                  <div className="flex gap-1.5">
+                    <Button
+                      size="sm"
+                      variant={barcodeFormat === 'barcode' ? 'default' : 'outline'}
+                      className="flex-1 h-7 text-[11px] gap-1"
+                      onClick={() => { setBarcodeFormat('barcode'); setShowBarcodeModal(true) }}
+                    >
+                      <ScanLine size={11} /> Barcode
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={barcodeFormat === 'qr' ? 'default' : 'outline'}
+                      className="flex-1 h-7 text-[11px] gap-1"
+                      onClick={() => { setBarcodeFormat('qr'); setShowBarcodeModal(true) }}
+                    >
+                      <QrCode size={11} /> QR Code
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <Button variant="outline" size="sm" className="w-full justify-start gap-2 text-xs" onClick={copyCitation}>
                 <Quote size={13} /> Copy APA Citation
               </Button>
@@ -695,6 +806,82 @@ export default function LibraryResourceDetailsPage() {
               </Link>
             </CardContent>
           </Card>
+
+          {/* Barcode / QR Modal */}
+          {showBarcodeModal && barcodeImageUrl && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowBarcodeModal(false)}
+            >
+              <div
+                className="bg-card rounded-2xl border border-border shadow-2xl p-6 max-w-sm w-full mx-4 grid gap-4"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    {barcodeFormat === 'qr' ? <QrCode size={15} className="text-accent" /> : <ScanLine size={15} className="text-accent" />}
+                    {barcodeFormat === 'qr' ? 'QR Code' : 'Barcode'} — {resource.title?.slice(0, 30)}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowBarcodeModal(false)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex justify-center bg-white rounded-xl p-4 border border-border">
+                  <img
+                    src={barcodeImageUrl}
+                    alt={`${barcodeFormat} for ${resource.title}`}
+                    className="max-w-full"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                </div>
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    size="sm"
+                    variant={barcodeFormat === 'barcode' ? 'default' : 'outline'}
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setBarcodeFormat('barcode')}
+                  >
+                    <ScanLine size={11} /> Barcode
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={barcodeFormat === 'qr' ? 'default' : 'outline'}
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setBarcodeFormat('qr')}
+                  >
+                    <QrCode size={11} /> QR Code
+                  </Button>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1"
+                  >
+                    <a href={barcodeImageUrl} download={`barcode-${numericId}.png`}>
+                      <Download size={11} /> Save PNG
+                    </a>
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Print this to attach to the physical item's shelf label or spine.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Checkout Dialog */}
+          {showCheckoutDialog && isCatalogItem && (
+            <CheckoutDialog
+              open={showCheckoutDialog}
+              onClose={() => setShowCheckoutDialog(false)}
+              catalogItem={{ ...resource, id: numericId }}
+              onSuccess={() => setShowCheckoutDialog(false)}
+            />
+          )}
 
           {/* Related Resources section removed — will be fetched from backend in future */}
           <Card className="border-border bg-muted/10">

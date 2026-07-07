@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
+  BookCheck,
   BookOpen,
   UploadCloud,
   Bookmark,
@@ -14,6 +15,7 @@ import {
   GraduationCap,
   FilePlus,
   Layers,
+  Heart,
   X,
   ChevronLeft,
   ChevronRight,
@@ -33,6 +35,7 @@ import cseduLogo from '@/assets/CSEDULOGO.png'
 
 const iconMap = {
   LayoutDashboard,
+  BookCheck,
   BookOpen,
   UploadCloud,
   Bookmark,
@@ -46,6 +49,7 @@ const iconMap = {
   GraduationCap,
   FilePlus,
   Layers,
+  Heart,
 }
 
 // Fallback icons for items without an iconName

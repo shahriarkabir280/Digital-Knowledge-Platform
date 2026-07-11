@@ -7,8 +7,8 @@ import {
   FileText, 
   Presentation, 
   GraduationCap, 
-  Database, 
-  Bookmark, 
+  Laptop,
+  Bookmark,
   Plus, 
   X, 
   Filter, 
@@ -24,7 +24,8 @@ import {
   FilePlus,
   HelpCircle,
   PlayCircle,
-  FileEdit
+  FileEdit,
+  Library
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -478,19 +479,20 @@ export default function LibraryPage() {
       {/* ── Top-level page tab: Digital Resources vs Physical Catalog ── */}
       <div className="flex gap-1 border-b border-border">
         {[
-          { id: 'digital', label: '📚 Digital Resources' },
-          { id: 'catalog', label: '🏛️ Physical Catalog' },
-        ].map(({ id, label }) => (
+          { id: 'digital', label: 'Digital Resources', Icon: Laptop },
+          { id: 'catalog', label: 'Physical Catalog', Icon: Library },
+        ].map(({ id, label, Icon }) => (
           <button
             key={id}
             type="button"
             onClick={() => setPageTab(id)}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${
               pageTab === id
                 ? 'border-accent text-accent bg-accent/5'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
             }`}
           >
+            <Icon size={14} />
             {label}
           </button>
         ))}

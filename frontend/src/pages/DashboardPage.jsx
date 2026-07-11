@@ -315,6 +315,18 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </Link>
+
+            <Link to="/admin/role-requests" className="group block">
+              <Card className="border-border hover:border-amber-500/30 hover:shadow-md transition-all h-full">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 group-hover:bg-amber-500/20 transition-colors flex items-center justify-center">
+                    <ClipboardCheck size={20} className="text-amber-500" />
+                  </div>
+                  <span className="text-xs font-bold">Role Requests</span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">Review pending role upgrade requests</span>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </div>
       )}

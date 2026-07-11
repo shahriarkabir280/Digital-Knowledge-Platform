@@ -9,19 +9,19 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '../app/use-auth.js'
 import LibraryMemberTabs from '../components/library/LibraryMemberTabs.jsx'
-import { 
-  User, 
-  Mail, 
-  Building, 
-  Calendar, 
-  Shield, 
-  FileText, 
-  CheckCircle2, 
-  AlertCircle, 
-  Loader2, 
+import { submitRoleRequest, fetchMyRoleRequests } from '../services/api/roleRequests.js'
+import {
+  User,
+  Mail,
+  Building,
+  Calendar,
+  Shield,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
   Send,
-  UserCheck,
-  Settings
+  UserCheck
 } from 'lucide-react'
 
 export default function LibraryProfilePage() {
@@ -36,23 +36,22 @@ export default function LibraryProfilePage() {
   // Role Request states
   const [requestedRole, setRequestedRole] = useState('CONTRIBUTOR')
   const [requestReason, setRequestReason] = useState('')
-  const [roleRequests, setRoleRequests] = useState(() => {
-    const saved = localStorage.getItem('dkp_role_requests')
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 'mock-1',
-        requestedRole: 'CONTRIBUTOR',
-        reason: 'Need access to publish lecture slides and lab manuals for the CSE-201 course.',
-        status: 'Approved',
-        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-      }
-    ]
-  })
+  const [roleRequests, setRoleRequests] = useState([])
+  const [submittingRequest, setSubmittingRequest] = useState(false)
 
-  // Sync role requests to localStorage
+  const loadRoleRequests = async () => {
+    if (!authState.token) return
+    try {
+      const items = await fetchMyRoleRequests(authState.token)
+      setRoleRequests(items)
+    } catch {
+      // keep current list on failure
+    }
+  }
+
   useEffect(() => {
-    localStorage.setItem('dkp_role_requests', JSON.stringify(roleRequests))
-  }, [roleRequests])
+    loadRoleRequests()
+  }, [authState.token])
 
   const avatarLabel = (profileName || 'U').trim().charAt(0).toUpperCase()
 
@@ -65,52 +64,33 @@ export default function LibraryProfilePage() {
     alert('Profile updated successfully!')
   }
 
-  const handleRoleRequestSubmit = (e) => {
+  const handleRoleRequestSubmit = async (e) => {
     e.preventDefault()
     if (!requestReason.trim()) {
       alert('Please provide a justification for this role request.')
       return
     }
 
-    const newRequest = {
-      id: `req-${Date.now()}`,
-      requestedRole,
-      reason: requestReason.trim(),
-      status: 'Pending',
-      createdAt: new Date().toISOString()
+    try {
+      setSubmittingRequest(true)
+      await submitRoleRequest({
+        authToken: authState.token,
+        requestedRole,
+        reason: requestReason.trim(),
+      })
+      setRequestReason('')
+      await loadRoleRequests()
+      alert('Role upgrade request submitted to administrator!')
+    } catch (error) {
+      alert(error.message || 'Failed to submit role request.')
+    } finally {
+      setSubmittingRequest(false)
     }
-
-    setRoleRequests(prev => [newRequest, ...prev])
-    setRequestReason('')
-    alert('Role upgrade request submitted to administrator!')
-  }
-
-  // Simulate administrator approval/rejection for testing
-  const simulateAdminDecision = (id, decision) => {
-    setRoleRequests(prev => prev.map(req => {
-      if (req.id === id) {
-        const nextStatus = decision === 'approve' ? 'Approved' : 'Rejected'
-        
-        // If approved, update user's session role in state and session storage
-        if (decision === 'approve') {
-          login({
-            role: req.requestedRole,
-            name: authState.name,
-            token: authState.token,
-            refreshToken: authState.refreshToken,
-            expiresAt: authState.expiresAt
-          })
-        }
-        
-        return { ...req, status: nextStatus }
-      }
-      return req
-    }))
   }
 
   const resolveStatusBadge = (status) => {
-    if (status === 'Approved') return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-    if (status === 'Rejected') return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+    if (status === 'APPROVED') return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+    if (status === 'REJECTED') return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
     return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
   }
 
@@ -235,8 +215,8 @@ export default function LibraryProfilePage() {
                     value={requestReason} onChange={e => setRequestReason(e.target.value)} required />
                 </div>
 
-                <Button type="submit" size="sm" className="w-fit ml-auto gap-1 text-xs bg-accent hover:bg-accent/90 text-white">
-                  <Send size={12} /> Submit Request
+                <Button type="submit" size="sm" disabled={submittingRequest} className="w-fit ml-auto gap-1 text-xs bg-accent hover:bg-accent/90 text-white">
+                  <Send size={12} /> {submittingRequest ? 'Submitting...' : 'Submit Request'}
                 </Button>
               </form>
 
@@ -262,23 +242,6 @@ export default function LibraryProfilePage() {
                       <p className="text-xs text-muted-foreground bg-background p-2.5 rounded-lg border border-border/40">
                         {req.reason}
                       </p>
-
-                      {/* Administrative actions simulator */}
-                      {req.status === 'Pending' && (
-                        <div className="flex gap-2 items-center justify-end border-t border-dashed border-border/60 pt-2.5 mt-1">
-                          <span className="text-[9px] text-muted-foreground font-semibold flex items-center gap-0.5">
-                            <Settings size={10} /> Test Administrator:
-                          </span>
-                          <Button size="sm" variant="outline" className="h-6 text-[9px] px-2 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/10 font-bold"
-                            onClick={() => simulateAdminDecision(req.id, 'approve')}>
-                            Approve
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-6 text-[9px] px-2 text-red-600 border-red-500/20 hover:bg-red-500/10 font-bold"
-                            onClick={() => simulateAdminDecision(req.id, 'reject')}>
-                            Reject
-                          </Button>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>

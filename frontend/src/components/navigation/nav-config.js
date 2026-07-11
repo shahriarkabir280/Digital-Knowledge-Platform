@@ -32,12 +32,6 @@ export const navItems = [
     roles: ROUTE_ACCESS.libraryBookmarks,
   },
   {
-    to: '/library/wishlist',
-    label: 'My Wishlist',
-    iconName: 'Heart',
-    roles: ROUTE_ACCESS.libraryWishlist,
-  },
-  {
     to: '/library/analytics',
     label: 'Insights',
     iconName: 'BarChart3',

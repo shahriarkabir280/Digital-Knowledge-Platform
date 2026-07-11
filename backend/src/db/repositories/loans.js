@@ -49,6 +49,30 @@ async function checkout(catalogItemId, memberId, loanDays = DEFAULT_LOAN_DAYS, i
       );
     }
 
+    // ── Hold reservation (FR-DKP-019) ──────────────────────────────
+    // READY holds reserve copies. If this member has a READY hold, we
+    // consume it. Otherwise every available copy that is spoken for by
+    // someone else's READY hold is off-limits to a walk-up checkout.
+    const myReadyHold = await trx("holds")
+      .where({ item_id: catalogItemId, member_id: memberId, status: "READY" })
+      .forUpdate()
+      .first();
+
+    const readyCount = await trx("holds")
+      .where({ item_id: catalogItemId, status: "READY" })
+      .count("* as c")
+      .first();
+    const readyHolds = parseInt(readyCount?.c || 0, 10);
+
+    // Copies reserved for OTHER members' ready holds.
+    const reservedByOthers = myReadyHold ? readyHolds - 1 : readyHolds;
+    if (item.available_copies - reservedByOthers < 1) {
+      throw Object.assign(
+        new Error("All available copies are reserved for members with holds"),
+        { statusCode: 409, code: "RESERVED_FOR_HOLDS" }
+      );
+    }
+
     // Find an available copy for tracking purposes
     const availableCopy = await trx("catalog_copies")
       .where({ item_id: catalogItemId, status: "AVAILABLE" })
@@ -64,6 +88,13 @@ async function checkout(catalogItemId, memberId, loanDays = DEFAULT_LOAN_DAYS, i
       await trx("catalog_copies")
         .where({ id: availableCopy.id })
         .update({ status: "CHECKED_OUT", updated_at: trx.fn.now() });
+    }
+
+    // Consume this member's hold now that they've collected the item.
+    if (myReadyHold) {
+      await trx("holds")
+        .where({ id: myReadyHold.id })
+        .update({ status: "FULFILLED" });
     }
 
     const dueDate = new Date();
@@ -91,7 +122,13 @@ async function checkout(catalogItemId, memberId, loanDays = DEFAULT_LOAN_DAYS, i
 // ── Return ─────────────────────────────────────────────────────────
 
 async function returnItem(loanId, returnedTo = null) {
-  return db.transaction(async (trx) => {
+  const holdsRepo = require("./holds");
+  const wishlistsRepo = require("./wishlists");
+  let promotedHold = null;
+  let itemId = null;
+  let wasUnavailable = false;
+
+  const updatedLoan = await db.transaction(async (trx) => {
     const loan = await trx("loans").where({ id: loanId }).forUpdate().first();
 
     if (!loan) {
@@ -108,7 +145,7 @@ async function returnItem(loanId, returnedTo = null) {
       });
     }
 
-    const [updatedLoan] = await trx("loans")
+    const [updated] = await trx("loans")
       .where({ id: loanId })
       .update({
         status: "RETURNED",
@@ -117,6 +154,12 @@ async function returnItem(loanId, returnedTo = null) {
         updated_at: trx.fn.now(),
       })
       .returning("*");
+
+    // Was the item fully checked out before this return? (drives wishlist alerts)
+    const itemBefore = await trx("catalog_items")
+      .where({ id: loan.item_id })
+      .first();
+    wasUnavailable = (itemBefore?.available_copies ?? 0) <= 0;
 
     // Increment available copies
     await trx("catalog_items")
@@ -130,12 +173,26 @@ async function returnItem(loanId, returnedTo = null) {
         .update({ status: "AVAILABLE", updated_at: trx.fn.now() });
     }
 
-    // Trigger hold fulfillment
-    const holdsRepo = require("./holds");
-    await holdsRepo.fulfillNext(loan.item_id, trx);
+    // Promote the next hold atomically with the return (no notification here —
+    // that would risk poisoning this transaction; see holds.fulfillNext).
+    itemId = loan.item_id;
+    promotedHold = await holdsRepo.fulfillNext(loan.item_id, trx);
 
-    return updatedLoan;
+    return updated;
   });
+
+  // After commit: notify. A hold takes precedence over wishlist alerts — if a
+  // hold claimed the freed copy, only the hold member is told (the copy is
+  // reserved for them, not open to wishlisters).
+  if (promotedHold) {
+    await holdsRepo.notifyHoldReady(promotedHold, itemId);
+  } else if (wasUnavailable) {
+    // Item just went from 0 → available and nobody was in the hold queue:
+    // let wishlisters know it's grabbable.
+    await wishlistsRepo.notifyAvailable(itemId);
+  }
+
+  return updatedLoan;
 }
 
 // ── Renewal ────────────────────────────────────────────────────────

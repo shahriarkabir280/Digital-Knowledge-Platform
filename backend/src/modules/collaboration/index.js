@@ -29,6 +29,9 @@ router.get("/documents/:docId/annotations/export", controller.exportAnnotations)
 // Virtual Reading Rooms
 router.post("/rooms", controller.createReadingRoom);
 router.get("/documents/:docId/rooms", controller.getReadingRooms);
+router.get("/users/search", controller.searchUsers);
+router.post("/rooms/:roomId/invite", controller.inviteToRoom);
+router.get("/rooms/:roomId/members", controller.getRoomMembers);
 router.post("/rooms/:roomId/messages", controller.postRoomMessage);
 router.get("/rooms/:roomId/messages", controller.getRoomMessages);
 router.post("/rooms/:roomId/presence", controller.updatePresence);

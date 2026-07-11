@@ -5,6 +5,30 @@
 
 const db = require("../../db");
 
+/**
+ * Return the exclusive upper bound for a `to` filter. A date-only value like
+ * "2026-07-11" means "include all of July 11", so we compare `< 2026-07-12`
+ * instead of `<= 2026-07-11` (which is midnight and drops the whole last day).
+ */
+function endExclusive(to) {
+  if (!to) return null;
+  const s = String(to);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const d = new Date(`${s}T00:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString();
+  }
+  return s; // already a full timestamp — use as-is
+}
+
+/** Apply an inclusive [from, to] date-range filter to a query. */
+function applyRange(query, col, from, to) {
+  if (from) query.where(col, ">=", from);
+  const end = endExclusive(to);
+  if (end) query.where(col, "<", end);
+  return query;
+}
+
 // ── Circulation Report ─────────────────────────────────────────────
 
 async function getCirculationReport({ from, to } = {}) {
@@ -18,8 +42,7 @@ async function getCirculationReport({ from, to } = {}) {
     .groupByRaw("DATE_TRUNC('day', checkout_date)")
     .orderBy("date", "asc");
 
-  if (from) query = query.where("checkout_date", ">=", from);
-  if (to) query = query.where("checkout_date", "<=", to);
+  applyRange(query, "checkout_date", from, to);
 
   const rows = await query;
 
@@ -30,10 +53,7 @@ async function getCirculationReport({ from, to } = {}) {
       db.raw("COUNT(*) FILTER (WHERE status = 'OVERDUE') as total_overdue"),
       db.raw("COUNT(*) FILTER (WHERE status = 'ACTIVE') as total_active")
     )
-    .modify((q) => {
-      if (from) q.where("checkout_date", ">=", from);
-      if (to) q.where("checkout_date", "<=", to);
-    })
+    .modify((q) => applyRange(q, "checkout_date", from, to))
     .first();
 
   return { daily: rows, totals };
@@ -55,8 +75,7 @@ async function getPopularItems({ from, to, limit = 10 } = {}) {
     .orderBy("checkout_count", "desc")
     .limit(Math.min(limit, 50));
 
-  if (from) query = query.where("loans.checkout_date", ">=", from);
-  if (to) query = query.where("loans.checkout_date", "<=", to);
+  applyRange(query, "loans.checkout_date", from, to);
 
   return query;
 }
@@ -80,15 +99,15 @@ async function getOverdueReport({ from, to } = {}) {
         "EXTRACT(DAY FROM NOW() - loans.due_date)::integer as days_overdue"
       ),
       db.raw(
-        "EXTRACT(DAY FROM NOW() - loans.due_date)::integer * 5 as estimated_fine"
+        "LEAST(EXTRACT(DAY FROM NOW() - loans.due_date)::integer, 30) * ? as estimated_fine",
+        [RATE]
       )
     )
     .whereIn("loans.status", ["OVERDUE", "ACTIVE"])
     .where("loans.due_date", "<", db.fn.now())
     .orderBy("loans.due_date", "asc");
 
-  if (from) query = query.where("loans.checkout_date", ">=", from);
-  if (to) query = query.where("loans.checkout_date", "<=", to);
+  applyRange(query, "loans.checkout_date", from, to);
 
   return query;
 }
@@ -148,10 +167,116 @@ async function getMemberActivity({ from, to } = {}) {
     .orderBy("total_loans", "desc")
     .limit(50);
 
-  if (from) query = query.where("loans.checkout_date", ">=", from);
-  if (to) query = query.where("loans.checkout_date", "<=", to);
+  applyRange(query, "loans.checkout_date", from, to);
 
   return query;
+}
+
+// ── Fine rate (kept consistent with the fines module) ──────────────
+const { FINE_RATE_PER_DAY } = require("../../db/repositories/fines");
+const RATE = FINE_RATE_PER_DAY || 5;
+
+// ── New report types (bring total to 11) ───────────────────────────
+
+/** 7. Fines summary + per-member outstanding balances. */
+async function getFinesReport({ from, to } = {}) {
+  const summaryQ = db("fines").select(
+    db.raw("COUNT(*) as total_fines"),
+    db.raw("COALESCE(SUM(amount), 0) as total_amount"),
+    db.raw("COALESCE(SUM(amount) FILTER (WHERE status = 'PENDING'), 0) as pending_amount"),
+    db.raw("COALESCE(SUM(amount) FILTER (WHERE status = 'PAID'), 0) as paid_amount"),
+    db.raw("COALESCE(SUM(amount) FILTER (WHERE status = 'WAIVED'), 0) as waived_amount")
+  );
+  applyRange(summaryQ, "fines.created_at", from, to);
+
+  const byMemberQ = db("fines")
+    .join("users", "fines.member_id", "users.id")
+    .select(
+      "users.name as member_name",
+      "users.email as member_email",
+      db.raw("COALESCE(SUM(amount) FILTER (WHERE status = 'PENDING'), 0) as outstanding"),
+      db.raw("COUNT(*) as fine_count")
+    )
+    .groupBy("users.id", "users.name", "users.email")
+    .havingRaw("SUM(amount) FILTER (WHERE status = 'PENDING') > 0")
+    .orderBy("outstanding", "desc")
+    .limit(50);
+  applyRange(byMemberQ, "fines.created_at", from, to);
+
+  const [summary, byMember] = await Promise.all([summaryQ.first(), byMemberQ]);
+  return { summary, byMember };
+}
+
+/** 8. Active loans currently out (not yet returned). */
+async function getActiveLoansReport({ from, to } = {}) {
+  const query = db("loans")
+    .join("catalog_items", "loans.item_id", "catalog_items.id")
+    .join("users", "loans.member_id", "users.id")
+    .select(
+      "loans.id as loan_id",
+      "catalog_items.title as item_title",
+      "users.name as member_name",
+      "loans.checkout_date",
+      "loans.due_date",
+      "loans.renewed_count"
+    )
+    .whereIn("loans.status", ["ACTIVE", "OVERDUE"])
+    .orderBy("loans.due_date", "asc")
+    .limit(500);
+
+  applyRange(query, "loans.checkout_date", from, to);
+  return query;
+}
+
+/** 9. Inventory / low-availability report. */
+async function getInventoryReport() {
+  const [lowStock, totals] = await Promise.all([
+    db("catalog_items")
+      .whereNot("state", "WITHDRAWN")
+      .whereRaw("available_copies <= 1")
+      .select("id", "title", "authors as author", "location", "total_copies", "available_copies")
+      .orderBy("available_copies", "asc")
+      .limit(200),
+    db("catalog_items")
+      .whereNot("state", "WITHDRAWN")
+      .select(
+        db.raw("COUNT(*) as total_titles"),
+        db.raw("SUM(total_copies) as total_copies"),
+        db.raw("SUM(available_copies) as available_copies"),
+        db.raw("COUNT(*) FILTER (WHERE available_copies = 0) as out_of_stock")
+      )
+      .first(),
+  ]);
+  return { lowStock, totals };
+}
+
+/** 10. New acquisitions in a date range (by created_at). */
+async function getNewAcquisitionsReport({ from, to } = {}) {
+  const query = db("catalog_items")
+    .whereNot("state", "WITHDRAWN")
+    .select("id", "title", "authors as author", "category as item_type", "created_at")
+    .orderBy("created_at", "desc")
+    .limit(500);
+
+  applyRange(query, "created_at", from, to);
+  return query;
+}
+
+/** 11. Active holds queue report. */
+async function getHoldsReport() {
+  return db("holds")
+    .join("catalog_items", "holds.item_id", "catalog_items.id")
+    .join("users", "holds.member_id", "users.id")
+    .select(
+      "holds.id as hold_id",
+      "catalog_items.title as item_title",
+      "users.name as member_name",
+      "holds.status",
+      "holds.placed_at"
+    )
+    .whereIn("holds.status", ["QUEUED", "READY"])
+    .orderBy("holds.placed_at", "asc")
+    .limit(500);
 }
 
 // ── Export ─────────────────────────────────────────────────────────
@@ -208,6 +333,77 @@ async function exportReport({ type, format, from, to }) {
       }));
       reportTitle = "Member Activity Report";
       columns = ["Name", "Email", "Total Loans", "Returned", "Overdue"];
+      break;
+    }
+    case "collection-stats": {
+      const report = await getCollectionStats();
+      data = report.byType.map((r) => ({
+        Type: r.item_type || "(uncategorized)",
+        Titles: r.item_count,
+        "Total Copies": r.total_copies,
+        "Available Copies": r.available_copies,
+      }));
+      reportTitle = "Collection Statistics Report";
+      columns = ["Type", "Titles", "Total Copies", "Available Copies"];
+      break;
+    }
+    case "fines-summary": {
+      const report = await getFinesReport({ from, to });
+      data = report.byMember.map((r) => ({
+        "Member Name": r.member_name,
+        "Member Email": r.member_email,
+        "Outstanding (BDT)": r.outstanding,
+        "Fine Count": r.fine_count,
+      }));
+      reportTitle = "Fines Summary Report";
+      columns = ["Member Name", "Member Email", "Outstanding (BDT)", "Fine Count"];
+      break;
+    }
+    case "active-loans": {
+      data = (await getActiveLoansReport({ from, to })).map((r) => ({
+        "Item Title": r.item_title,
+        "Member Name": r.member_name,
+        "Checkout Date": new Date(r.checkout_date).toLocaleDateString(),
+        "Due Date": new Date(r.due_date).toLocaleDateString(),
+        Renewals: r.renewed_count,
+      }));
+      reportTitle = "Active Loans Report";
+      columns = ["Item Title", "Member Name", "Checkout Date", "Due Date", "Renewals"];
+      break;
+    }
+    case "inventory": {
+      const report = await getInventoryReport();
+      data = report.lowStock.map((r) => ({
+        Title: r.title,
+        Author: r.author || "",
+        Location: r.location || "",
+        "Total Copies": r.total_copies,
+        "Available Copies": r.available_copies,
+      }));
+      reportTitle = "Inventory (Low Stock) Report";
+      columns = ["Title", "Author", "Location", "Total Copies", "Available Copies"];
+      break;
+    }
+    case "new-acquisitions": {
+      data = (await getNewAcquisitionsReport({ from, to })).map((r) => ({
+        Title: r.title,
+        Author: r.author || "",
+        Type: r.item_type || "",
+        "Added On": new Date(r.created_at).toLocaleDateString(),
+      }));
+      reportTitle = "New Acquisitions Report";
+      columns = ["Title", "Author", "Type", "Added On"];
+      break;
+    }
+    case "holds": {
+      data = (await getHoldsReport()).map((r) => ({
+        "Item Title": r.item_title,
+        "Member Name": r.member_name,
+        Status: r.status,
+        "Placed On": new Date(r.placed_at).toLocaleDateString(),
+      }));
+      reportTitle = "Holds Queue Report";
+      columns = ["Item Title", "Member Name", "Status", "Placed On"];
       break;
     }
     default:
@@ -406,5 +602,10 @@ module.exports = {
   getOverdueReport,
   getCollectionStats,
   getMemberActivity,
+  getFinesReport,
+  getActiveLoansReport,
+  getInventoryReport,
+  getNewAcquisitionsReport,
+  getHoldsReport,
   exportReport,
 };

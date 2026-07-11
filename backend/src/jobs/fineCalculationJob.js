@@ -49,16 +49,21 @@ async function runOnce() {
  * Runs once at startup (after due tracking job), then every 24 hours.
  */
 function start() {
-  // Slight delay to avoid racing with dueTrackingJob on startup
-  setTimeout(() => {
-    runOnce();
-    const intervalId = setInterval(runOnce, JOB_INTERVAL_MS);
+  let intervalId = null;
 
-    const stop = () => clearInterval(intervalId);
-    return { stop };
+  // Slight delay to avoid racing with dueTrackingJob on startup
+  const timeoutId = setTimeout(() => {
+    runOnce();
+    intervalId = setInterval(runOnce, JOB_INTERVAL_MS);
   }, 5 * 60 * 1000); // 5-minute delay after startup
 
   console.log("[fineCalculationJob] Started — runs every 24 hours (5-minute startup delay)");
+
+  const stop = () => {
+    clearTimeout(timeoutId);
+    if (intervalId) clearInterval(intervalId);
+  };
+  return { stop };
 }
 
 module.exports = { start, runOnce };

@@ -131,9 +131,24 @@ async function sendHoldReady({ to, itemTitle, memberName, holdId }) {
   return sendEmail({ to, subject, text });
 }
 
+/**
+ * Send a "wishlist item now available" email.
+ */
+async function sendWishlistAvailable({ to, itemTitle, memberName }) {
+  const subject = `Now Available: ${itemTitle}`;
+  const text = `Hello ${memberName || "Member"},\n\n` +
+    `An item on your wishlist is now available to borrow:\n\n` +
+    `  Item: ${itemTitle}\n\n` +
+    `Log in to place a hold or check it out before it's gone.\n\n` +
+    `Thank you,\nDigital Knowledge Platform Library`;
+
+  return sendEmail({ to, subject, text });
+}
+
 module.exports = {
   sendEmail,
   sendDueReminder,
   sendOverdueNotice,
   sendHoldReady,
+  sendWishlistAvailable,
 };

@@ -114,9 +114,9 @@ router.post(
         entityId: renewed.id,
         action: "UPDATE",
         changedBy: req.auth?.id,
-        oldValues: { renewal_count: renewed.renewal_count - 1 },
+        oldValues: { renewed_count: renewed.renewed_count - 1 },
         newValues: {
-          renewal_count: renewed.renewal_count,
+          renewed_count: renewed.renewed_count,
           due_date: renewed.due_date,
         },
       });

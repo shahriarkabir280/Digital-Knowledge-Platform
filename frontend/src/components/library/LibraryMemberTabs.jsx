@@ -18,6 +18,7 @@ import {
   getMyLoans, renewLoan, getMyFines, payFine,
   getMyHolds, cancelHold, getBorrowingHistory, exportBorrowingHistory
 } from '../../services/api/library.js'
+import { circulationErrorMessage } from '../../services/api/errorMessages.js'
 import { toast } from 'sonner'
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -62,10 +63,10 @@ function MyLoansTab() {
   const renewMutation = useMutation({
     mutationFn: (loanId) => renewLoan(loanId),
     onSuccess: () => {
-      queryClient.invalidateQueries(['my-loans'])
+      queryClient.invalidateQueries({ queryKey: ['my-loans'] })
       toast.success('Loan renewed successfully!')
     },
-    onError: (err) => toast.error(err.message || 'Renewal failed'),
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Renewal failed')),
   })
 
   if (isLoading) return (
@@ -292,7 +293,7 @@ function FinesTab() {
   const payMutation = useMutation({
     mutationFn: (fineId) => payFine(fineId),
     onSuccess: () => {
-      queryClient.invalidateQueries(['my-fines'])
+      queryClient.invalidateQueries({ queryKey: ['my-fines'] })
       toast.success('Fine marked as paid.')
     },
     onError: (err) => toast.error(err.message || 'Payment failed'),
@@ -367,10 +368,10 @@ function HoldsTab() {
   const cancelMutation = useMutation({
     mutationFn: (holdId) => cancelHold(holdId),
     onSuccess: () => {
-      queryClient.invalidateQueries(['my-holds'])
+      queryClient.invalidateQueries({ queryKey: ['my-holds'] })
       toast.success('Hold cancelled.')
     },
-    onError: (err) => toast.error(err.message || 'Cancel failed'),
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Cancel failed')),
   })
 
   if (isLoading) return (

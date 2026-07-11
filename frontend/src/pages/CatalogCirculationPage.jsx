@@ -13,7 +13,8 @@ import {
   BookCheck, Search, Loader2, AlertCircle, BookOpen,
   User, MapPin, CheckCircle2, X, RefreshCw, RotateCcw, ScanLine
 } from 'lucide-react'
-import { searchCatalog, checkoutItem, getOverdueLoans, returnItem, searchMembers } from '../services/api/library.js'
+import { searchCatalog, checkoutItem, getOverdueLoans, returnItem, searchMembers, lookupCatalog } from '../services/api/library.js'
+import { circulationErrorMessage } from '../services/api/errorMessages.js'
 import BarcodeScanner from '../components/library/BarcodeScanner.jsx'
 import { toast } from 'sonner'
 
@@ -131,14 +132,8 @@ function CheckoutPanel({ item, onClose, onSuccess }) {
 
   const handleScanResult = async (scannedValue) => {
     setShowScanner(false)
-    const numericId = parseInt(scannedValue, 10)
-    if (!isNaN(numericId)) {
-      // Treat as member ID directly
-      setSelectedMember({ id: numericId, name: `Member #${numericId}`, email: '' })
-      toast.success(`Member ID ${numericId} scanned`)
-      return
-    }
-    // Try searching by the scanned text (e.g. email encoded in QR)
+    // Verify the scanned card against the member directory rather than
+    // trusting an arbitrary scanned number as a member ID.
     try {
       const data = await searchMembers(scannedValue.trim())
       if (data.length === 1) {
@@ -147,7 +142,7 @@ function CheckoutPanel({ item, onClose, onSuccess }) {
       } else if (data.length > 1) {
         toast.info('Multiple members found — please search manually.')
       } else {
-        toast.error('No member found for that barcode.')
+        toast.error(`No member found for "${scannedValue}".`)
       }
     } catch {
       toast.error('Member lookup failed.')
@@ -164,7 +159,7 @@ function CheckoutPanel({ item, onClose, onSuccess }) {
       onSuccess()
       onClose()
     } catch (err) {
-      setError(err.message || 'Checkout failed.')
+      setError(circulationErrorMessage(err, 'Checkout failed.'))
     } finally {
       setLoading(false)
     }
@@ -260,6 +255,8 @@ function CatalogSearchPanel() {
   const [searchQuery, setSearchQuery] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState('')
   const [selectedItem, setSelectedItem] = useState(null)
+  const [showItemScanner, setShowItemScanner] = useState(false)
+  const [looking, setLooking] = useState(false)
 
   // Load all items on mount (empty query = all)
   const { data: allData, isLoading: allLoading } = useQuery({
@@ -291,6 +288,26 @@ function CatalogSearchPanel() {
     setSelectedItem(null)
   }
 
+  // Scan a book's barcode/QR (or ISBN) and jump straight to that item.
+  const handleItemScan = async (scannedValue) => {
+    setShowItemScanner(false)
+    const code = String(scannedValue || '').trim()
+    if (!code) return
+    setLooking(true)
+    try {
+      const { item, matchedBy } = await lookupCatalog(code)
+      setSelectedItem(item)
+      // Surface the matched item in the list too, so staff see it in context.
+      setSearchQuery(item.title || code)
+      setSubmittedQuery(item.title || code)
+      toast.success(`Matched by ${matchedBy}: ${item.title}`)
+    } catch (err) {
+      toast.error(circulationErrorMessage(err, `No item matched "${code}".`))
+    } finally {
+      setLooking(false)
+    }
+  }
+
   const availableCount = items.filter(i => i.available_copies > 0).length
 
   return (
@@ -318,7 +335,27 @@ function CatalogSearchPanel() {
         <Button type="submit" size="sm" className="gap-1.5 bg-accent hover:bg-accent/90 text-white shrink-0">
           <Search size={12} /> Search
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="gap-1.5 shrink-0"
+          onClick={() => setShowItemScanner((v) => !v)}
+          disabled={looking}
+        >
+          {looking ? <Loader2 size={12} className="animate-spin" /> : <ScanLine size={12} />}
+          {showItemScanner ? 'Close' : 'Scan Item'}
+        </Button>
       </form>
+
+      {/* Inline item scanner (scan a book barcode/QR → jump to it) */}
+      {showItemScanner && (
+        <BarcodeScanner
+          active={showItemScanner}
+          onResult={handleItemScan}
+          onClose={() => setShowItemScanner(false)}
+        />
+      )}
 
       {/* Summary row */}
       {!isLoading && items.length > 0 && (
@@ -420,8 +457,9 @@ function CatalogSearchPanel() {
                     item={item}
                     onClose={() => setSelectedItem(null)}
                     onSuccess={() => {
-                      queryClient.invalidateQueries(['catalog-all'])
-                      queryClient.invalidateQueries(['catalog-search', submittedQuery])
+                      queryClient.invalidateQueries({ queryKey: ['catalog-all'] })
+                      queryClient.invalidateQueries({ queryKey: ['catalog-search', submittedQuery] })
+                      queryClient.invalidateQueries({ queryKey: ['overdue-loans'] })
                       setSelectedItem(null)
                     }}
                   />
@@ -453,10 +491,12 @@ function OverduePanel() {
   const returnMutation = useMutation({
     mutationFn: (loanId) => returnItem(loanId),
     onSuccess: () => {
-      queryClient.invalidateQueries(['overdue-loans'])
+      queryClient.invalidateQueries({ queryKey: ['overdue-loans'] })
+      queryClient.invalidateQueries({ queryKey: ['overdue-loans-widget'] })
+      queryClient.invalidateQueries({ queryKey: ['catalog-all'] })
       toast.success('Item returned successfully.')
     },
-    onError: (err) => toast.error(err.message || 'Return failed.'),
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Return failed.')),
   })
 
   if (isLoading) return <div className="flex justify-center py-10"><Loader2 size={18} className="animate-spin text-muted-foreground" /></div>

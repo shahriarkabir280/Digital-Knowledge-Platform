@@ -36,6 +36,20 @@ async function placeHold(catalogItemId, memberId) {
       );
     }
 
+    // Holds are for checked-out items (FR-DKP-019). If an unreserved copy is
+    // available right now, the member should just borrow it instead.
+    const readyCount = await trx("holds")
+      .where({ item_id: catalogItemId, status: "READY" })
+      .count("* as c")
+      .first();
+    const reserved = parseInt(readyCount?.c || 0, 10);
+    if ((item.available_copies || 0) - reserved > 0) {
+      throw Object.assign(
+        new Error("This item is available to borrow — no hold needed"),
+        { statusCode: 409, code: "ITEM_AVAILABLE" }
+      );
+    }
+
     const [hold] = await trx("holds")
       .insert({
         item_id: catalogItemId,
@@ -52,11 +66,21 @@ async function placeHold(catalogItemId, memberId) {
 
 /**
  * Fulfill next hold in queue when item is returned.
+ *
+ * IMPORTANT: this runs inside the caller's return transaction, so it does the
+ * hold status update (which must be atomic with the return) but does NOT touch
+ * the notifications table. Any failed write here would poison the whole
+ * transaction and silently roll back the return (Postgres aborts the tx; the
+ * later COMMIT becomes a no-op ROLLBACK). Notifications are best-effort and are
+ * sent AFTER commit via notifyHoldReady().
+ *
+ * @returns the promoted hold row (status READY), or null if the queue is empty.
  */
 async function fulfillNext(catalogItemId, trx = db) {
   const nextHold = await trx("holds")
     .where({ item_id: catalogItemId, status: "QUEUED" })
     .orderBy("placed_at", "asc")
+    .forUpdate()
     .first();
 
   if (!nextHold) return null;
@@ -66,22 +90,56 @@ async function fulfillNext(catalogItemId, trx = db) {
     .update({ status: "READY" })
     .returning("*");
 
-  // Attempt to insert notification (if notifications table has type column)
-  // Otherwise skip notification creation
+  return updated;
+}
+
+/**
+ * Best-effort "your hold is ready" notification (in-app + email). Call this
+ * AFTER the return transaction has committed — never inside it. Swallows errors
+ * so a notifications schema mismatch or mail failure can't affect the
+ * committed return.
+ */
+async function notifyHoldReady(hold, catalogItemId) {
+  if (!hold) return;
+
+  // Fetch member + item details for a useful message/email.
+  let member = null;
+  let item = null;
   try {
-    await trx("notifications").insert({
-      user_id: nextHold.member_id,
-      event_type: "hold_ready",
-      title: "Your hold is ready",
-      message: `Your hold on catalog item #${catalogItemId} is now ready for pickup.`,
-      is_read: false,
-      created_at: trx.fn.now(),
-    });
-  } catch (err) {
-    console.warn("[holds] Could not create notification:", err.message);
+    member = await db("users").where({ id: hold.member_id }).first();
+    item = await db("catalog_items").where({ id: catalogItemId }).first();
+  } catch {
+    /* non-fatal — fall back to generic text below */
   }
 
-  return updated;
+  const itemTitle = item?.title || `catalog item #${catalogItemId}`;
+
+  try {
+    await db("notifications").insert({
+      user_id: hold.member_id,
+      event_type: "hold_ready",
+      title: "Your hold is ready",
+      message: `Your hold on "${itemTitle}" is now ready for pickup.`,
+      is_read: false,
+      created_at: db.fn.now(),
+    });
+  } catch (err) {
+    console.warn("[holds] Could not create hold-ready notification:", err.message);
+  }
+
+  if (member?.email) {
+    try {
+      const emailService = require("../../services/emailService");
+      await emailService.sendHoldReady({
+        to: member.email,
+        itemTitle,
+        memberName: member.name,
+        holdId: hold.id,
+      });
+    } catch (err) {
+      console.warn("[holds] Could not send hold-ready email:", err.message);
+    }
+  }
 }
 
 /**
@@ -144,6 +202,7 @@ async function findById(holdId) {
 module.exports = {
   placeHold,
   fulfillNext,
+  notifyHoldReady,
   cancelHold,
   findByMember,
   findById,

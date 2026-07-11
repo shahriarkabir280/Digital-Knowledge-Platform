@@ -43,6 +43,26 @@ function extractErrorMessage(parsedBody, status) {
   return `API request failed with status ${status}`
 }
 
+// Pull the machine-readable error code (e.g. RESERVED_FOR_HOLDS) out of the
+// body so callers can branch on it, not just the human message.
+function extractErrorCode(parsedBody) {
+  if (parsedBody && typeof parsedBody === 'object') {
+    if (parsedBody.error && typeof parsedBody.error === 'object') {
+      return parsedBody.error.code || null
+    }
+    return parsedBody.code || null
+  }
+  return null
+}
+
+// Build an Error that carries the HTTP status and backend error code.
+function buildApiError(parsedBody, status) {
+  const err = new Error(extractErrorMessage(parsedBody, status))
+  err.status = status
+  err.code = extractErrorCode(parsedBody)
+  return err
+}
+
 export async function apiRequest(path, options = {}) {
   const { authToken, headers, ...restOptions } = options
   const storedSession = loadAuthSession()
@@ -91,19 +111,19 @@ export async function apiRequest(path, options = {}) {
 
             const retryBody = await parseResponseBody(retryResp)
             if (!retryResp.ok) {
-              throw new Error(extractErrorMessage(retryBody, retryResp.status))
+              throw buildApiError(retryBody, retryResp.status)
             }
             return retryBody
           }
         }
-      } catch (err) {
+      } catch {
         // fallthrough to throw original error below
       }
     }
   }
 
   if (!response.ok) {
-    throw new Error(extractErrorMessage(parsedBody, response.status))
+    throw buildApiError(parsedBody, response.status)
   }
 
   return parsedBody

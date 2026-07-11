@@ -100,9 +100,63 @@ async function isInWishlist(memberId, catalogItemId) {
   return !!entry;
 }
 
+/**
+ * Notify (in-app + email) every member who has this item on their wishlist
+ * that it is now available. Best-effort: never throws.
+ *
+ * Call this AFTER a return commits, and only when no hold reserved the freed
+ * copy (a hold takes precedence over wishlist notifications).
+ */
+async function notifyAvailable(catalogItemId) {
+  let item = null;
+  let watchers = [];
+  try {
+    item = await db("catalog_items").where({ id: catalogItemId }).first();
+    if (!item || item.state === "WITHDRAWN") return;
+
+    watchers = await db("wishlists")
+      .join("users", "wishlists.user_id", "users.id")
+      .where("wishlists.item_id", catalogItemId)
+      .select("users.id as user_id", "users.email as email", "users.name as name");
+  } catch (err) {
+    console.warn("[wishlists] Could not load watchers:", err.message);
+    return;
+  }
+
+  const emailService = require("../../services/emailService");
+
+  for (const w of watchers) {
+    try {
+      await db("notifications").insert({
+        user_id: w.user_id,
+        event_type: "wishlist_available",
+        title: "Wishlist item available",
+        message: `"${item.title}" from your wishlist is now available to borrow.`,
+        is_read: false,
+        created_at: db.fn.now(),
+      });
+    } catch (err) {
+      console.warn("[wishlists] Could not create notification:", err.message);
+    }
+
+    if (w.email) {
+      try {
+        await emailService.sendWishlistAvailable({
+          to: w.email,
+          itemTitle: item.title,
+          memberName: w.name,
+        });
+      } catch (err) {
+        console.warn("[wishlists] Could not send email:", err.message);
+      }
+    }
+  }
+}
+
 module.exports = {
   add,
   remove,
   findByMember,
   isInWishlist,
+  notifyAvailable,
 };

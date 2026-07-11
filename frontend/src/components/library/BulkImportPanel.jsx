@@ -1,6 +1,6 @@
 /**
  * Bulk Import Panel
- * Drag-and-drop CSV import with validation report.
+ * Drag-and-drop CSV / MARC import with validation report.
  */
 
 import { useState, useRef } from 'react'
@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, X, Download } from 'lucide-react'
-import { apiRequest } from '../../services/api/client.js'
+
+const ACCEPTED_EXT = ['.csv', '.mrc', '.marc', '.xml']
 
 export default function BulkImportPanel() {
   const [file, setFile] = useState(null)
@@ -19,8 +20,9 @@ export default function BulkImportPanel() {
 
   const handleFile = (f) => {
     if (!f) return
-    if (!f.name.endsWith('.csv')) {
-      alert('Only CSV files are supported.')
+    const name = f.name.toLowerCase()
+    if (!ACCEPTED_EXT.some((ext) => name.endsWith(ext))) {
+      alert('Supported formats: CSV, MARC (.mrc / .marc), MARCXML (.xml).')
       return
     }
     setFile(f)
@@ -80,7 +82,7 @@ export default function BulkImportPanel() {
         <div>
           <h3 className="text-sm font-bold text-foreground">Bulk Catalog Import</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Upload a CSV file to add up to 10,000 catalog items at once.
+            Upload a CSV or MARC (.mrc / .marc / .xml) file to add up to 10,000 catalog items at once.
           </p>
         </div>
         <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={downloadTemplate}>
@@ -102,7 +104,7 @@ export default function BulkImportPanel() {
         <input
           ref={inputRef}
           type="file"
-          accept=".csv"
+          accept=".csv,.mrc,.marc,.xml"
           className="hidden"
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
@@ -126,10 +128,10 @@ export default function BulkImportPanel() {
             <Upload size={28} className="text-muted-foreground/50" />
             <div className="text-center">
               <p className="text-sm font-semibold text-foreground">
-                Drop CSV file here or click to browse
+                Drop CSV or MARC file here or click to browse
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Max 10,000 rows · 20 MB limit
+                CSV · MARC (.mrc/.marc) · MARCXML (.xml) — Max 10,000 rows · 20 MB limit
               </p>
             </div>
           </>

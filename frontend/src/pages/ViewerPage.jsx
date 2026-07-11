@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { useAuth } from '../app/use-auth.js'
 import { apiRequest } from '../services/api/client'
+import JitsiRoom from '../components/JitsiRoom.jsx'
 import {
   fetchAnnotations,
   createAnnotation,
@@ -17,17 +18,36 @@ import {
   fetchRoomMessages,
   postRoomMessage,
   sendRoomHeartbeat,
-  fetchRoomPresence
+  fetchRoomPresence,
+  searchUsers,
+  inviteToRoom,
+  fetchRoomMembers,
+  downloadAnnotationsExport
 } from '../services/api/collaboration.js'
 import {
   ExternalLink, Loader2, AlertCircle, Download, FileText,
   MessageSquare, Plus, Users, Send, Lock, Unlock, Trash2,
-  LogOut, Globe, Palette, Eye, ArrowDownToLine, Share2
+  LogOut, Globe, Palette, Eye, ArrowDownToLine, Share2, UserPlus, Video, VideoOff
 } from 'lucide-react'
 
 export default function ViewerPage() {
   const { docId } = useParams()
   const { authState } = useAuth()
+
+  // Decode the current user's id from the JWT (payload carries id/sub).
+  // Used only to show host-only invite controls; the backend enforces host-only.
+  const currentUserId = (() => {
+    try {
+      const token = authState?.token
+      if (!token) return null
+      const payload = JSON.parse(atob(token.split('.')[1] || ''))
+      const raw = payload.id ?? payload.sub
+      return raw != null ? Number(raw) : null
+    } catch {
+      return null
+    }
+  })()
+
   const [document, setDocument] = useState(null)
   const [fileUrl, setFileUrl] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -40,6 +60,7 @@ export default function ViewerPage() {
   const [activeRoom, setActiveRoom] = useState(null)
   const [roomMessages, setRoomMessages] = useState([])
   const [roomPresence, setRoomPresence] = useState([])
+  const [roomMembers, setRoomMembers] = useState([])
 
   // Annotation Form State
   const [sectionRef, setSectionRef] = useState('')
@@ -53,6 +74,14 @@ export default function ViewerPage() {
   // Reading Room Form State
   const [newRoomName, setNewRoomName] = useState('')
   const [chatInput, setChatInput] = useState('')
+
+  // Invite State
+  const [inviteQuery, setInviteQuery] = useState('')
+  const [inviteResults, setInviteResults] = useState([])
+  const [inviteSearching, setInviteSearching] = useState(false)
+
+  // Video call state (Jitsi) for the active reading room
+  const [videoActive, setVideoActive] = useState(false)
 
   // Refs for auto-scroll
   const chatEndRef = useRef(null)
@@ -152,6 +181,10 @@ export default function ViewerPage() {
           if (msgRes?.success) {
             setRoomMessages(msgRes.data || [])
           }
+          const memRes = await fetchRoomMembers(activeRoom.id, authState.token)
+          if (memRes?.success) {
+            setRoomMembers(memRes.data || [])
+          }
         } catch (err) {
           console.error('Reading room poll failed:', err)
         }
@@ -244,11 +277,13 @@ export default function ViewerPage() {
     }
   }
 
-  const handleExportAnnotations = (format) => {
+  const handleExportAnnotations = async (format) => {
     if (!docId || !authState?.token) return
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-    const exportUrl = `${baseUrl}/collaboration/documents/${docId}/annotations/export?format=${format}&token=${authState.token}`
-    window.open(exportUrl, '_blank')
+    try {
+      await downloadAnnotationsExport(docId, format, authState.token)
+    } catch (err) {
+      alert('Failed to export annotations: ' + err.message)
+    }
   }
 
   // Room Actions
@@ -287,7 +322,47 @@ export default function ViewerPage() {
     setActiveRoom(null)
     setRoomMessages([])
     setRoomPresence([])
+    setRoomMembers([])
+    setInviteQuery('')
+    setInviteResults([])
+    setVideoActive(false)
     loadAnnotationsAndRooms()
+  }
+
+  // Invite: search users (host only)
+  const handleInviteSearch = async (e) => {
+    const value = e.target.value
+    setInviteQuery(value)
+    if (value.trim().length < 2) {
+      setInviteResults([])
+      return
+    }
+    setInviteSearching(true)
+    try {
+      const res = await searchUsers(value.trim(), authState.token)
+      if (res?.success) setInviteResults(res.data || [])
+    } catch (err) {
+      console.error('User search failed:', err)
+    } finally {
+      setInviteSearching(false)
+    }
+  }
+
+  // Invite: send invitation to a specific user
+  const handleInviteUser = async (invitee) => {
+    if (!activeRoom) return
+    try {
+      const res = await inviteToRoom(activeRoom.id, invitee.id, authState.token)
+      if (res?.success) {
+        setRoomMembers(prev => [...prev, res.data])
+        setInviteQuery('')
+        setInviteResults([])
+      } else {
+        alert(res?.message || 'Failed to invite user')
+      }
+    } catch (err) {
+      alert('Failed to invite user: ' + err.message)
+    }
   }
 
   const getHighlightClass = (color) => {
@@ -659,10 +734,36 @@ export default function ViewerPage() {
                           </h4>
                           <span className="text-[9px] text-muted-foreground">Host: {activeRoom.host_name || 'Anonymous'}</span>
                         </div>
-                        <Button size="sm" variant="outline" className="h-7 text-red-500 border-red-500/20 hover:bg-red-500/10" onClick={handleLeaveRoom}>
-                          <LogOut size={11} className="mr-1" /> Leave
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={`h-7 ${videoActive
+                              ? 'text-red-500 border-red-500/20 hover:bg-red-500/10'
+                              : 'text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/10'}`}
+                            onClick={() => setVideoActive(v => !v)}
+                          >
+                            {videoActive
+                              ? (<><VideoOff size={11} className="mr-1" /> End video</>)
+                              : (<><Video size={11} className="mr-1" /> Start video</>)}
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-red-500 border-red-500/20 hover:bg-red-500/10" onClick={handleLeaveRoom}>
+                            <LogOut size={11} className="mr-1" /> Leave
+                          </Button>
+                        </div>
                       </div>
+
+                      {/* Video call panel (Jitsi) */}
+                      {videoActive && (
+                        <div className="mb-3 h-64 border border-emerald-500/30 rounded-lg overflow-hidden bg-black shrink-0">
+                          <JitsiRoom
+                            roomId={activeRoom.id}
+                            roomName={activeRoom.name}
+                            displayName={authState?.name}
+                            onClose={() => setVideoActive(false)}
+                          />
+                        </div>
+                      )}
 
                       {/* Split area: upper is messages log, side is presence */}
                       <div className="flex-1 grid grid-cols-4 gap-3 overflow-hidden mb-3">
@@ -686,21 +787,70 @@ export default function ViewerPage() {
                           </div>
                         </div>
 
-                        {/* Presence Area - 1 col */}
+                        {/* Members / Presence Area - 1 col */}
                         <div className="col-span-1 border border-border rounded-lg p-2 flex flex-col overflow-hidden bg-muted/10">
                           <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border pb-1 mb-1">
-                            Online
+                            Members ({roomMembers.length})
                           </span>
                           <div className="flex-1 overflow-y-auto space-y-1.5">
-                            {roomPresence.map(p => (
-                              <div key={p.id} className="flex items-center gap-1 text-[10px] truncate" title={p.user_name || p.user_email}>
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-                                <span className="truncate font-medium text-foreground">{p.user_name || 'User'}</span>
-                              </div>
-                            ))}
+                            {roomMembers.map(m => {
+                              const online = roomPresence.some(p => String(p.user_id) === String(m.user_id))
+                              return (
+                                <div key={m.id} className="flex items-center gap-1 text-[10px] truncate" title={m.user_email}>
+                                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${online ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/30'}`} />
+                                  <span className="truncate font-medium text-foreground">{m.user_name || 'User'}</span>
+                                  {m.role === 'HOST' && <span className="text-[8px] text-emerald-600 font-bold">HOST</span>}
+                                  {m.status === 'INVITED' && <span className="text-[8px] text-amber-600 italic">invited</span>}
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
                       </div>
+
+                      {/* Invite panel (host only) */}
+                      {activeRoom.host_id != null && currentUserId != null &&
+                        Number(activeRoom.host_id) === currentUserId && (
+                        <div className="relative mb-3 p-2 border border-border rounded-lg bg-muted/10">
+                          <div className="flex items-center gap-2">
+                            <UserPlus size={13} className="text-emerald-600 shrink-0" />
+                            <Input
+                              placeholder="Invite by name or email..."
+                              value={inviteQuery}
+                              onChange={handleInviteSearch}
+                              className="flex-1 text-xs h-8"
+                            />
+                          </div>
+                          {(inviteResults.length > 0 || inviteSearching) && (
+                            <div className="absolute left-2 right-2 top-full mt-1 z-10 max-h-40 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
+                              {inviteSearching ? (
+                                <p className="text-[10px] text-muted-foreground p-2 italic">Searching...</p>
+                              ) : (
+                                inviteResults.map(u => {
+                                  const already = roomMembers.some(m => String(m.user_id) === String(u.id))
+                                  return (
+                                    <button
+                                      key={u.id}
+                                      type="button"
+                                      disabled={already}
+                                      onClick={() => handleInviteUser(u)}
+                                      className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-left text-[11px] hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      <span className="truncate">
+                                        <strong className="text-foreground">{u.name || 'User'}</strong>
+                                        <span className="text-muted-foreground"> · {u.email}</span>
+                                      </span>
+                                      <span className="text-[9px] text-emerald-600 font-bold shrink-0">
+                                        {already ? 'Added' : 'Invite'}
+                                      </span>
+                                    </button>
+                                  )
+                                })
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Chat message input */}
                       <form onSubmit={handleSendChatMessage} className="flex gap-2">

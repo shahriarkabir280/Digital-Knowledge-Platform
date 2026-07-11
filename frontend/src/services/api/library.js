@@ -29,6 +29,15 @@ export async function getCatalogItem(id) {
 }
 
 /**
+ * Resolve a scanned barcode/QR value or ISBN to a catalog item.
+ * @param {string} code
+ * @returns {Promise<{ matchedBy: string, item: object }>}
+ */
+export async function lookupCatalog(code) {
+  return apiRequest(`/library/catalog/lookup?code=${encodeURIComponent(code)}`)
+}
+
+/**
  * Get available facet values for filter dropdowns.
  */
 export async function getCatalogFacets() {
@@ -226,4 +235,14 @@ export async function addToWishlist(catalogItemId) {
 
 export async function removeFromWishlist(wishlistId) {
   return apiRequest(`/library/wishlist/${wishlistId}`, { method: 'DELETE' })
+}
+
+// ── Reports (STAFF+) ───────────────────────────────────────────────
+
+/**
+ * List the report types the backend supports (drives the reports UI).
+ * @returns {Promise<{ types: Array<{key,label,dateRange,exportable}> }>}
+ */
+export async function getReportTypes() {
+  return apiRequest('/library/reports/types')
 }

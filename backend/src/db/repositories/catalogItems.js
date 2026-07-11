@@ -68,7 +68,9 @@ async function search(opts = {}) {
       "search_vector_en @@ plainto_tsquery('english', ?)",
       [q.trim()]
     );
-    query = query.select(
+    // Explicitly keep all item columns: calling .select(relevance) below would
+    // otherwise drop Knex's implicit "select *", leaving rows with only relevance.
+    query = query.select("catalog_items.*").select(
       db.raw(
         "ts_rank(search_vector_en, plainto_tsquery('english', ?)) AS relevance",
         [q.trim()]
@@ -148,6 +150,20 @@ async function findByBarcode(barcode, trx = db) {
  */
 async function findByIsbn(isbn, trx = db) {
   return baseQuery(trx).where("isbn", isbn);
+}
+
+/**
+ * Return the subset of the given ISBNs that already exist (single query).
+ * Used by bulk import for duplicate detection without an N+1.
+ */
+async function findExistingIsbns(isbns, trx = db) {
+  if (!isbns || isbns.length === 0) return [];
+  const rows = await trx("catalog_items")
+    .whereNot("state", "WITHDRAWN")
+    .whereIn("isbn", isbns)
+    .distinct("isbn")
+    .pluck("isbn");
+  return rows;
 }
 
 /**
@@ -287,6 +303,7 @@ module.exports = {
   findById,
   findByBarcode,
   findByIsbn,
+  findExistingIsbns,
   getFacets,
   create,
   update,

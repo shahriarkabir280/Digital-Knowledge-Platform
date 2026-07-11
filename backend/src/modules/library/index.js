@@ -42,6 +42,63 @@ router.get("/catalog/facets", catalogController.getCatalogFacets);
 
 router.get("/catalog/stats", catalogController.getCatalogStats);
 
+// ── Scan lookup: resolve a scanned barcode/QR or ISBN to an item (STAFF+) ──
+// Must be registered before "/catalog/:id" so "lookup" isn't captured as :id.
+router.get(
+  "/catalog/lookup",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const code = (req.query.code || req.query.barcode || "").toString().trim();
+      if (!code) {
+        return next({
+          statusCode: 400,
+          code: "MISSING_CODE",
+          message: "Provide a ?code= barcode/QR or ISBN value",
+        });
+      }
+
+      const catalogItems = require("../../db/repositories/catalogItems");
+
+      // 1) Try a per-copy barcode (catalog_copies). 2) Fall back to ISBN.
+      // 3) Fall back to the ITEM-<id> value emitted by the barcode generator.
+      let item = await catalogItems.findByBarcode(code);
+      let matchedBy = "barcode";
+
+      if (!item) {
+        const byIsbn = await catalogItems.findByIsbn(code);
+        if (byIsbn && byIsbn.length) {
+          item = byIsbn[0];
+          matchedBy = "isbn";
+        }
+      }
+
+      if (!item) {
+        const m = code.match(/^ITEM-(\d+)$/i);
+        if (m) {
+          item = await catalogItems.findById(m[1]);
+          matchedBy = "item_id";
+        }
+      }
+
+      if (!item) {
+        return next({
+          statusCode: 404,
+          code: "ITEM_NOT_FOUND",
+          message: `No catalog item matched "${code}"`,
+        });
+      }
+
+      res.json({ matchedBy, item });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get("/catalog/:id", catalogController.getCatalogItem);
+
 // ── Catalog barcode/QR (STAFF+) ─────────────────────────────────────
 
 router.get(
@@ -68,7 +125,14 @@ router.get(
         });
       }
 
-      const barcodeValue = item.barcode || `ITEM-${item.id}`;
+      // Prefer a real per-copy barcode; fall back to a stable ITEM-<id> value
+      // that /catalog/lookup can also resolve.
+      const db = require("../../db");
+      const copy = await db("catalog_copies")
+        .where({ item_id: item.id })
+        .whereNotNull("barcode")
+        .first();
+      const barcodeValue = copy?.barcode || item.barcode || `ITEM-${item.id}`;
       const format = req.query.format === "qr" ? "qr" : "barcode";
 
       const pngBuffer = await barcodeService.generate(barcodeValue, format);
@@ -85,7 +149,6 @@ router.get(
   }
 );
 
-router.get("/catalog/:id", catalogController.getCatalogItem);
 
 // ── Protected catalog CRUD (STAFF+) ────────────────────────────────
 
@@ -125,12 +188,13 @@ router.post(
         return next({
           statusCode: 400,
           code: "NO_FILE",
-          message: "Please upload a CSV file",
+          message: "Please upload a CSV or MARC (.mrc/.marc/.xml) file",
         });
       }
 
-      const result = await importService.processCsvImport(
+      const result = await importService.processImport(
         req.file.buffer,
+        req.file.originalname,
         req.auth?.id
       );
       res.json(result);
@@ -389,6 +453,97 @@ router.get(
     } catch (error) {
       next(error);
     }
+  }
+);
+
+router.get(
+  "/reports/active-loans",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const { from, to } = req.query;
+      res.json(await reportService.getActiveLoansReport({ from, to }));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  "/reports/inventory",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (_req, res, next) => {
+    try {
+      res.json(await reportService.getInventoryReport());
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  "/reports/new-acquisitions",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const { from, to } = req.query;
+      res.json(await reportService.getNewAcquisitionsReport({ from, to }));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  "/reports/holds",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (_req, res, next) => {
+    try {
+      res.json(await reportService.getHoldsReport());
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  "/reports/fines-detail",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const { from, to } = req.query;
+      res.json(await reportService.getFinesReport({ from, to }));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Machine-readable list of available report types (drives the reports UI).
+router.get(
+  "/reports/types",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  (_req, res) => {
+    res.json({
+      types: [
+        { key: "circulation", label: "Circulation", dateRange: true, exportable: true },
+        { key: "popular-items", label: "Popular Items", dateRange: true, exportable: true },
+        { key: "overdue", label: "Overdue Items", dateRange: true, exportable: true },
+        { key: "collection-stats", label: "Collection Statistics", dateRange: false, exportable: true },
+        { key: "member-activity", label: "Member Activity", dateRange: true, exportable: true },
+        { key: "fines-summary", label: "Fines Summary", dateRange: true, exportable: true },
+        { key: "active-loans", label: "Active Loans", dateRange: true, exportable: true },
+        { key: "inventory", label: "Inventory (Low Stock)", dateRange: false, exportable: true },
+        { key: "new-acquisitions", label: "New Acquisitions", dateRange: true, exportable: true },
+        { key: "holds", label: "Holds Queue", dateRange: false, exportable: true },
+      ],
+    });
   }
 );
 

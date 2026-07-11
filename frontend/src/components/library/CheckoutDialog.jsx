@@ -4,7 +4,7 @@
  * Supports manual member ID entry and camera-based barcode scanning.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, BookCheck, ScanLine, AlertCircle, X } from 'lucide-react'
 import { checkoutItem, searchMembers } from '../../services/api/library.js'
+import { circulationErrorMessage } from '../../services/api/errorMessages.js'
 import BarcodeScanner from './BarcodeScanner.jsx'
 import { toast } from 'sonner'
 
@@ -27,7 +28,7 @@ export default function CheckoutDialog({ open, onClose, catalogItem, onSuccess }
   const [scanMode, setScanMode] = useState(null) // 'item' or 'member'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const debounceRef = { current: null }
+  const debounceRef = useRef(null)
 
   const handleMemberSearch = (query) => {
     setMemberSearchQuery(query)
@@ -65,36 +66,28 @@ export default function CheckoutDialog({ open, onClose, catalogItem, onSuccess }
     setMemberResults([])
   }
 
-  // Handle scan result — look up member by barcode/ID
+  // Handle scan result — resolve a scanned member card to a real member.
   const handleScanResult = useCallback(async (scannedValue) => {
     setShowScanner(false)
     setScanMode(null)
 
     if (scanMode === 'member') {
-      // Try to parse as numeric ID or search by barcode
-      const numericId = parseInt(scannedValue, 10)
-      if (!isNaN(numericId)) {
-        setMemberId(String(numericId))
-        setMemberSearchQuery(`Member ID: ${numericId}`)
-        setMemberName(`Member #${numericId}`)
-        toast.success(`Member ID ${numericId} scanned`)
-      } else {
-        // Search by email/name from scanned text
-        try {
-          const data = await searchMembers(scannedValue.trim())
-          if (data.length === 1) {
-            selectMember(data[0])
-            toast.success(`Found member: ${data[0].name}`)
-          } else if (data.length > 1) {
-            setMemberResults(data)
-            setMemberSearchQuery(scannedValue)
-            toast.info('Multiple members found — please select one.')
-          } else {
-            toast.error('No member found with that barcode/ID.')
-          }
-        } catch {
-          toast.error('Member lookup failed.')
+      // Verify the scanned value against the member directory rather than
+      // trusting an arbitrary number as a member ID.
+      try {
+        const data = await searchMembers(scannedValue.trim())
+        if (data.length === 1) {
+          selectMember(data[0])
+          toast.success(`Found member: ${data[0].name}`)
+        } else if (data.length > 1) {
+          setMemberResults(data)
+          setMemberSearchQuery(scannedValue)
+          toast.info('Multiple members found — please select one.')
+        } else {
+          toast.error(`No member found for "${scannedValue}".`)
         }
+      } catch {
+        toast.error('Member lookup failed.')
       }
     }
   }, [scanMode])
@@ -113,7 +106,7 @@ export default function CheckoutDialog({ open, onClose, catalogItem, onSuccess }
       onSuccess?.(loan)
       handleClose()
     } catch (err) {
-      setError(err.message || 'Checkout failed. Please try again.')
+      setError(circulationErrorMessage(err, 'Checkout failed. Please try again.'))
     } finally {
       setLoading(false)
     }

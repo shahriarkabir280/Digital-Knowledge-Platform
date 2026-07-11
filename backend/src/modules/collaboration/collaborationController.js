@@ -251,6 +251,17 @@ async function exportAnnotations(req, res, next) {
   }
 }
 
+// Helper: is the user allowed into this room? (host or an invited/joined member)
+async function isRoomMember(roomId, userId) {
+  const room = await db("reading_rooms").where({ id: roomId }).first();
+  if (!room) return { ok: false, room: null };
+  if (Number(room.host_id) === Number(userId)) return { ok: true, room };
+  const membership = await db("reading_room_members")
+    .where({ room_id: roomId, user_id: userId })
+    .first();
+  return { ok: Boolean(membership), room };
+}
+
 // 6. Create Virtual Reading Room
 async function createReadingRoom(req, res, next) {
   try {
@@ -270,21 +281,50 @@ async function createReadingRoom(req, res, next) {
       })
       .returning("*");
 
+    // Host is automatically a JOINED member of their own room
+    await db("reading_room_members")
+      .insert({
+        room_id: room.id,
+        user_id: userId,
+        invited_by: userId,
+        role: "HOST",
+        status: "JOINED",
+        created_at: db.fn.now()
+      })
+      .onConflict(["room_id", "user_id"])
+      .ignore()
+      .catch((err) => console.warn("Failed to add host as room member:", err.message));
+
     return res.status(201).json({ success: true, data: room });
   } catch (error) {
     return next(error);
   }
 }
 
-// 7. Get Reading Rooms for a document
+// 7. Get Reading Rooms for a document (only rooms the user hosts or is invited to)
 async function getReadingRooms(req, res, next) {
   try {
     const { docId } = req.params;
+    const userId = req.user.id;
+
     const rooms = await db("reading_rooms")
       .select("reading_rooms.*", "users.name as host_name")
       .leftJoin("users", "reading_rooms.host_id", "users.id")
+      .leftJoin("reading_room_members", function join() {
+        this.on("reading_room_members.room_id", "=", "reading_rooms.id").andOn(
+          "reading_room_members.user_id",
+          "=",
+          db.raw("?", [userId])
+        );
+      })
       .where({ document_id: String(docId) })
-      .orderBy("created_at", "desc");
+      .andWhere((builder) => {
+        builder
+          .where("reading_rooms.host_id", userId)
+          .orWhereNotNull("reading_room_members.id");
+      })
+      .distinct("reading_rooms.id")
+      .orderBy("reading_rooms.created_at", "desc");
 
     return res.status(200).json({ success: true, data: rooms });
   } catch (error) {
@@ -292,10 +332,140 @@ async function getReadingRooms(req, res, next) {
   }
 }
 
-// 8. Get messages for a reading room
+// 7b. Search users to invite (any authenticated user; excludes self)
+async function searchUsers(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const q = String(req.query.q || "").trim();
+
+    if (q.length < 2) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const like = `%${q}%`;
+    const users = await db("users")
+      .select("id", "name", "email")
+      .where("id", "!=", userId)
+      .andWhere((builder) => {
+        builder.whereILike("name", like).orWhereILike("email", like);
+      })
+      .orderBy("name", "asc")
+      .limit(10);
+
+    return res.status(200).json({ success: true, data: users });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// 7c. Invite a user to a reading room (host only)
+async function inviteToRoom(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { roomId } = req.params;
+    const { inviteeId } = req.body;
+
+    if (!inviteeId) {
+      return res.status(400).json({ success: false, message: "inviteeId is required" });
+    }
+
+    const room = await db("reading_rooms").where({ id: roomId }).first();
+    if (!room) {
+      return res.status(404).json({ success: false, message: "Reading room not found" });
+    }
+    if (Number(room.host_id) !== Number(userId)) {
+      return res.status(403).json({ success: false, message: "Only the room host can invite members" });
+    }
+
+    const invitee = await db("users").where({ id: inviteeId }).first();
+    if (!invitee) {
+      return res.status(404).json({ success: false, message: "User to invite was not found" });
+    }
+
+    const existing = await db("reading_room_members")
+      .where({ room_id: roomId, user_id: inviteeId })
+      .first();
+    if (existing) {
+      return res.status(409).json({ success: false, message: "User is already a member of this room" });
+    }
+
+    const [member] = await db("reading_room_members")
+      .insert({
+        room_id: roomId,
+        user_id: inviteeId,
+        invited_by: userId,
+        role: "MEMBER",
+        status: "INVITED",
+        created_at: db.fn.now()
+      })
+      .returning("*");
+
+    const hostName = await getUserIdentifier(userId);
+
+    // Notify the invited user (matches live notifications schema: event_type + document_id)
+    await db("notifications")
+      .insert({
+        user_id: inviteeId,
+        document_id: null,
+        event_type: "room_invite",
+        title: "You were invited to a reading room",
+        message: `${hostName} invited you to the reading room "${room.name}"`,
+        is_read: false,
+        created_at: db.fn.now()
+      })
+      .catch((err) => console.warn("Failed to notify invited user:", err.message));
+
+    return res.status(201).json({
+      success: true,
+      data: { ...member, name: invitee.name, email: invitee.email }
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// 7d. Get members of a reading room (members only)
+async function getRoomMembers(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { roomId } = req.params;
+
+    const { ok, room } = await isRoomMember(roomId, userId);
+    if (!room) {
+      return res.status(404).json({ success: false, message: "Reading room not found" });
+    }
+    if (!ok) {
+      return res.status(403).json({ success: false, message: "You are not a member of this room" });
+    }
+
+    const members = await db("reading_room_members")
+      .select(
+        "reading_room_members.*",
+        "users.name as user_name",
+        "users.email as user_email"
+      )
+      .leftJoin("users", "reading_room_members.user_id", "users.id")
+      .where({ room_id: roomId })
+      .orderBy("reading_room_members.created_at", "asc");
+
+    return res.status(200).json({ success: true, data: members });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// 8. Get messages for a reading room (members only)
 async function getRoomMessages(req, res, next) {
   try {
     const { roomId } = req.params;
+    const { ok, room } = await isRoomMember(roomId, req.user.id);
+    if (!room) {
+      return res.status(404).json({ success: false, message: "Reading room not found" });
+    }
+    if (!ok) {
+      return res.status(403).json({ success: false, message: "You are not a member of this room" });
+    }
+
     const messages = await db("reading_room_messages")
       .select("reading_room_messages.*", "users.name as author_name", "users.email as author_email")
       .leftJoin("users", "reading_room_messages.user_id", "users.id")
@@ -308,7 +478,7 @@ async function getRoomMessages(req, res, next) {
   }
 }
 
-// 9. Post message to a reading room
+// 9. Post message to a reading room (members only)
 async function postRoomMessage(req, res, next) {
   try {
     const userId = req.user.id;
@@ -318,6 +488,20 @@ async function postRoomMessage(req, res, next) {
     if (!messageText || !messageText.trim()) {
       return res.status(400).json({ success: false, message: "Message text is required" });
     }
+
+    const { ok, room } = await isRoomMember(roomId, userId);
+    if (!room) {
+      return res.status(404).json({ success: false, message: "Reading room not found" });
+    }
+    if (!ok) {
+      return res.status(403).json({ success: false, message: "You are not a member of this room" });
+    }
+
+    // Joining implicitly via first message: mark an INVITED member as JOINED
+    await db("reading_room_members")
+      .where({ room_id: roomId, user_id: userId, status: "INVITED" })
+      .update({ status: "JOINED" })
+      .catch(() => {});
 
     const [msg] = await db("reading_room_messages")
       .insert({
@@ -339,11 +523,25 @@ async function postRoomMessage(req, res, next) {
   }
 }
 
-// 10. Update room presence (heartbeat)
+// 10. Update room presence (heartbeat) — members only
 async function updatePresence(req, res, next) {
   try {
     const userId = req.user.id;
     const { roomId } = req.params;
+
+    const { ok, room } = await isRoomMember(roomId, userId);
+    if (!room) {
+      return res.status(404).json({ success: false, message: "Reading room not found" });
+    }
+    if (!ok) {
+      return res.status(403).json({ success: false, message: "You are not a member of this room" });
+    }
+
+    // Presence heartbeat also confirms an invited member has joined
+    await db("reading_room_members")
+      .where({ room_id: roomId, user_id: userId, status: "INVITED" })
+      .update({ status: "JOINED" })
+      .catch(() => {});
 
     // PostgreSQL specific UPSERT (ON CONFLICT DO UPDATE)
     await db.raw(`
@@ -386,6 +584,9 @@ module.exports = {
   exportAnnotations,
   createReadingRoom,
   getReadingRooms,
+  searchUsers,
+  inviteToRoom,
+  getRoomMembers,
   getRoomMessages,
   postRoomMessage,
   updatePresence,

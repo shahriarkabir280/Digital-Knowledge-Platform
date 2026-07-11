@@ -455,7 +455,7 @@ export default function LibraryPage() {
               Explore, bookmark, and contribute course textbooks, lecture slides, lab manuals, and research papers verified by CSEDU faculty.
             </p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-slate-700/50 pt-4 mt-2">
+          <div className="grid grid-cols-3 gap-4 border-t border-slate-700/50 pt-4 mt-2">
             <div>
               <p className="text-xl font-bold text-white">{publishedDocs.length}+</p>
               <p className="text-xs text-slate-400 uppercase tracking-wider">Total Assets</p>
@@ -467,10 +467,6 @@ export default function LibraryPage() {
             <div>
               <p className="text-xl font-bold text-white">{bookmarks.length}</p>
               <p className="text-xs text-slate-400 uppercase tracking-wider">Bookmarked</p>
-            </div>
-            <div>
-              <p className="text-xl font-bold text-white">—</p>
-              <p className="text-xs text-slate-400 uppercase tracking-wider">Avg Rating</p>
             </div>
           </div>
         </div>

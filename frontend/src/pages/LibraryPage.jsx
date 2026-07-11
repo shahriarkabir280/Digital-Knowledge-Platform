@@ -46,6 +46,7 @@ import { uploadDocument } from '../services/api/documents.js'
 import { ResourceGridSkeleton, SidebarSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
 import ResourceCard from '../components/library/ResourceCard.jsx'
 import CatalogSearchFilters from '../components/library/CatalogSearchFilters.jsx'
+import CatalogItemCard from '../components/library/CatalogItemCard.jsx'
 import { extractFileMetadata } from '../services/metadataExtractor.js'
 import { searchCatalog, getCatalogStats } from '../services/api/library.js'
 import { toast } from 'sonner'
@@ -147,7 +148,7 @@ export default function LibraryPage() {
   const [catalogSearchInput, setCatalogSearchInput] = useState('')
   const [catalogPage, setCatalogPage] = useState(1)
 
-  const { data: catalogData, isLoading: catalogLoading } = useQuery({
+  const { data: catalogData, isLoading: catalogLoading, isError: catalogIsError } = useQuery({
     queryKey: ['physical-catalog', catalogFilters, catalogPage],
     queryFn: () => searchCatalog({ ...catalogFilters, page: catalogPage, limit: 20 }),
     enabled: pageTab === 'catalog',
@@ -502,13 +503,13 @@ export default function LibraryPage() {
           {catalogStats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'Total Titles', value: catalogStats.total_titles ?? catalogStats.totalTitles },
-                { label: 'Available Now', value: catalogStats.available_titles ?? catalogStats.availableTitles, color: 'text-emerald-600' },
-                { label: 'Total Copies', value: catalogStats.total_copies ?? catalogStats.totalCopies },
-                { label: 'Checked Out', value: catalogStats.checked_out ?? catalogStats.checkedOut, color: 'text-amber-600' },
+                { label: 'Total Titles', value: Number(catalogStats.total_items) },
+                { label: 'Available Now', value: Number(catalogStats.available_items), color: 'text-emerald-600' },
+                { label: 'Total Copies', value: Number(catalogStats.total_copies) },
+                { label: 'Checked Out', value: Number(catalogStats.checked_out_items), color: 'text-amber-600' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="rounded-xl border border-border bg-card p-3 text-center">
-                  <p className={`text-xl font-extrabold ${color || 'text-foreground'}`}>{value ?? '—'}</p>
+                  <p className={`text-xl font-extrabold ${color || 'text-foreground'}`}>{Number.isNaN(value) ? '—' : value}</p>
                   <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mt-0.5">{label}</p>
                 </div>
               ))}
@@ -560,6 +561,12 @@ export default function LibraryPage() {
             <div className="flex justify-center py-12">
               <Loader2 size={22} className="animate-spin text-muted-foreground" />
             </div>
+          ) : catalogIsError ? (
+            <div className="text-center py-14 text-muted-foreground border border-dashed border-red-500/30 bg-red-500/5 rounded-xl">
+              <AlertCircle size={32} className="mx-auto text-red-500/50 mb-3" />
+              <p className="text-sm font-semibold text-foreground">Couldn't load the catalog</p>
+              <p className="text-xs mt-1">Something went wrong fetching results. Please try again.</p>
+            </div>
           ) : catalogItems.length === 0 ? (
             <div className="text-center py-14 text-muted-foreground border border-dashed border-border rounded-xl">
               <BookOpen size={32} className="mx-auto opacity-20 mb-3" />
@@ -571,34 +578,9 @@ export default function LibraryPage() {
               <p className="text-xs text-muted-foreground font-semibold">
                 {catalogPagination?.total ?? catalogItems.length} item{(catalogPagination?.total ?? catalogItems.length) !== 1 ? 's' : ''} found
               </p>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {catalogItems.map(item => (
-                  <Link key={item.id} to={`/library/resource/${item.id}`}>
-                    <div className="rounded-xl border border-border bg-card p-4 hover:border-accent/30 hover:bg-muted/30 transition-all grid gap-2">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-12 rounded bg-accent/10 border border-border flex items-center justify-center shrink-0">
-                          <BookOpen size={16} className="text-accent/60" />
-                        </div>
-                        <div className="flex-1 min-w-0 grid gap-0.5">
-                          <p className="text-sm font-bold text-foreground line-clamp-2 leading-snug">{item.title}</p>
-                          <p className="text-xs text-muted-foreground truncate">{item.authors || '—'}</p>
-                          {item.isbn && <p className="text-[10px] font-mono text-muted-foreground">ISBN: {item.isbn}</p>}
-                        </div>
-                        <div className="shrink-0 text-right grid gap-1">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
-                            item.available_copies > 0
-                              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                              : 'bg-red-500/10 text-red-600 border-red-500/20'
-                          }`}>
-                            {item.available_copies > 0 ? `${item.available_copies} avail.` : 'Out'}
-                          </span>
-                          {item.location && (
-                            <span className="text-[10px] text-muted-foreground">{item.location}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+                  <CatalogItemCard key={item.id} item={item} />
                 ))}
               </div>
 

@@ -13,7 +13,6 @@ import {
   Database,
   GraduationCap,
   BookOpen,
-  Quote,
   PlayCircle,
   ExternalLink,
   Code2,
@@ -25,7 +24,6 @@ import {
   FilePlus,
   Loader2,
   BookCheck,
-  Heart,
   Clock,
   ScanLine,
   QrCode
@@ -33,7 +31,7 @@ import {
 import { useAuth } from '../app/use-auth.js'
 import CheckoutDialog from '../components/library/CheckoutDialog.jsx'
 import HoldRequestButton from '../components/library/HoldRequestButton.jsx'
-import { addToWishlist, removeFromWishlist, getMyWishlist } from '../services/api/library.js'
+import { getCatalogItem } from '../services/api/library.js'
 import { toast } from 'sonner'
 
 function StarRating({ rating, onRate, readonly = false }) {
@@ -67,9 +65,6 @@ export default function LibraryResourceDetailsPage() {
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCheckoutDialog, setShowCheckoutDialog] = useState(false)
-  const [inWishlist, setInWishlist] = useState(false)
-  const [wishlistItemId, setWishlistItemId] = useState(null)
-  const [wishlistLoading, setWishlistLoading] = useState(false)
   const [showBarcodeModal, setShowBarcodeModal] = useState(false)
   const [barcodeFormat, setBarcodeFormat] = useState('barcode') // 'barcode' | 'qr'
 
@@ -90,29 +85,76 @@ export default function LibraryResourceDetailsPage() {
     }
   }, [resourceId])
 
-  // Try to find the resource in published docs from localStorage cache
-  // In a real app, this would be fetched from the backend API by ID
-  const resource = useMemo(() => {
-    try {
-      // Check localStorage for cached published docs list
-      // This is a simplification — ideally we'd fetch /documents/:id from the backend
-      const stored = localStorage.getItem('dkp_published_docs_cache')
-      if (stored) {
-        const docs = JSON.parse(stored)
-        const found = docs.find(item => item.id === resourceId || item.id === `doc-${resourceId}`)
-        if (found) return found
+  const [resource, setResource] = useState(null)
+
+  // Resolve the resource: physical catalog items are fetched from the catalog
+  // API; digital documents are looked up in the published-docs localStorage
+  // cache (populated by LibraryPage's query — see /documents/:id TODO there).
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+
+    async function loadResource() {
+      if (isCatalogItem) {
+        try {
+          const item = await getCatalogItem(numericId)
+          if (!cancelled) {
+            setResource({
+              ...item,
+              title: item.title,
+              author: item.authors || 'Unknown',
+              type: item.category || 'Book',
+              year: item.publication_year,
+              summary: item.description,
+              updatedAt: item.updated_at,
+            })
+          }
+        } catch {
+          if (!cancelled) setResource(null)
+        } finally {
+          if (!cancelled) setLoading(false)
+        }
+        return
       }
-      return null
-    } catch {
-      return null
+
+      try {
+        const stored = localStorage.getItem('dkp_published_docs_cache')
+        const docs = stored ? JSON.parse(stored) : []
+        const found = docs.find(item => item.id === resourceId || item.id === `doc-${resourceId}`)
+        if (!cancelled) setResource(found || null)
+      } catch {
+        if (!cancelled) setResource(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }, [resourceId])
+
+    loadResource()
+    return () => { cancelled = true }
+  }, [resourceId, isCatalogItem, numericId])
+
+  // These must be computed unconditionally (before any early return) since
+  // they're hook dependencies below — Rules of Hooks forbids skipping hooks
+  // on some renders (e.g. while loading) and calling them on others.
+  const hasPdf = Boolean(resource?.pdfUrl) && !['Video', 'PPT'].includes(resource?.type)
+  const hasPpt = resource?.type === 'PPT' && Boolean(resource?.pptUrl)
+  const hasVideo = Boolean(resource?.youtubeId)
+  const hasReadme = Boolean(resource?.readme)
+
+  // Determine available tabs
+  const tabs = useMemo(() => {
+    const t = []
+    if (hasPdf || hasVideo || hasPpt) t.push({ id: 'preview', label: hasVideo ? '▶ Watch / Preview' : hasPpt ? '📊 View Slides' : '👁 View Document' })
+    if (hasReadme) t.push({ id: 'readme', label: '📄 README' })
+    t.push({ id: 'reviews', label: `★ Reviews (${reviews.length})` })
+    return t
+  }, [hasPdf, hasVideo, hasPpt, hasReadme, reviews.length])
 
   useEffect(() => {
-    // Simulate loading — in production, fetch from /api/documents/:id
-    const timer = setTimeout(() => setLoading(false), 300)
-    return () => clearTimeout(timer)
-  }, [resourceId])
+    if (hasPdf || hasVideo || hasPpt) setActiveTab('preview')
+    else if (hasReadme) setActiveTab('readme')
+    else setActiveTab('reviews')
+  }, [resourceId, hasPdf, hasVideo, hasPpt, hasReadme])
 
   // If resource not found
   if (loading) {
@@ -147,10 +189,6 @@ export default function LibraryResourceDetailsPage() {
     )
   }
 
-  const hasPdf = Boolean(resource.pdfUrl) && !['Video', 'PPT'].includes(resource.type)
-  const hasPpt = resource.type === 'PPT' && Boolean(resource.pptUrl)
-  const hasVideo = Boolean(resource.youtubeId)
-  const hasReadme = Boolean(resource.readme)
   const hasGithub = Boolean(resource.githubUrl)
 
   // Detect if the pdfUrl is a backend auth-gated API URL (not publicly accessible)
@@ -168,22 +206,6 @@ export default function LibraryResourceDetailsPage() {
     ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resource.pptUrl)}`
     : null
 
-  // Determine available tabs
-  const tabs = useMemo(() => {
-    const t = []
-    if (hasPdf || hasVideo || hasPpt) t.push({ id: 'preview', label: hasVideo ? '▶ Watch / Preview' : hasPpt ? '📊 View Slides' : '👁 View Document' })
-    if (hasReadme) t.push({ id: 'readme', label: '📄 README' })
-    t.push({ id: 'reviews', label: `★ Reviews (${reviews.length})` })
-    return t
-  }, [hasPdf, hasVideo, hasPpt, hasReadme, reviews.length])
-
-  useEffect(() => {
-    if (hasPdf || hasVideo || hasPpt) setActiveTab('preview')
-    else if (hasReadme) setActiveTab('readme')
-    else setActiveTab('reviews')
-  }, [resourceId, hasPdf, hasVideo, hasPpt, hasReadme])
-
-
   const toggleBookmark = () => {
     const saved = localStorage.getItem('dkp_bookmarked_resources')
     let ids = saved ? JSON.parse(saved) : []
@@ -196,38 +218,9 @@ export default function LibraryResourceDetailsPage() {
     setBookmarked(!bookmarked)
   }
 
-  const toggleWishlist = async () => {
-    if (!authState?.token) { toast?.('Please log in to use wishlist'); return }
-    setWishlistLoading(true)
-    try {
-      if (inWishlist && wishlistItemId) {
-        await removeFromWishlist(wishlistItemId)
-        setInWishlist(false)
-        setWishlistItemId(null)
-        toast.success('Removed from wishlist')
-      } else {
-        const entry = await addToWishlist(numericId)
-        setInWishlist(true)
-        setWishlistItemId(entry?.id || null)
-        toast.success('Added to wishlist')
-      }
-    } catch (err) {
-      toast.error(err.message || 'Wishlist action failed')
-    } finally {
-      setWishlistLoading(false)
-    }
-  }
-
   const barcodeImageUrl = isCatalogItem
     ? `${import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/library/catalog/${numericId}/barcode?format=${barcodeFormat}&_token=${encodeURIComponent(authState?.token || '')}`
     : null
-
-  const copyCitation = () => {
-    const year = resource.year || new Date(resource.updatedAt || Date.now()).getFullYear()
-    const citation = `${resource.author || 'Anonymous'}. (${year}). ${resource.title}. Department of ${resource.department || 'CSE'}, Institutional Repository.`
-    navigator.clipboard.writeText(citation)
-    alert('APA citation copied to clipboard!')
-  }
 
   const submitReview = () => {
     if (!userComment.trim()) {
@@ -322,9 +315,6 @@ export default function LibraryResourceDetailsPage() {
             <Button variant="outline" className="gap-1.5 text-xs" onClick={toggleBookmark}>
               <Bookmark size={14} className={bookmarked ? 'fill-accent text-accent' : ''} />
               {bookmarked ? 'Saved' : 'Bookmark'}
-            </Button>
-            <Button variant="outline" className="gap-1.5 text-xs" onClick={copyCitation}>
-              <Quote size={14} /> Cite
             </Button>
             {(hasPdf || hasGithub) && (
               <Button asChild className="gap-1.5 text-xs">
@@ -730,20 +720,6 @@ export default function LibraryResourceDetailsPage() {
                 {bookmarked ? 'Remove from Bookmarks' : 'Add to Bookmarks'}
               </Button>
 
-              {/* Wishlist — for logged-in members */}
-              {authState?.token && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start gap-2 text-xs"
-                  onClick={toggleWishlist}
-                  disabled={wishlistLoading}
-                >
-                  <Heart size={13} className={inWishlist ? 'fill-rose-500 text-rose-500' : ''} />
-                  {wishlistLoading ? 'Updating…' : inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                </Button>
-              )}
-
               {/* Hold request — show when logged in and item is catalog item */}
               {authState?.token && isCatalogItem && (
                 <div className="w-full">
@@ -789,9 +765,6 @@ export default function LibraryResourceDetailsPage() {
                 </div>
               )}
 
-              <Button variant="outline" size="sm" className="w-full justify-start gap-2 text-xs" onClick={copyCitation}>
-                <Quote size={13} /> Copy APA Citation
-              </Button>
               {resource.githubUrl && (
                 <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2 text-xs">
                   <a href={resource.githubUrl} target="_blank" rel="noreferrer">

@@ -71,7 +71,7 @@ export default function CatalogSearchFilters({ filters = {}, onChange, compact =
   const subjects = facets?.subjects?.length ? facets.subjects : []
   const locations = facets?.locations?.length ? facets.locations : []
   const languages = facets?.languages?.length ? facets.languages : Object.keys(LANGUAGE_LABELS)
-  const itemTypes = facets?.item_types?.length ? facets.item_types : Object.keys(ITEM_TYPE_LABELS)
+  const itemTypes = facets?.itemTypes?.length ? facets.itemTypes : Object.keys(ITEM_TYPE_LABELS)
 
   const filterContent = (
     <div className={compact ? 'flex flex-wrap gap-3 items-end' : 'grid gap-4'}>
@@ -109,35 +109,22 @@ export default function CatalogSearchFilters({ filters = {}, onChange, compact =
           Category
         </Label>
         <div className={compact ? 'flex gap-1.5 flex-wrap' : 'grid gap-1'}>
-          {compact ? (
-            <select
-              value={filters.item_type || ''}
-              onChange={(e) => set('item_type', e.target.value)}
-              className="h-8 rounded-md border border-border bg-card px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+          {['', ...itemTypes].map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => set('item_type', t)}
+              className={`
+                px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors text-left
+                ${(filters.item_type ?? '') === t
+                  ? 'bg-accent text-white border-accent'
+                  : 'bg-card border-border text-foreground hover:border-accent/50 hover:bg-muted/30'
+                }
+              `}
             >
-              <option value="">All types</option>
-              {itemTypes.map((t) => (
-                <option key={t} value={t}>{ITEM_TYPE_LABELS[t] || t}</option>
-              ))}
-            </select>
-          ) : (
-            ['', ...itemTypes].map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => set('item_type', t)}
-                className={`
-                  px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors text-left
-                  ${(filters.item_type ?? '') === t
-                    ? 'bg-accent text-white border-accent'
-                    : 'bg-card border-border text-foreground hover:border-accent/50 hover:bg-muted/30'
-                  }
-                `}
-              >
-                {t === '' ? 'All' : (ITEM_TYPE_LABELS[t] || t)}
-              </button>
-            ))
-          )}
+              {t === '' ? 'All' : (ITEM_TYPE_LABELS[t] || t)}
+            </button>
+          ))}
         </div>
       </div>
 

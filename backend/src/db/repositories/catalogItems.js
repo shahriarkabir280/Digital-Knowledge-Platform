@@ -50,6 +50,7 @@ async function search(opts = {}) {
     isbn,
     subject,
     status,
+    available,
     location,
     item_type, // maps to category
     language,
@@ -82,6 +83,7 @@ async function search(opts = {}) {
   if (isbn) query = query.where("isbn", isbn);
   if (subject) query = query.where("subject", "ILIKE", `%${subject}%`);
   if (status) query = query.where("state", status.toUpperCase());
+  if (available === "true") query = query.where("available_copies", ">", 0);
   if (location) query = query.where("location", "ILIKE", `%${location}%`);
   if (item_type) query = query.where("category", "ILIKE", item_type);
   if (language) query = query.where("language", "ILIKE", language);

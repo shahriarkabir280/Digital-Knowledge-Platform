@@ -34,6 +34,7 @@ const searchQuerySchema = z.object({
   isbn: z.string().optional(),
   subject: z.string().optional(),
   status: z.string().optional(),           // maps to state
+  available: z.enum(["true", "false"]).optional(),
   location: z.string().optional(),
   item_type: z.string().optional(),        // maps to category
   language: z.string().optional(),

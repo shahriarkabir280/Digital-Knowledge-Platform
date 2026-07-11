@@ -2,7 +2,6 @@ import { createBrowserRouter } from 'react-router-dom'
 import { Navigate } from 'react-router-dom'
 import AdminDashboardPage from '../pages/AdminDashboardPage.jsx'
 import AdminRoleManagementPage from '../pages/AdminRoleManagementPage.jsx'
-import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage.jsx'
 import AllUploadsPage from '../pages/AllUploadsPage.jsx'
 import AppLayout from '../components/layout/AppLayout.jsx'
 import DashboardPage from '../pages/DashboardPage.jsx'
@@ -220,10 +219,6 @@ export const appRouter = createBrowserRouter([
               {
                 path: '/admin/panel',
                 element: <AdminRoleManagementPage />,
-              },
-              {
-                path: '/admin/role-requests',
-                element: <AdminRoleRequestsPage />,
               },
             ],
           },

@@ -61,10 +61,4 @@ export const navItems = [
     iconName: 'Settings2',
     roles: ROUTE_ACCESS.librarySettings,
   },
-  {
-    to: '/admin/role-requests',
-    label: 'Role Requests',
-    iconName: 'ShieldCheck',
-    roles: [ROLES.ADMIN],
-  },
 ]

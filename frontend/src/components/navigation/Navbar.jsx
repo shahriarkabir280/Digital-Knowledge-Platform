@@ -46,7 +46,7 @@ function resolveNotificationRoute(notification, role) {
   }
   if (eventType.startsWith('role_request')) {
     if (eventType === 'role_request_submitted' && STAFF_ROLES.has(role)) {
-      return '/admin/role-requests'
+      return '/admin/panel'
     }
     return '/library/profile'
   }

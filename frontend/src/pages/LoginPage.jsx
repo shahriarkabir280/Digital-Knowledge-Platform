@@ -4,10 +4,17 @@ import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import cseduLogo from '@/assets/CSEDULOGO.png'
+import AuthLayout from '../components/auth/AuthLayout.jsx'
 import { defaultRouteForRole } from '../app/rbac.js'
 import { useAuth } from '../app/use-auth.js'
 import { loginRequest } from '../services/api/auth.js'
+import { Mail, Lock, LogIn, Compass, FileText, Users, Download, Loader2 } from 'lucide-react'
+
+const STATS = [
+  { label: 'Documents', value: '12,490+', Icon: FileText },
+  { label: 'Researchers', value: '840+', Icon: Users },
+  { label: 'Downloads', value: '84K+', Icon: Download },
+]
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('')
@@ -61,143 +68,89 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100svh', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-      {/* Left panel — branding */}
-      <div style={{
-        background: 'linear-gradient(145deg, var(--brand-700) 0%, var(--brand-500) 60%, var(--brand-400) 100%)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '48px',
-        gap: '32px',
-      }}
-        className="auth-left-panel"
-      >
-        <div style={{ textAlign: 'center', display: 'grid', gap: '20px' }}>
-          <img
-            src={cseduLogo}
-            alt="CSEDU Logo"
-            style={{ width: '96px', height: '96px', borderRadius: '20px', border: '3px solid rgba(255,255,255,.25)', margin: '0 auto', objectFit: 'cover' }}
-          />
-          <div style={{ color: '#fff' }}>
-            <p style={{ fontSize: '.8rem', fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', opacity: .75, marginBottom: '8px' }}>
-              Department of Computer Science &amp; Engineering
-            </p>
-            <h1 style={{ fontSize: 'clamp(1.8rem, 3vw, 2.6rem)', fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.1, marginBottom: '12px' }}>
-              Digital Knowledge<br />Platform
-            </h1>
-            <p style={{ fontSize: '.95rem', opacity: .8, lineHeight: 1.6, maxWidth: '32ch', margin: '0 auto' }}>
-              Centralized repository for academic resources, research papers, and institutional knowledge.
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', width: '100%', maxWidth: '360px' }}>
-          {[
-            { label: 'Documents', value: '12,490+' },
-            { label: 'Researchers', value: '840+' },
-            { label: 'Downloads', value: '84K+' },
-          ].map(stat => (
-            <div key={stat.label} style={{
-              background: 'rgba(255,255,255,.12)',
-              borderRadius: '12px',
-              padding: '14px 10px',
-              textAlign: 'center',
-              border: '1px solid rgba(255,255,255,.15)',
-            }}>
-              <p style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', lineHeight: 1 }}>{stat.value}</p>
-              <p style={{ color: 'rgba(255,255,255,.7)', fontSize: '.72rem', marginTop: '4px', fontWeight: 600 }}>{stat.label}</p>
+    <AuthLayout
+      eyebrow="Department of Computer Science & Engineering"
+      title={<>Digital Knowledge<br />Platform</>}
+      description="Centralized repository for academic resources, research papers, and institutional knowledge."
+      panelExtra={
+        <div className="grid w-full max-w-[360px] grid-cols-3 gap-3">
+          {STATS.map(({ label, value, Icon }) => (
+            <div key={label} className="grid gap-1.5 rounded-xl border border-white/15 bg-white/10 p-3.5 text-center">
+              <Icon size={16} className="mx-auto text-white/70" />
+              <p className="text-[1.05rem] font-extrabold leading-none text-white">{value}</p>
+              <p className="text-[.7rem] font-semibold text-white/70">{label}</p>
             </div>
           ))}
         </div>
+      }
+    >
+      <div className="grid gap-1.5">
+        <h2 className="text-[1.75rem] font-extrabold tracking-tight text-[var(--ink)]">
+          Welcome back
+        </h2>
+        <p className="text-sm text-[var(--muted)]">
+          Sign in to your CSEDU account to continue.
+        </p>
       </div>
 
-      {/* Right panel — form */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '48px 40px',
-        background: 'hsl(var(--background))',
-      }}>
-        <div style={{ width: '100%', maxWidth: '400px', display: 'grid', gap: '28px' }}>
-          <div style={{ display: 'grid', gap: '6px' }}>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-.02em', color: 'var(--ink)' }}>
-              Welcome back
-            </h2>
-            <p style={{ color: 'var(--muted)', fontSize: '.9rem' }}>
-              Sign in to your CSEDU account to continue.
-            </p>
+      <form onSubmit={onSubmit} className="grid gap-4">
+        <div className="grid gap-1.5">
+          <Label htmlFor="identifier">Email address</Label>
+          <div className="relative">
+            <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
+            <Input
+              id="identifier"
+              name="identifier"
+              autoComplete="email"
+              placeholder="you@cs.du.ac.bd"
+              className="h-11 pl-9 text-[.95rem]"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+            />
           </div>
-
-          <form onSubmit={onSubmit} style={{ display: 'grid', gap: '16px' }}>
-            <div style={{ display: 'grid', gap: '6px' }}>
-              <Label htmlFor="identifier">Email address</Label>
-              <Input
-                id="identifier"
-                name="identifier"
-                autoComplete="email"
-                placeholder="you@cs.du.ac.bd"
-                style={{ height: '44px', fontSize: '.95rem' }}
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-              />
-            </div>
-
-            <div style={{ display: 'grid', gap: '6px' }}>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Enter your password"
-                style={{ height: '44px', fontSize: '.95rem' }}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-
-            {errorMessage && <Alert variant="error">{errorMessage}</Alert>}
-
-            <Button type="submit" size="lg" disabled={isSubmitting} style={{ height: '44px', fontSize: '.95rem' }}>
-              {isSubmitting ? 'Signing in…' : 'Sign in'}
-            </Button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ flex: 1, height: '1px', background: 'hsl(var(--border))' }} />
-              <span style={{ fontSize: '.78rem', color: 'var(--muted)', fontWeight: 600 }}>OR</span>
-              <div style={{ flex: 1, height: '1px', background: 'hsl(var(--border))' }} />
-            </div>
-
-            <Button type="button" variant="outline" size="lg" onClick={onGuestAccess} style={{ height: '44px', fontSize: '.95rem' }}>
-              Guest Access
-            </Button>
-          </form>
-
-          <p style={{ fontSize: '.875rem', color: 'var(--muted)', textAlign: 'center' }}>
-            Don't have an account?{' '}
-            <Link to="/register" style={{ fontWeight: 700, color: 'var(--accent-strong)', textDecoration: 'none' }}
-              onMouseEnter={e => e.target.style.textDecoration = 'underline'}
-              onMouseLeave={e => e.target.style.textDecoration = 'none'}
-            >
-              Create one
-            </Link>
-          </p>
         </div>
-      </div>
 
-      {/* Responsive: stack on mobile */}
-      <style>{`
-        @media (max-width: 768px) {
-          .auth-left-panel { display: none !important; }
-          div[style*="gridTemplateColumns: 1fr 1fr"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
-    </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
+            <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              className="h-11 pl-9 text-[.95rem]"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {errorMessage && <Alert variant="error">{errorMessage}</Alert>}
+
+        <Button type="submit" size="lg" disabled={isSubmitting} className="h-11 gap-1.5 text-[.95rem]">
+          {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
+          {isSubmitting ? 'Signing in…' : 'Sign in'}
+        </Button>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-[hsl(var(--border))]" />
+          <span className="text-[.78rem] font-semibold text-[var(--muted)]">OR</span>
+          <div className="h-px flex-1 bg-[hsl(var(--border))]" />
+        </div>
+
+        <Button type="button" variant="outline" size="lg" onClick={onGuestAccess} className="h-11 gap-1.5 text-[.95rem]">
+          <Compass size={16} /> Guest Access
+        </Button>
+      </form>
+
+      <p className="text-center text-sm text-[var(--muted)]">
+        Don't have an account?{' '}
+        <Link to="/register" className="font-bold text-[var(--accent-strong)] no-underline hover:underline">
+          Create one
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }

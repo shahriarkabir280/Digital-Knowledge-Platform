@@ -225,7 +225,8 @@ export default function AllUploadsPage() {
         <>
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
+            className="border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30"
             onClick={() => onTransition(item.id, 'published')}
             disabled={Boolean(transitioning[publishingKey])}
           >
@@ -238,7 +239,8 @@ export default function AllUploadsPage() {
           {item.state === 'review' && (
             <Button
               type="button"
-              variant="destructive"
+              variant="outline"
+              className="border-red-500/40 text-red-700 hover:bg-red-500/10 dark:text-red-400 dark:border-red-500/30"
               onClick={() => onTransition(item.id, 'draft')}
               disabled={Boolean(transitioning[`${item.id}:draft`])}
             >
@@ -323,7 +325,7 @@ export default function AllUploadsPage() {
           </div>
 
           <div className="sm:col-span-2 md:col-span-3 lg:col-span-4 flex justify-end gap-2 pt-2 border-t border-border">
-            <Button type="button" variant="secondary" onClick={onApplyFilters}>
+            <Button type="button" variant="outline" className="border-accent/40 text-accent hover:bg-accent/10" onClick={onApplyFilters}>
               Apply Filters
             </Button>
             <Button type="button" variant="outline" onClick={onResetFilters}>
@@ -418,7 +420,8 @@ export default function AllUploadsPage() {
                   {authState.role === 'ADMIN' && (
                     <Button
                       type="button"
-                      variant="destructive"
+                      variant="outline"
+                      className="border-red-500/40 text-red-700 hover:bg-red-500/10 dark:text-red-400 dark:border-red-500/30"
                       onClick={() => onDeleteDocument(item.id, item.title)}
                     >
                       Remove

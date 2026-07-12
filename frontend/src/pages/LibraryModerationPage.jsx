@@ -413,19 +413,17 @@ export default function LibraryModerationPage() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    variant="secondary"
-                    className="gap-2 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-800 dark:text-emerald-300"
+                    variant="outline"
+                    className="gap-2 border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30"
                     onClick={() => openApprovalDialog(resource)}
                   >
-                    <Check className="h-4 w-4" />
                     Publish
                   </Button>
                   <Button
-                    variant="destructive"
-                    className="gap-2"
+                    variant="outline"
+                    className="gap-2 border-red-500/40 text-red-700 hover:bg-red-500/10 dark:text-red-400 dark:border-red-500/30"
                     onClick={() => openRejectionDialog(resource)}
                   >
-                    <X className="h-4 w-4" />
                     Reject
                   </Button>
                 </div>
@@ -492,7 +490,10 @@ export default function LibraryModerationPage() {
             <Button
               onClick={handleAction}
               disabled={processing}
-              variant={action === 'approve' ? 'default' : 'destructive'}
+              variant="outline"
+              className={action === 'approve'
+                ? 'border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
+                : 'border-red-500/40 text-red-700 hover:bg-red-500/10 dark:text-red-400 dark:border-red-500/30'}
             >
               {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {action === 'approve' ? 'Approve' : 'Reject'}

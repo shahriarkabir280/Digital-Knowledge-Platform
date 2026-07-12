@@ -154,15 +154,16 @@ export default function ProjectModerationPage() {
                       className="border-red-500/30 text-red-600 hover:bg-red-50"
                       disabled={processingId !== null}
                     >
-                      <X size={14} className="mr-1" /> Reject
+                      Reject
                     </Button>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => openReviewDialog(project, 'approve')}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30"
                       disabled={processingId !== null}
                     >
-                      <Check size={14} className="mr-1" /> Approve
+                      Approve
                     </Button>
                   </div>
                 </div>
@@ -294,10 +295,13 @@ export default function ProjectModerationPage() {
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   type="submit"
+                  variant="outline"
                   size="sm"
-                  className={action === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white'}
+                  className={action === 'approve'
+                    ? 'border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
+                    : 'border-red-500/40 text-red-700 hover:bg-red-500/10 dark:text-red-400 dark:border-red-500/30'}
                 >
                   Confirm {action === 'approve' ? 'Approval' : 'Rejection'}
                 </Button>

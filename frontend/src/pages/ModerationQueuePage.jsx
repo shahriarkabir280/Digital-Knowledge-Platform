@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { Check, X, AlertCircle, Loader2 } from 'lucide-react'
+import { Check, X, AlertCircle, Loader2, Eye } from 'lucide-react'
 import { apiRequest } from '../services/api/client'
 import { useAuth } from '../app/use-auth.js'
 
@@ -230,7 +230,7 @@ export default function ModerationQueuePage() {
 
                 <div className="flex flex-col gap-2">
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     className="gap-2"
                     onClick={() => {
@@ -240,24 +240,23 @@ export default function ModerationQueuePage() {
                       }
                     }}
                   >
-                    👁️ View
+                    <Eye className="h-4 w-4" />
+                    View
                   </Button>
                   <Button
-                    variant="default"
+                    variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30"
                     onClick={() => openApprovalDialog(doc)}
                   >
-                    <Check className="h-4 w-4" />
                     Approve
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 border-red-500/40 text-red-700 hover:bg-red-500/10 dark:text-red-400 dark:border-red-500/30"
                     onClick={() => openRejectionDialog(doc)}
                   >
-                    <X className="h-4 w-4" />
                     Reject
                   </Button>
                 </div>
@@ -333,7 +332,10 @@ export default function ModerationQueuePage() {
               <Button
                 onClick={handleAction}
                 disabled={processing}
-                variant={action === 'approve' ? 'default' : 'destructive'}
+                variant="outline"
+                className={action === 'approve'
+                  ? 'border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
+                  : 'border-red-500/40 text-red-700 hover:bg-red-500/10 dark:text-red-400 dark:border-red-500/30'}
               >
                 {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {action === 'approve' ? 'Approve' : 'Reject'}

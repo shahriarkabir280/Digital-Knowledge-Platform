@@ -411,9 +411,12 @@ export default function LibraryProfilePage() {
                 <div className="grid gap-1.5">
                   <Label htmlFor="req-role-select" className="text-xs font-semibold">Desired Workspace Role</Label>
                   <Select id="req-role-select" value={requestedRole} onChange={e => setRequestedRole(e.target.value)}>
+                    <option value="ADMIN">Admin</option>
+                    <option value="MEMBER">Member</option>
                     <option value="CONTRIBUTOR">Contributor (Ability to upload resource cards directly)</option>
-                    <option value="REVIEWER">Technical Reviewer (Access to Review queue desk)</option>
+                    <option value="LAB_MANAGER">Lab Manager</option>
                     <option value="STAFF">Operations Staff (Manage circulations & operational tasks)</option>
+                    <option value="REVIEWER">Technical Reviewer (Access to Review queue desk)</option>
                   </Select>
                 </div>
 

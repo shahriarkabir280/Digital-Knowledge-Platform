@@ -9,7 +9,7 @@ const usersRepository = require("../../db/repositories/users");
 
 const router = Router();
 
-const requestableRoles = ["CONTRIBUTOR", "REVIEWER", "STAFF", "LAB_MANAGER"];
+const requestableRoles = ["ADMIN", "MEMBER", "CONTRIBUTOR", "LAB_MANAGER", "STAFF", "REVIEWER"];
 
 const createRequestSchema = z.object({
   requestedRole: z.enum(requestableRoles),

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -33,7 +33,8 @@ import { useAuth } from '../app/use-auth.js'
 import CheckoutDialog from '../components/library/CheckoutDialog.jsx'
 import HoldRequestButton from '../components/library/HoldRequestButton.jsx'
 import BorrowRequestButton from '../components/library/BorrowRequestButton.jsx'
-import { getCatalogItem } from '../services/api/library.js'
+import { getCatalogItem, getCatalogItemReviews, getMyCatalogItemReview, submitCatalogItemReview } from '../services/api/library.js'
+import { circulationErrorMessage } from '../services/api/errorMessages.js'
 import { toast } from 'sonner'
 
 function StarRating({ rating, onRate, readonly = false }) {
@@ -62,9 +63,12 @@ export default function LibraryResourceDetailsPage() {
   const { authState } = useAuth()
   const [bookmarked, setBookmarked] = useState(false)
   const [activeTab, setActiveTab] = useState('preview')
-  const [userComment, setUserComment] = useState('')
-  const [userRating, setUserRating] = useState(5)
-  const [reviews, setReviews] = useState([])
+  const [reviewComment, setReviewComment] = useState('')
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewsData, setReviewsData] = useState({ reviews: [], summary: { average: 0, count: 0, breakdown: {} } })
+  const [myReview, setMyReview] = useState(null)
+  const [loadingReviews, setLoadingReviews] = useState(false)
+  const [submittingReview, setSubmittingReview] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showCheckoutDialog, setShowCheckoutDialog] = useState(false)
   const [showBarcodeModal, setShowBarcodeModal] = useState(false)
@@ -135,6 +139,36 @@ export default function LibraryResourceDetailsPage() {
     return () => { cancelled = true }
   }, [resourceId, isCatalogItem, numericId])
 
+  // Reviews only exist for physical catalog items (books) — there is no
+  // review backend for digital documents, so we don't fake data for them.
+  const loadReviews = useCallback(async () => {
+    if (!isCatalogItem) return
+    setLoadingReviews(true)
+    try {
+      const data = await getCatalogItemReviews(numericId)
+      setReviewsData(data)
+
+      if (authState?.token) {
+        const mine = await getMyCatalogItemReview(numericId)
+        setMyReview(mine || null)
+        if (mine) {
+          setReviewRating(mine.rating)
+          setReviewComment(mine.comment || '')
+        }
+      } else {
+        setMyReview(null)
+      }
+    } catch {
+      // keep prior state — reviews are supplementary, not critical
+    } finally {
+      setLoadingReviews(false)
+    }
+  }, [isCatalogItem, numericId, authState?.token])
+
+  useEffect(() => {
+    loadReviews()
+  }, [loadReviews])
+
   // These must be computed unconditionally (before any early return) since
   // they're hook dependencies below — Rules of Hooks forbids skipping hooks
   // on some renders (e.g. while loading) and calling them on others.
@@ -148,9 +182,9 @@ export default function LibraryResourceDetailsPage() {
     const t = []
     if (hasPdf || hasVideo || hasPpt) t.push({ id: 'preview', label: hasVideo ? '▶ Watch / Preview' : hasPpt ? '📊 View Slides' : '👁 View Document' })
     if (hasReadme) t.push({ id: 'readme', label: '📄 README' })
-    t.push({ id: 'reviews', label: `★ Reviews (${reviews.length})` })
+    t.push({ id: 'reviews', label: `★ Reviews (${reviewsData.summary.count})` })
     return t
-  }, [hasPdf, hasVideo, hasPpt, hasReadme, reviews.length])
+  }, [hasPdf, hasVideo, hasPpt, hasReadme, reviewsData.summary.count])
 
   useEffect(() => {
     if (hasPdf || hasVideo || hasPpt) setActiveTab('preview')
@@ -224,21 +258,25 @@ export default function LibraryResourceDetailsPage() {
     ? `${import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/library/catalog/${numericId}/barcode?format=${barcodeFormat}&_token=${encodeURIComponent(authState?.token || '')}`
     : null
 
-  const submitReview = () => {
-    if (!userComment.trim()) {
-      alert('Please write a review before submitting.')
+  const submitReview = async () => {
+    if (!authState?.token) {
+      toast.error('Please log in to write a review.')
       return
     }
-    const newReview = {
-      id: `rev-${Date.now()}`,
-      user: 'You',
-      rating: userRating,
-      comment: userComment.trim(),
-      date: new Date().toLocaleDateString()
+    if (!reviewComment.trim()) {
+      toast.error('Please write a review before submitting.')
+      return
     }
-    setReviews(prev => [newReview, ...prev])
-    setUserComment('')
-    setUserRating(5)
+    setSubmittingReview(true)
+    try {
+      await submitCatalogItemReview(numericId, { rating: reviewRating, comment: reviewComment.trim() })
+      toast.success('Review submitted — thank you!')
+      await loadReviews()
+    } catch (err) {
+      toast.error(circulationErrorMessage(err, 'Could not submit review.'))
+    } finally {
+      setSubmittingReview(false)
+    }
   }
 
   const getTypeIcon = (type) => {
@@ -302,12 +340,22 @@ export default function LibraryResourceDetailsPage() {
               )}
             </div>
             <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1.5 text-amber-500 font-bold">
-                <StarRating rating={Math.round(resource.rating || 5)} readonly />
-                <span className="text-foreground">{resource.rating || '5.0'}</span>
-                <span className="text-muted-foreground font-normal">({resource.reviews || 0} reviews)</span>
-              </div>
-              <span className="text-muted-foreground">·</span>
+              {isCatalogItem && (
+                <>
+                  {reviewsData.summary.count > 0 ? (
+                    <div className="flex items-center gap-1.5 text-amber-500 font-bold">
+                      <StarRating rating={Math.round(reviewsData.summary.average)} readonly />
+                      <span className="text-foreground">{reviewsData.summary.average}</span>
+                      <span className="text-muted-foreground font-normal">
+                        ({reviewsData.summary.count} review{reviewsData.summary.count === 1 ? '' : 's'})
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">No ratings yet</span>
+                  )}
+                  <span className="text-muted-foreground">·</span>
+                </>
+              )}
               <span className="text-muted-foreground">{resource.downloads || 0} downloads</span>
             </div>
           </div>
@@ -594,74 +642,106 @@ export default function LibraryResourceDetailsPage() {
           {activeTab === 'reviews' && (
             <Card className="border-border">
               <CardContent className="p-5 grid gap-6">
-                
-                {/* Rating Summary */}
-                <div className="flex items-center gap-6 p-4 bg-muted/20 rounded-xl border border-border/60">
-                  <div className="text-center shrink-0">
-                    <p className="text-4xl font-black text-foreground">{resource.rating || '5.0'}</p>
-                    <StarRating rating={Math.round(resource.rating || 5)} readonly />
-                    <p className="text-[12px] text-muted-foreground mt-1">{resource.reviews || 0} reviews</p>
-                  </div>
-                  <div className="flex-1 grid gap-1.5">
-                    {[5, 4, 3, 2, 1].map(star => (
-                      <div key={star} className="flex items-center gap-2 text-[12px]">
-                        <span className="text-muted-foreground w-3">{star}</span>
-                        <span className="text-amber-400">★</span>
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-amber-400 rounded-full" style={{ width: star === 5 ? '70%' : star === 4 ? '20%' : '10%' }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Write Review */}
-                <div className="grid gap-3 border-t border-border/60 pt-4">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Write a Review</h4>
-                  <div className="grid gap-1">
-                    <Label className="text-xs font-semibold">Your Rating</Label>
-                    <StarRating rating={userRating} onRate={setUserRating} />
+                {!isCatalogItem ? (
+                  <p className="text-xs text-muted-foreground italic py-6 text-center">
+                    Reviews aren't available for digital resources yet.
+                  </p>
+                ) : loadingReviews && reviewsData.reviews.length === 0 ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 size={20} className="animate-spin text-muted-foreground" />
                   </div>
-                  <div className="grid gap-1">
-                    <Label htmlFor="review-comment" className="text-xs font-semibold">Your Review</Label>
-                    <textarea
-                      id="review-comment"
-                      value={userComment}
-                      onChange={e => setUserComment(e.target.value)}
-                      placeholder="Was this resource helpful? What could be improved?"
-                      rows={3}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    />
-                  </div>
-                  <Button size="sm" className="w-fit text-xs" onClick={submitReview}>
-                    Submit Review
-                  </Button>
-                </div>
-
-                {/* Reviews List */}
-                <div className="grid gap-4 border-t border-border/60 pt-4">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Community Reviews ({reviews.length})
-                  </h4>
-                  {reviews.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">No reviews yet. Be the first to review!</p>
-                  )}
-                  {reviews.map(rev => (
-                    <div key={rev.id} className="flex gap-3 p-3.5 rounded-lg bg-muted/15 border border-border/50">
-                      <div className="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs shrink-0">
-                        {rev.user.charAt(0).toUpperCase()}
+                ) : (
+                  <>
+                    {/* Rating Summary */}
+                    <div className="flex items-center gap-6 p-4 bg-muted/20 rounded-xl border border-border/60">
+                      <div className="text-center shrink-0">
+                        <p className="text-4xl font-black text-foreground">
+                          {reviewsData.summary.count > 0 ? reviewsData.summary.average : '—'}
+                        </p>
+                        <StarRating rating={Math.round(reviewsData.summary.average)} readonly />
+                        <p className="text-[12px] text-muted-foreground mt-1">
+                          {reviewsData.summary.count} review{reviewsData.summary.count === 1 ? '' : 's'}
+                        </p>
                       </div>
-                      <div className="grid gap-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-bold text-foreground">{rev.user}</span>
-                          <StarRating rating={rev.rating} readonly />
-                          <span className="text-[12px] text-muted-foreground">{rev.date}</span>
-                        </div>
-                        <p className="text-xs text-foreground/80 leading-relaxed">{rev.comment}</p>
+                      <div className="flex-1 grid gap-1.5">
+                        {[5, 4, 3, 2, 1].map(star => {
+                          const starCount = reviewsData.summary.breakdown?.[star] || 0
+                          const pct = reviewsData.summary.count > 0 ? (starCount / reviewsData.summary.count) * 100 : 0
+                          return (
+                            <div key={star} className="flex items-center gap-2 text-[12px]">
+                              <span className="text-muted-foreground w-3">{star}</span>
+                              <span className="text-amber-400">★</span>
+                              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-muted-foreground w-5 text-right">{starCount}</span>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Write Review */}
+                    {authState?.token ? (
+                      <div className="grid gap-3 border-t border-border/60 pt-4">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          {myReview ? 'Edit Your Review' : 'Write a Review'}
+                        </h4>
+                        <div className="grid gap-1">
+                          <Label className="text-xs font-semibold">Your Rating</Label>
+                          <StarRating rating={reviewRating} onRate={setReviewRating} />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label htmlFor="review-comment" className="text-xs font-semibold">Your Review</Label>
+                          <textarea
+                            id="review-comment"
+                            value={reviewComment}
+                            onChange={e => setReviewComment(e.target.value)}
+                            placeholder="Was this book helpful? What could be improved?"
+                            rows={3}
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          />
+                        </div>
+                        <Button size="sm" className="w-fit text-xs gap-1.5" onClick={submitReview} disabled={submittingReview}>
+                          {submittingReview ? <Loader2 size={12} className="animate-spin" /> : null}
+                          Submit Review
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="border-t border-border/60 pt-4">
+                        <p className="text-xs text-muted-foreground italic">
+                          <Link to="/login" className="text-accent font-semibold underline underline-offset-2">Log in</Link> to write a review.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Reviews List */}
+                    <div className="grid gap-4 border-t border-border/60 pt-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Community Reviews ({reviewsData.reviews.length})
+                      </h4>
+                      {reviewsData.reviews.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">No reviews yet. Be the first to review!</p>
+                      )}
+                      {reviewsData.reviews.map(rev => (
+                        <div key={rev.id} className="flex gap-3 p-3.5 rounded-lg bg-muted/15 border border-border/50">
+                          <div className="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs shrink-0">
+                            {(rev.user_name || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="grid gap-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-bold text-foreground">{rev.user_name || 'Member'}</span>
+                              <StarRating rating={rev.rating} readonly />
+                              <span className="text-[12px] text-muted-foreground">{new Date(rev.created_at).toLocaleDateString()}</span>
+                            </div>
+                            {rev.comment && <p className="text-xs text-foreground/80 leading-relaxed">{rev.comment}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
 
               </CardContent>
             </Card>

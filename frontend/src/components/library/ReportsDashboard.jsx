@@ -15,6 +15,7 @@ import {
   Users, BookOpen, AlertTriangle, Download, RefreshCw
 } from 'lucide-react'
 import { apiRequest } from '../../services/api/client.js'
+import { loadAuthSession } from '../../app/auth-session.js'
 
 const REPORT_TYPES = [
   { id: 'circulation', label: 'Circulation', icon: BarChart3, description: 'Daily checkouts, returns & overdue' },
@@ -122,7 +123,7 @@ export default function ReportsDashboard() {
       if (dateTo) p.set('to', dateTo)
 
       const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')
-      const token = JSON.parse(localStorage.getItem('dkp_auth_session') || '{}').token || ''
+      const token = loadAuthSession()?.token || ''
 
       const res = await fetch(`${base}/library/reports/export?${p.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },

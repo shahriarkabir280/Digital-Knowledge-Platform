@@ -83,8 +83,17 @@ function MyLoansTab() {
     <div className="grid gap-3">
       {loans.map((loan) => {
         const dueDate = new Date(loan.due_date)
-        const isOverdue = dueDate < new Date() && loan.status !== 'RETURNED'
+        const now = new Date()
+        const isOverdue = dueDate < now && loan.status !== 'RETURNED'
         const renewalsLeft = 2 - (loan.renewed_count || loan.renewal_count || 0)
+        const daysRemaining = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24))
+        const timeRemainingLabel = loan.status === 'RETURNED'
+          ? null
+          : isOverdue
+            ? `Overdue by ${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) === 1 ? '' : 's'}`
+            : daysRemaining === 0
+              ? 'Due today'
+              : `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`
 
         return (
           <div key={loan.id} className="rounded-xl border border-border bg-card p-4 grid gap-3">
@@ -102,7 +111,7 @@ function MyLoansTab() {
               </Badge>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-[13px] text-muted-foreground">
+            <div className="grid grid-cols-2 gap-2 text-[13px] text-muted-foreground">
               <div>
                 <p className="font-semibold text-foreground">Checked Out</p>
                 <p>{formatDate(loan.checkout_date)}</p>
@@ -110,10 +119,13 @@ function MyLoansTab() {
               <div>
                 <p className={`font-semibold ${isOverdue ? 'text-red-600' : 'text-foreground'}`}>Due Date</p>
                 <p className={isOverdue ? 'text-red-600 font-bold' : ''}>{formatDate(loan.due_date)}</p>
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">Renewals Left</p>
-                <p>{renewalsLeft} of 2</p>
+                {timeRemainingLabel && (
+                  <p className={`text-[12px] font-semibold mt-0.5 ${
+                    isOverdue ? 'text-red-600' : daysRemaining <= 1 ? 'text-amber-600' : 'text-muted-foreground'
+                  }`}>
+                    {timeRemainingLabel}
+                  </p>
+                )}
               </div>
             </div>
 

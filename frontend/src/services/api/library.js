@@ -4,6 +4,7 @@
  */
 
 import { apiRequest } from './client.js'
+import { loadAuthSession } from '../../app/auth-session.js'
 
 // ── Catalog Search & Read ──────────────────────────────────────────
 
@@ -95,6 +96,26 @@ export async function getAuditLog(params = {}) {
   return apiRequest(`/library/audit-log?${query.toString()}`)
 }
 
+// ── Reviews (books) ───────────────────────────────────────────────
+
+/**
+ * @returns {Promise<{ reviews: Array, summary: { average, count, breakdown } }>}
+ */
+export async function getCatalogItemReviews(catalogItemId) {
+  return apiRequest(`/library/catalog/${catalogItemId}/reviews`)
+}
+
+export async function getMyCatalogItemReview(catalogItemId) {
+  return apiRequest(`/library/catalog/${catalogItemId}/reviews/mine`)
+}
+
+export async function submitCatalogItemReview(catalogItemId, { rating, comment }) {
+  return apiRequest(`/library/catalog/${catalogItemId}/reviews`, {
+    method: 'POST',
+    body: JSON.stringify({ rating, comment }),
+  })
+}
+
 // ── Loans ──────────────────────────────────────────────────────────
 
 /**
@@ -157,7 +178,7 @@ export async function getBorrowingHistory(params = {}) {
  */
 export async function exportBorrowingHistory(format = 'csv', params = {}) {
   const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')
-  const token = JSON.parse(localStorage.getItem('dkp_auth_session') || '{}').token || ''
+  const token = loadAuthSession()?.token || ''
 
   const query = new URLSearchParams({ format })
   if (params.from) query.set('from', params.from)

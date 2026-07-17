@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, X, Download } from 'lucide-react'
+import { loadAuthSession } from '../../app/auth-session.js'
 
 const ACCEPTED_EXT = ['.csv', '.mrc', '.marc', '.xml']
 
@@ -50,7 +51,7 @@ export default function BulkImportPanel() {
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${JSON.parse(localStorage.getItem('dkp_auth_session') || '{}').token || ''}`,
+            Authorization: `Bearer ${loadAuthSession()?.token || ''}`,
           },
           body: formData,
         }

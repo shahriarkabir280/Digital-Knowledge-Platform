@@ -19,6 +19,8 @@ const holdsRepo = require("../../db/repositories/holds");
 const wishlistsRepo = require("../../db/repositories/wishlists");
 const subscriptionsRepo = require("../../db/repositories/subscriptions");
 const borrowRequestsRepo = require("../../db/repositories/borrowRequests");
+const reviewsRepo = require("../../db/repositories/reviews");
+const catalogItems = require("../../db/repositories/catalogItems");
 const auditLog = require("../../db/repositories/auditLog");
 const reportService = require("./reportService");
 const importService = require("./importService");
@@ -100,6 +102,63 @@ router.get(
 );
 
 router.get("/catalog/:id", catalogController.getCatalogItem);
+
+// ── Reviews (books) ──────────────────────────────────────────────
+
+// GET /api/library/catalog/:id/reviews — public: list + summary
+router.get("/catalog/:id/reviews", async (req, res, next) => {
+  try {
+    const catalogItemId = parseInt(req.params.id, 10);
+    const [reviews, summary] = await Promise.all([
+      reviewsRepo.findByCatalogItem(catalogItemId),
+      reviewsRepo.getSummary(catalogItemId),
+    ]);
+    res.json({ reviews, summary });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/library/catalog/:id/reviews/mine — the caller's own review, if any
+router.get("/catalog/:id/reviews/mine", requireAuth, async (req, res, next) => {
+  try {
+    const catalogItemId = parseInt(req.params.id, 10);
+    const mine = await reviewsRepo.findMine(catalogItemId, req.auth.id);
+    res.json(mine || null);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/library/catalog/:id/reviews — create/update the caller's review
+router.post("/catalog/:id/reviews", requireAuth, async (req, res, next) => {
+  try {
+    const catalogItemId = parseInt(req.params.id, 10);
+    const rating = parseInt(req.body.rating, 10);
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return next({
+        statusCode: 400,
+        code: "INVALID_RATING",
+        message: "rating must be an integer between 1 and 5",
+      });
+    }
+
+    const item = await catalogItems.findById(catalogItemId);
+    if (!item) {
+      return next({
+        statusCode: 404,
+        code: "CATALOG_ITEM_NOT_FOUND",
+        message: "Catalog item not found",
+      });
+    }
+
+    const review = await reviewsRepo.upsert(catalogItemId, req.auth.id, rating, req.body.comment);
+    res.status(201).json(review);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // ── Catalog barcode/QR (STAFF+) ─────────────────────────────────────
 

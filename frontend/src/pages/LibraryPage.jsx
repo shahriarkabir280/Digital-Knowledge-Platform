@@ -49,15 +49,17 @@ import ResourceCard from '../components/library/ResourceCard.jsx'
 import CatalogSearchFilters from '../components/library/CatalogSearchFilters.jsx'
 import CatalogItemCard from '../components/library/CatalogItemCard.jsx'
 import { extractFileMetadata } from '../services/metadataExtractor.js'
-import { searchCatalog, getCatalogStats } from '../services/api/library.js'
+import { searchCatalog } from '../services/api/library.js'
 import { toast } from 'sonner'
 
 export default function LibraryPage() {
   const { authState } = useAuth()
   const queryClient = useQueryClient()
+  const isGuestUser = !authState?.token || authState?.role === 'GUEST'
 
   const { data: publishedDocs = [], isLoading: loadingPublished } = useQuery({
     queryKey: ['library-docs', authState?.token || 'guest'],
+    enabled: !isGuestUser,
     queryFn: async ({ queryKey }) => {
       const token = queryKey[1] === 'guest' ? null : queryKey[1]
       const isGuest = !token
@@ -148,18 +150,13 @@ export default function LibraryPage() {
   const [catalogFilters, setCatalogFilters] = useState({ q: '' })
   const [catalogSearchInput, setCatalogSearchInput] = useState('')
   const [catalogPage, setCatalogPage] = useState(1)
+  const [showCatalogFilters, setShowCatalogFilters] = useState(false)
 
   const { data: catalogData, isLoading: catalogLoading, isError: catalogIsError } = useQuery({
     queryKey: ['physical-catalog', catalogFilters, catalogPage],
     queryFn: () => searchCatalog({ ...catalogFilters, page: catalogPage, limit: 20 }),
     enabled: pageTab === 'catalog',
     staleTime: 2 * 60 * 1000,
-  })
-
-  const { data: catalogStats } = useQuery({
-    queryKey: ['catalog-stats'],
-    queryFn: getCatalogStats,
-    staleTime: 5 * 60 * 1000,
   })
 
   const catalogItems = catalogData?.items || catalogData || []
@@ -497,23 +494,6 @@ export default function LibraryPage() {
       {/* ── Physical Catalog Panel ─────────────────────────────────── */}
       {pageTab === 'catalog' && (
         <div className="grid gap-5">
-          {/* Catalog stats bar */}
-          {catalogStats && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: 'Total Titles', value: Number(catalogStats.total_items) },
-                { label: 'Available Now', value: Number(catalogStats.available_items), color: 'text-emerald-600' },
-                { label: 'Total Copies', value: Number(catalogStats.total_copies) },
-                { label: 'Checked Out', value: Number(catalogStats.checked_out_items), color: 'text-amber-600' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="rounded-xl border border-border bg-card p-3 text-center">
-                  <p className={`text-xl font-extrabold ${color || 'text-foreground'}`}>{Number.isNaN(value) ? '—' : value}</p>
-                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mt-0.5">{label}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
           {/* Search bar */}
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -545,14 +525,23 @@ export default function LibraryPage() {
             >
               <Search size={13} /> Search
             </Button>
+            <Button
+              variant="outline"
+              className="gap-1 text-xs h-10 border-border shrink-0"
+              onClick={() => setShowCatalogFilters(!showCatalogFilters)}
+            >
+              <Filter size={14} /> Filters
+            </Button>
           </div>
 
-          {/* Filters */}
-          <CatalogSearchFilters
-            filters={catalogFilters}
-            onChange={(newFilters) => { setCatalogFilters(newFilters); setCatalogPage(1) }}
-            compact
-          />
+          {/* Filters — collapsed until "Filters" is clicked, same pattern as Digital Resources */}
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showCatalogFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <CatalogSearchFilters
+              filters={catalogFilters}
+              onChange={(newFilters) => { setCatalogFilters(newFilters); setCatalogPage(1) }}
+              compact
+            />
+          </div>
 
           {/* Results */}
           {catalogLoading ? (
@@ -601,8 +590,31 @@ export default function LibraryPage() {
         </div>
       )}
 
+      {/* ── Digital Resources: guests are blocked out entirely ── */}
+      {pageTab === 'digital' && isGuestUser && (
+        <div className="flex flex-col items-center text-center gap-5 py-16 px-8 rounded-2xl border border-dashed border-border bg-muted/10">
+          <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
+            <GraduationCap size={28} className="text-accent" />
+          </div>
+          <div className="grid gap-1.5 max-w-sm">
+            <h3 className="text-base font-bold text-foreground">Sign in to browse the online library</h3>
+            <p className="text-sm text-muted-foreground">
+              Digital textbooks, lecture slides, and course materials are available to registered members, staff, and faculty. The Physical Catalog stays open to everyone.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+            <Button asChild className="flex-1 gap-2 text-xs font-semibold">
+              <Link to="/login">Log In</Link>
+            </Button>
+            <Button asChild variant="outline" className="flex-1 gap-2 text-xs font-semibold">
+              <Link to="/register">Create an Account</Link>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* ── Digital Resources section (hidden when catalog tab active) ── */}
-      {pageTab === 'digital' && (
+      {pageTab === 'digital' && !isGuestUser && (
       <>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
@@ -759,7 +771,7 @@ export default function LibraryPage() {
             </CardHeader>
             <CardContent className="p-4 pt-0 grid gap-2.5">
               {visibleBookmarks.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground italic">No bookmarked items yet.</p>
+                <p className="text-[13px] text-muted-foreground italic">No bookmarked items yet.</p>
               ) : (
                 visibleBookmarks.map(id => {
                   const r = publishedDocs.find(doc => doc.id === id)
@@ -770,7 +782,7 @@ export default function LibraryPage() {
                         <Link to={`/library/resource/${r.id}`} className="text-xs font-bold text-foreground truncate hover:text-accent transition-colors">
                           {r.title}
                         </Link>
-                        <p className="text-[10px] text-muted-foreground truncate">{r.course} · {r.author}</p>
+                        <p className="text-[12px] text-muted-foreground truncate">{r.course} · {r.author}</p>
                       </div>
                       <Button size="icon" variant="ghost" className="w-6 h-6 hover:text-red-500 shrink-0" onClick={() => toggleBookmark(r.id)}>
                         <X size={12} />
@@ -1003,7 +1015,7 @@ export default function LibraryPage() {
                           </div>
                           <div className="text-center">
                             <p className="text-xs font-semibold text-foreground">Drop your file here, or <span className="text-accent">browse</span></p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">PDF, PPT, PPTX, DOC, DOCX, CSV, ZIP — max 50MB</p>
+                            <p className="text-[12px] text-muted-foreground mt-0.5">PDF, PPT, PPTX, DOC, DOCX, CSV, ZIP — max 50MB</p>
                           </div>
                         </div>
                       ) : (
@@ -1019,12 +1031,12 @@ export default function LibraryPage() {
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold text-foreground truncate">{selectedFile.name}</p>
                             {isExtracting ? (
-                              <p className="text-[10px] text-accent font-semibold flex items-center gap-1">
+                              <p className="text-[12px] text-accent font-semibold flex items-center gap-1">
                                 <Sparkles size={10} className="animate-pulse" />
                                 AI analyzing document...
                               </p>
                             ) : (
-                              <p className="text-[10px] text-muted-foreground">
+                              <p className="text-[12px] text-muted-foreground">
                                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                               </p>
                             )}
@@ -1039,7 +1051,7 @@ export default function LibraryPage() {
                       {/* Upload Progress Bar */}
                       {isUploading && (
                         <div className="grid gap-1.5">
-                          <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <div className="flex justify-between text-[12px] text-muted-foreground">
                             <span className="flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Uploading to server...</span>
                             <span className="font-bold text-accent">{uploadProgress}%</span>
                           </div>
@@ -1054,7 +1066,7 @@ export default function LibraryPage() {
 
                       {/* Upload success */}
                       {!isUploading && uploadProgress === 100 && (
-                        <p className="flex items-center gap-1 text-[11px] text-emerald-500 font-semibold">
+                        <p className="flex items-center gap-1 text-[13px] text-emerald-500 font-semibold">
                           <CheckCircle2 size={12} /> File uploaded successfully!
                         </p>
                       )}

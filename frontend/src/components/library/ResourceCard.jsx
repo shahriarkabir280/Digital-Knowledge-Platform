@@ -61,15 +61,15 @@ function WebsiteThumbnail({ url, type }) {
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-accent/20 to-accent/5">
           <Globe size={30} className="text-accent opacity-70" />
-          <span className="text-[10px] text-muted-foreground font-medium px-3 text-center line-clamp-2">{domain}</span>
+          <span className="text-[12px] text-muted-foreground font-medium px-3 text-center line-clamp-2">{domain}</span>
         </div>
       )}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center">
-        <span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
+        <span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-[12px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
           <ExternalLink size={10} /> Open Resource
         </span>
       </div>
-      <span className="absolute bottom-2 left-2 bg-accent text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
+      <span className="absolute bottom-2 left-2 bg-accent text-white text-[12px] font-bold uppercase px-1.5 py-0.5 rounded">
         {type}
       </span>
     </div>
@@ -118,7 +118,7 @@ export default function ResourceCard({
           <PlayCircle size={32} className="text-white fill-white" />
         </div>
       </div>
-      <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
+      <span className="absolute top-2 left-2 bg-red-600 text-white text-[12px] font-bold uppercase px-1.5 py-0.5 rounded">
         YouTube
       </span>
     </CardLink>
@@ -136,7 +136,7 @@ export default function ResourceCard({
         onMouseEnter={e => e.currentTarget.play()}
         onMouseLeave={e => { e.currentTarget.pause(); e.currentTarget.currentTime = 0 }}
       />
-      <span className="absolute bottom-2 left-2 bg-accent text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
+      <span className="absolute bottom-2 left-2 bg-accent text-white text-[12px] font-bold uppercase px-1.5 py-0.5 rounded">
         Video
       </span>
     </div>
@@ -162,11 +162,11 @@ export default function ResourceCard({
             className="w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all duration-200 flex items-center justify-center">
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[12px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
               Click to View Details
             </span>
           </div>
-          <span className="absolute bottom-2 left-2 bg-accent text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
+          <span className="absolute bottom-2 left-2 bg-accent text-white text-[12px] font-bold uppercase px-1.5 py-0.5 rounded">
             {type}
           </span>
         </div>
@@ -223,7 +223,7 @@ export default function ResourceCard({
         {(item.tags || []).length > 0 && (
           <div className="flex flex-wrap gap-1">
             {(item.tags || []).slice(0, 3).map(tag => (
-              <Badge key={tag} variant="outline" className="text-[10px] py-0 px-1.5 bg-muted/10 text-muted-foreground border-muted/35">
+              <Badge key={tag} variant="outline" className="text-[12px] py-0 px-1.5 bg-muted/10 text-muted-foreground border-muted/35">
                 #{tag}
               </Badge>
             ))}

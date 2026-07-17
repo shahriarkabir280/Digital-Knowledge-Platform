@@ -200,14 +200,14 @@ export default function PDFThumbnail({
 
       {/* ── Hover overlay ── */}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all duration-200 flex items-center justify-center pointer-events-none">
-        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30 pointer-events-none">
+        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[12px] font-bold text-white bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30 pointer-events-none">
           Click to View Details
         </span>
       </div>
 
       {/* ── Type badge (always visible) ── */}
       <span
-        className={`absolute bottom-2 left-2 ${badgeColor} text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded`}
+        className={`absolute bottom-2 left-2 ${badgeColor} text-white text-[11px] font-bold uppercase px-1.5 py-0.5 rounded`}
       >
         {badgeLabel}
       </span>

@@ -17,6 +17,13 @@ const CIRCULATION_ERROR_MESSAGES = {
   ITEM_NOT_FOUND: 'No catalog item matched that code.',
   LOAN_NOT_FOUND: 'That loan could not be found.',
   NOT_YOUR_LOAN: 'You can only act on your own loans.',
+  NO_ACTIVE_SUBSCRIPTION: 'An active library subscription is required to borrow physical items.',
+  REQUEST_ALREADY_PENDING: 'There is already a pending borrow request for this item.',
+  REQUEST_NOT_FOUND: 'That borrow request could not be found.',
+  REQUEST_NOT_YOURS: 'You can only act on your own borrow requests.',
+  REQUEST_INVALID_STATUS: 'This request has already been decided.',
+  NO_SUBSCRIPTION_TO_RENEW: "You don't have a subscription yet — contact a librarian to start one.",
+  NO_PENDING_RENEWAL: 'This member has no pending renewal request.',
 }
 
 /**

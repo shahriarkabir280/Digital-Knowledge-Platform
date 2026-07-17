@@ -36,6 +36,28 @@ async function placeHold(catalogItemId, memberId) {
       );
     }
 
+    // A member shouldn't be able to hold a title they already have on loan
+    // or a pending borrow request for — that's the same book twice.
+    const existingLoan = await trx("loans")
+      .where({ item_id: catalogItemId, member_id: memberId, status: "ACTIVE" })
+      .first();
+    if (existingLoan) {
+      throw Object.assign(
+        new Error("You already have this item checked out"),
+        { statusCode: 409, code: "ALREADY_CHECKED_OUT" }
+      );
+    }
+
+    const existingRequest = await trx("borrow_requests")
+      .where({ item_id: catalogItemId, member_id: memberId, status: "PENDING" })
+      .first();
+    if (existingRequest) {
+      throw Object.assign(
+        new Error("You already have a pending borrow request for this item"),
+        { statusCode: 409, code: "REQUEST_ALREADY_PENDING" }
+      );
+    }
+
     // Holds are for checked-out items (FR-DKP-019). If an unreserved copy is
     // available right now, the member should just borrow it instead.
     const readyCount = await trx("holds")
@@ -156,7 +178,7 @@ async function cancelHold(holdId, memberId) {
       });
     }
 
-    if (hold.member_id !== memberId) {
+    if (Number(hold.member_id) !== Number(memberId)) {
       throw Object.assign(new Error("You can only cancel your own holds"), {
         statusCode: 403,
         code: "HOLD_NOT_YOURS",

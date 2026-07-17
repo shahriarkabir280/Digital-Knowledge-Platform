@@ -120,7 +120,7 @@ export default function LibraryProfilePage() {
 
               <div className="mt-3 grid gap-1">
                 <h3 className="font-bold text-sm text-foreground">{profileName}</h3>
-                <Badge variant="outline" className="text-[10px] uppercase font-bold py-0.5 px-2.5 mx-auto bg-accent/5 text-accent border-accent/20">
+                <Badge variant="outline" className="text-[12px] uppercase font-bold py-0.5 px-2.5 mx-auto bg-accent/5 text-accent border-accent/20">
                   {authState.role}
                 </Badge>
               </div>
@@ -231,10 +231,10 @@ export default function LibraryProfilePage() {
                     <div key={req.id} className="p-4 rounded-xl border border-border bg-muted/10 grid gap-2.5">
                       <div className="flex justify-between items-start gap-2 flex-wrap">
                         <div className="grid gap-0.5">
-                          <span className="text-[10px] text-muted-foreground">Requested: {new Date(req.createdAt).toLocaleDateString()}</span>
-                          <h5 className="text-xs font-bold text-foreground">Requested Role: <Badge variant="outline" className="text-[10px] bg-background font-bold">{req.requestedRole}</Badge></h5>
+                          <span className="text-[12px] text-muted-foreground">Requested: {new Date(req.createdAt).toLocaleDateString()}</span>
+                          <h5 className="text-xs font-bold text-foreground">Requested Role: <Badge variant="outline" className="text-[12px] bg-background font-bold">{req.requestedRole}</Badge></h5>
                         </div>
-                        <Badge className={`text-[10px] px-2.5 py-0.5 border font-semibold uppercase ${resolveStatusBadge(req.status)}`}>
+                        <Badge className={`text-[12px] px-2.5 py-0.5 border font-semibold uppercase ${resolveStatusBadge(req.status)}`}>
                           {req.status}
                         </Badge>
                       </div>

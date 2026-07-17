@@ -176,7 +176,7 @@ export default function BulkImportPanel() {
                   ].map(({ label, value, color }) => (
                     <div key={label} className={`rounded-lg p-2.5 text-center ${color}`}>
                       <p className="text-lg font-bold">{value ?? 0}</p>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
+                      <p className="text-[12px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
                     </div>
                   ))}
                 </div>
@@ -188,7 +188,7 @@ export default function BulkImportPanel() {
                     </p>
                     <div className="grid gap-1.5">
                       {result.errors.map((err, i) => (
-                        <div key={i} className="text-[11px] text-red-600 dark:text-red-400">
+                        <div key={i} className="text-[13px] text-red-600 dark:text-red-400">
                           <span className="font-semibold">Line {err.line}: </span>
                           {err.row} — {err.errors?.join(', ')}
                         </div>

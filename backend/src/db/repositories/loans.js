@@ -37,6 +37,18 @@ async function checkout(catalogItemId, memberId, loanDays = DEFAULT_LOAN_DAYS, i
       });
     }
 
+    // Physical (offline) borrowing requires an active monthly subscription.
+    // Enforced here so it applies uniformly to staff walk-up checkout and to
+    // borrow-request approval (both funnel through this function).
+    const subscriptionsRepo = require("./subscriptions");
+    const activeSubscription = await subscriptionsRepo.getActive(memberId, trx);
+    if (!activeSubscription) {
+      throw Object.assign(
+        new Error("Member does not have an active library subscription"),
+        { statusCode: 409, code: "NO_ACTIVE_SUBSCRIPTION" }
+      );
+    }
+
     // Check if member already has this item checked out
     const existingLoan = await trx("loans")
       .where({ item_id: catalogItemId, member_id: memberId, status: "ACTIVE" })

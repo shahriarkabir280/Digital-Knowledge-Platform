@@ -16,6 +16,9 @@ const createCatalogItemSchema = z.object({
   subject: z.string().max(255).optional().nullable(),
   description: z.string().optional().nullable(),
   location: z.string().max(255).optional().nullable(),
+  location_floor: z.string().max(100).optional().nullable(),
+  location_shelf: z.string().max(100).optional().nullable(),
+  location_column: z.string().max(100).optional().nullable(),
   item_type: z.string().max(50).default("textbook"),    // maps to category
   language: z.string().max(50).default("EN"),
   publisher: z.string().max(255).optional().nullable(),

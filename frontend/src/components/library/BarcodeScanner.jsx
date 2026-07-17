@@ -143,7 +143,7 @@ export default function BarcodeScanner({ onResult, active, onClose }) {
           <ScanLine size={14} className="text-accent" />
           Barcode / QR Scanner
           {status === 'scanning' && (
-            <Badge className="text-[9px] font-bold bg-emerald-500/10 text-emerald-600 border-emerald-500/20 border py-0">
+            <Badge className="text-[11px] font-bold bg-emerald-500/10 text-emerald-600 border-emerald-500/20 border py-0">
               Live
             </Badge>
           )}
@@ -205,11 +205,11 @@ export default function BarcodeScanner({ onResult, active, onClose }) {
             Scanned: <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">{lastResult}</span>
           </div>
         ) : status === 'scanning' ? (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             Point the camera at an item's barcode or QR code. Hold steady.
           </p>
         ) : status === 'loading' ? (
-          <p className="text-[11px] text-muted-foreground">Requesting camera permission…</p>
+          <p className="text-[13px] text-muted-foreground">Requesting camera permission…</p>
         ) : null}
       </div>
     </div>

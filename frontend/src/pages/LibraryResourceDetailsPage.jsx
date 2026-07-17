@@ -26,11 +26,13 @@ import {
   BookCheck,
   Clock,
   ScanLine,
-  QrCode
+  QrCode,
+  MapPin
 } from 'lucide-react'
 import { useAuth } from '../app/use-auth.js'
 import CheckoutDialog from '../components/library/CheckoutDialog.jsx'
 import HoldRequestButton from '../components/library/HoldRequestButton.jsx'
+import BorrowRequestButton from '../components/library/BorrowRequestButton.jsx'
 import { getCatalogItem } from '../services/api/library.js'
 import { toast } from 'sonner'
 
@@ -280,9 +282,9 @@ export default function LibraryResourceDetailsPage() {
                 {getTypeIcon(resource.type)}
                 <span className="uppercase">{resource.type}</span>
               </div>
-              <Badge variant="outline" className="text-[10px] font-semibold uppercase">{resource.access || 'public'}</Badge>
+              <Badge variant="outline" className="text-[12px] font-semibold uppercase">{resource.access || 'public'}</Badge>
               {resource.version && (
-                <Badge variant="secondary" className="text-[10px]">v{resource.version}</Badge>
+                <Badge variant="secondary" className="text-[12px]">v{resource.version}</Badge>
               )}
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-foreground leading-snug">
@@ -330,7 +332,7 @@ export default function LibraryResourceDetailsPage() {
         {resource.tags && resource.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 border-t border-border/60 pt-3">
             {resource.tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="text-[10px] py-0.5 px-2">#{tag}</Badge>
+              <Badge key={tag} variant="secondary" className="text-[12px] py-0.5 px-2">#{tag}</Badge>
             ))}
           </div>
         )}
@@ -423,10 +425,10 @@ export default function LibraryResourceDetailsPage() {
                       />
                     </div>
                     <div className="p-3 border-t border-border bg-muted/10 flex items-center justify-between">
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-[12px] text-muted-foreground">
                         Powered by Microsoft Office Online · For best experience, download the file and open locally.
                       </p>
-                      <Button asChild size="sm" variant="ghost" className="text-[10px] gap-1 h-7">
+                      <Button asChild size="sm" variant="ghost" className="text-[12px] gap-1 h-7">
                         <a href={officeViewerUrl} target="_blank" rel="noreferrer">
                           <ExternalLink size={11} /> Open in New Tab
                         </a>
@@ -471,7 +473,7 @@ export default function LibraryResourceDetailsPage() {
                           <p className="text-xs text-muted-foreground">
                             This document is stored on the server. Use the buttons above to open or download it.
                           </p>
-                          <p className="text-[10px] text-muted-foreground/70 mt-1">
+                          <p className="text-[12px] text-muted-foreground/70 mt-1">
                             In-browser preview requires the file to be publicly hosted. Locally uploaded files are served directly.
                           </p>
                         </div>
@@ -503,10 +505,10 @@ export default function LibraryResourceDetailsPage() {
                           />
                         </div>
                         <div className="p-3 border-t border-border bg-muted/10 flex items-center justify-between">
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="text-[12px] text-muted-foreground">
                             Powered by Google Docs Viewer · If the preview fails, use \"Open in Browser\" above.
                           </p>
-                          <Button asChild size="sm" variant="ghost" className="text-[10px] gap-1 h-7">
+                          <Button asChild size="sm" variant="ghost" className="text-[12px] gap-1 h-7">
                             <a href={googleDocsViewerUrl} target="_blank" rel="noreferrer">
                               <ExternalLink size={11} /> Full-screen view
                             </a>
@@ -598,11 +600,11 @@ export default function LibraryResourceDetailsPage() {
                   <div className="text-center shrink-0">
                     <p className="text-4xl font-black text-foreground">{resource.rating || '5.0'}</p>
                     <StarRating rating={Math.round(resource.rating || 5)} readonly />
-                    <p className="text-[10px] text-muted-foreground mt-1">{resource.reviews || 0} reviews</p>
+                    <p className="text-[12px] text-muted-foreground mt-1">{resource.reviews || 0} reviews</p>
                   </div>
                   <div className="flex-1 grid gap-1.5">
                     {[5, 4, 3, 2, 1].map(star => (
-                      <div key={star} className="flex items-center gap-2 text-[10px]">
+                      <div key={star} className="flex items-center gap-2 text-[12px]">
                         <span className="text-muted-foreground w-3">{star}</span>
                         <span className="text-amber-400">★</span>
                         <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -653,7 +655,7 @@ export default function LibraryResourceDetailsPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs font-bold text-foreground">{rev.user}</span>
                           <StarRating rating={rev.rating} readonly />
-                          <span className="text-[10px] text-muted-foreground">{rev.date}</span>
+                          <span className="text-[12px] text-muted-foreground">{rev.date}</span>
                         </div>
                         <p className="text-xs text-foreground/80 leading-relaxed">{rev.comment}</p>
                       </div>
@@ -702,6 +704,34 @@ export default function LibraryResourceDetailsPage() {
             </CardContent>
           </Card>
 
+          {/* Shelf Location — physical catalog items only */}
+          {isCatalogItem && (resource.location_floor || resource.location_shelf || resource.location_column || resource.location) && (
+            <Card className="border-border">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <MapPin size={13} className="text-accent" /> Shelf Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                {(resource.location_floor || resource.location_shelf || resource.location_column) ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {resource.location_floor && (
+                      <Badge variant="outline" className="text-[12px] font-semibold">Floor {resource.location_floor}</Badge>
+                    )}
+                    {resource.location_shelf && (
+                      <Badge variant="outline" className="text-[12px] font-semibold">Shelf {resource.location_shelf}</Badge>
+                    )}
+                    {resource.location_column && (
+                      <Badge variant="outline" className="text-[12px] font-semibold">Column {resource.location_column}</Badge>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs font-semibold text-foreground">{resource.location}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Quick Actions */}
           <Card className="border-border">
             <CardHeader className="p-4 pb-2">
@@ -720,10 +750,15 @@ export default function LibraryResourceDetailsPage() {
                 {bookmarked ? 'Remove from Bookmarks' : 'Add to Bookmarks'}
               </Button>
 
-              {/* Hold request — show when logged in and item is catalog item */}
+              {/* Borrow / hold — show when logged in and item is catalog item.
+                  Available copies → request to borrow (librarian-approved,
+                  members only — staff use the Checkout button below).
+                  No copies available → join the hold queue instead. */}
               {authState?.token && isCatalogItem && (
                 <div className="w-full">
-                  <HoldRequestButton catalogItemId={numericId} />
+                  {Number(resource.available_copies) > 0
+                    ? (!isStaff && <BorrowRequestButton catalogItemId={numericId} />)
+                    : <HoldRequestButton catalogItemId={numericId} />}
                 </div>
               )}
 
@@ -743,12 +778,12 @@ export default function LibraryResourceDetailsPage() {
               {/* Barcode / QR — staff only */}
               {isStaff && isCatalogItem && (
                 <div className="grid gap-1.5 mt-1 pt-2 border-t border-border/60">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Item Barcode</p>
+                  <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Item Barcode</p>
                   <div className="flex gap-1.5">
                     <Button
                       size="sm"
                       variant={barcodeFormat === 'barcode' ? 'default' : 'outline'}
-                      className="flex-1 h-7 text-[11px] gap-1"
+                      className="flex-1 h-7 text-[13px] gap-1"
                       onClick={() => { setBarcodeFormat('barcode'); setShowBarcodeModal(true) }}
                     >
                       <ScanLine size={11} /> Barcode
@@ -756,7 +791,7 @@ export default function LibraryResourceDetailsPage() {
                     <Button
                       size="sm"
                       variant={barcodeFormat === 'qr' ? 'default' : 'outline'}
-                      className="flex-1 h-7 text-[11px] gap-1"
+                      className="flex-1 h-7 text-[13px] gap-1"
                       onClick={() => { setBarcodeFormat('qr'); setShowBarcodeModal(true) }}
                     >
                       <QrCode size={11} /> QR Code
@@ -839,7 +874,7 @@ export default function LibraryResourceDetailsPage() {
                     </a>
                   </Button>
                 </div>
-                <p className="text-[10px] text-muted-foreground text-center">
+                <p className="text-[12px] text-muted-foreground text-center">
                   Print this to attach to the physical item's shelf label or spine.
                 </p>
               </div>
@@ -859,7 +894,7 @@ export default function LibraryResourceDetailsPage() {
           {/* Related Resources section removed — will be fetched from backend in future */}
           <Card className="border-border bg-muted/10">
             <CardContent className="p-4 text-center">
-              <p className="text-[11px] text-muted-foreground italic">Related resources will be shown when available.</p>
+              <p className="text-[13px] text-muted-foreground italic">Related resources will be shown when available.</p>
             </CardContent>
           </Card>
 

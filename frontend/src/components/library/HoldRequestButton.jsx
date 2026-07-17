@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Clock, Loader2, CheckCircle2, X } from 'lucide-react'
 import { placeHold, cancelHold } from '../../services/api/library.js'
+import { circulationErrorMessage } from '../../services/api/errorMessages.js'
 import { toast } from 'sonner'
 
 export default function HoldRequestButton({ catalogItemId, existingHold, onSuccess }) {
@@ -21,7 +22,7 @@ export default function HoldRequestButton({ catalogItemId, existingHold, onSucce
       toast.success("You've been added to the hold queue.")
       onSuccess?.(hold)
     } catch (err) {
-      toast.error(err.message || 'Could not place hold.')
+      toast.error(circulationErrorMessage(err, 'Could not place hold.'))
     } finally {
       setLoading(false)
     }
@@ -36,7 +37,7 @@ export default function HoldRequestButton({ catalogItemId, existingHold, onSucce
       toast.success('Hold cancelled.')
       onSuccess?.(null)
     } catch (err) {
-      toast.error(err.message || 'Could not cancel hold.')
+      toast.error(circulationErrorMessage(err, 'Could not cancel hold.'))
     } finally {
       setLoading(false)
     }

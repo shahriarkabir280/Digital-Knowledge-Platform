@@ -27,6 +27,13 @@ function resolveNotificationRoute(notification, role) {
     return '/repository'
   }
 
+  if (eventType === 'borrow_request_created' || eventType === 'subscription_renewal_requested') {
+    return '/circulation'
+  }
+  if (eventType === 'borrow_request_approved' || eventType === 'borrow_request_rejected' || eventType === 'subscription_activated') {
+    return '/library/profile'
+  }
+
   return '/notifications'
 }
 

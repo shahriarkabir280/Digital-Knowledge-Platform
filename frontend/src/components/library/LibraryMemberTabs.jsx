@@ -12,11 +12,13 @@ import { Badge } from '@/components/ui/badge'
 import {
   BookOpen, Clock, CheckCircle2, AlertTriangle, RefreshCw,
   Loader2, Ban, RotateCcw, History, DollarSign, BookMarked,
-  FileText, FileSpreadsheet, Download
+  FileText, FileSpreadsheet, Download, CalendarCheck, ClipboardList
 } from 'lucide-react'
 import {
   getMyLoans, renewLoan, getMyFines, payFine,
-  getMyHolds, cancelHold, getBorrowingHistory, exportBorrowingHistory
+  getMyHolds, cancelHold, getBorrowingHistory, exportBorrowingHistory,
+  getMySubscription, getMyBorrowRequests, cancelBorrowRequest,
+  requestSubscriptionRenewal
 } from '../../services/api/library.js'
 import { circulationErrorMessage } from '../../services/api/errorMessages.js'
 import { toast } from 'sonner'
@@ -95,12 +97,12 @@ function MyLoansTab() {
                   {loan.item_author || loan.catalog_item_author || 'Unknown author'}
                 </p>
               </div>
-              <Badge className={`text-[10px] font-semibold border uppercase shrink-0 ${statusBadge(loan.status)}`}>
+              <Badge className={`text-[12px] font-semibold border uppercase shrink-0 ${statusBadge(loan.status)}`}>
                 {loan.status}
               </Badge>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-[11px] text-muted-foreground">
+            <div className="grid grid-cols-3 gap-2 text-[13px] text-muted-foreground">
               <div>
                 <p className="font-semibold text-foreground">Checked Out</p>
                 <p>{formatDate(loan.checkout_date)}</p>
@@ -126,7 +128,7 @@ function MyLoansTab() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 text-[11px] gap-1.5 ml-auto"
+                  className="h-7 text-[13px] gap-1.5 ml-auto"
                   disabled={renewalsLeft <= 0 || renewMutation.isPending}
                   onClick={() => renewMutation.mutate(loan.id)}
                   title={renewalsLeft <= 0 ? 'Maximum renewals reached' : 'Renew loan for 7 more days'}
@@ -183,7 +185,7 @@ function HistoryTab() {
       {/* Date range filter + export row */}
       <div className="flex flex-wrap items-end gap-2">
         <div className="grid gap-1">
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">From</label>
+          <label className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">From</label>
           <input
             type="date"
             value={dateFrom}
@@ -192,7 +194,7 @@ function HistoryTab() {
           />
         </div>
         <div className="grid gap-1">
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">To</label>
+          <label className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">To</label>
           <input
             type="date"
             value={dateTo}
@@ -245,7 +247,7 @@ function HistoryTab() {
                     <td className="px-3 py-2.5 text-muted-foreground">{formatDate(loan.due_date)}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{formatDate(loan.return_date)}</td>
                     <td className="px-3 py-2.5">
-                      <Badge className={`text-[9px] font-semibold border uppercase ${statusBadge(loan.status)}`}>
+                      <Badge className={`text-[11px] font-semibold border uppercase ${statusBadge(loan.status)}`}>
                         {loan.status}
                       </Badge>
                     </td>
@@ -331,7 +333,7 @@ function FinesTab() {
             </div>
             <div className="text-right shrink-0">
               <p className="text-base font-extrabold text-foreground">৳{parseFloat(fine.amount).toFixed(2)}</p>
-              <Badge className={`text-[9px] font-semibold border uppercase mt-0.5 ${statusBadge(fine.status)}`}>
+              <Badge className={`text-[11px] font-semibold border uppercase mt-0.5 ${statusBadge(fine.status)}`}>
                 {fine.status}
               </Badge>
             </div>
@@ -341,7 +343,7 @@ function FinesTab() {
             <div className="border-t border-border/60 pt-2.5 flex justify-end">
               <Button
                 size="sm"
-                className="h-7 text-[11px] gap-1.5 bg-accent hover:bg-accent/90 text-white"
+                className="h-7 text-[13px] gap-1.5 bg-accent hover:bg-accent/90 text-white"
                 disabled={payMutation.isPending}
                 onClick={() => payMutation.mutate(fine.id)}
               >
@@ -395,18 +397,18 @@ function HoldsTab() {
                 {hold.item_author || 'Unknown author'}
               </p>
             </div>
-            <Badge className={`text-[10px] font-semibold border uppercase shrink-0 ${statusBadge(hold.status)}`}>
+            <Badge className={`text-[12px] font-semibold border uppercase shrink-0 ${statusBadge(hold.status)}`}>
               {hold.status}
             </Badge>
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/60 pt-2.5">
+          <div className="flex items-center justify-between text-[13px] text-muted-foreground border-t border-border/60 pt-2.5">
             <span>Placed: {formatDate(hold.placed_at || hold.created_at)}</span>
             {['QUEUED', 'READY'].includes(hold.status) && (
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 text-[11px] gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-500/10"
+                className="h-7 text-[13px] gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-500/10"
                 disabled={cancelMutation.isPending}
                 onClick={() => cancelMutation.mutate(hold.id)}
               >
@@ -421,13 +423,176 @@ function HoldsTab() {
   )
 }
 
+// ── Subscription Tab ─────────────────────────────────────────────
+
+function SubscriptionTab() {
+  const queryClient = useQueryClient()
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['my-subscription'],
+    queryFn: getMySubscription,
+  })
+
+  const renewalMutation = useMutation({
+    mutationFn: requestSubscriptionRenewal,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-subscription'] })
+      toast.success('Renewal request sent — a librarian will review it shortly.')
+    },
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Could not request renewal.')),
+  })
+
+  if (isLoading) return (
+    <div className="flex justify-center py-12"><Loader2 size={20} className="animate-spin text-muted-foreground" /></div>
+  )
+  if (isError) return (
+    <div className="text-sm text-red-500 py-8 text-center">Failed to load subscription status.</div>
+  )
+
+  const { subscription, isActive } = data || {}
+
+  if (!subscription) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+        <CalendarCheck size={32} className="opacity-30 text-muted-foreground" />
+        <div className="grid gap-1 max-w-sm">
+          <p className="text-sm font-semibold text-foreground">No subscription yet</p>
+          <p className="text-xs text-muted-foreground">
+            A monthly subscription is required to borrow from the physical (offline) library.
+            Visit the circulation desk or contact a librarian to activate one.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const endDate = new Date(subscription.end_date)
+  const daysRemaining = Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24))
+  const renewalPending = Boolean(subscription.renewal_requested_at)
+
+  return (
+    <div className="grid gap-3">
+      <div className={`rounded-xl border p-4 grid gap-3 ${isActive ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-border bg-muted/10'}`}>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="grid gap-0.5">
+            <p className="text-sm font-bold text-foreground">Offline Library Subscription</p>
+            <p className="text-xs text-muted-foreground">
+              {isActive ? `Renews / expires ${formatDate(subscription.end_date)}` : `Expired ${formatDate(subscription.end_date)}`}
+            </p>
+          </div>
+          <Badge className={`text-[12px] font-semibold border uppercase shrink-0 ${statusBadge(isActive ? 'ACTIVE' : 'RETURNED')}`}>
+            {isActive ? 'Active' : subscription.status}
+          </Badge>
+        </div>
+        {isActive && (
+          <p className="text-xs text-muted-foreground border-t border-border/60 pt-2.5">
+            {daysRemaining > 0 ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining` : 'Expires today'}
+          </p>
+        )}
+
+        <div className="flex items-center gap-2 border-t border-border/60 pt-2.5">
+          {renewalPending ? (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+              <Clock size={13} />
+              Renewal requested — awaiting librarian
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1.5"
+              disabled={renewalMutation.isPending}
+              onClick={() => renewalMutation.mutate()}
+            >
+              {renewalMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              Request Renewal
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Borrow Requests Tab ─────────────────────────────────────────────
+
+function RequestsTab() {
+  const queryClient = useQueryClient()
+  const { data: requests = [], isLoading, isError } = useQuery({
+    queryKey: ['my-borrow-requests'],
+    queryFn: getMyBorrowRequests,
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: (requestId) => cancelBorrowRequest(requestId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-borrow-requests'] })
+      toast.success('Borrow request cancelled.')
+    },
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Cancel failed')),
+  })
+
+  if (isLoading) return (
+    <div className="flex justify-center py-12"><Loader2 size={20} className="animate-spin text-muted-foreground" /></div>
+  )
+  if (isError) return (
+    <div className="text-sm text-red-500 py-8 text-center">Failed to load borrow requests.</div>
+  )
+  if (!requests.length) return <EmptyState icon={ClipboardList} message="No borrow requests placed." />
+
+  return (
+    <div className="grid gap-3">
+      {requests.map((request) => (
+        <div key={request.id} className="rounded-xl border border-border bg-card p-4 grid gap-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="grid gap-0.5 flex-1 min-w-0">
+              <p className="text-sm font-bold text-foreground truncate">
+                {request.item_title || 'Unknown Item'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {request.item_author || 'Unknown author'}
+              </p>
+            </div>
+            <Badge className={`text-[12px] font-semibold border uppercase shrink-0 ${statusBadge(request.status)}`}>
+              {request.status}
+            </Badge>
+          </div>
+
+          {request.status === 'REJECTED' && request.reject_reason && (
+            <p className="text-xs text-red-600 dark:text-red-400 bg-red-500/5 border border-red-500/20 rounded-md px-2.5 py-1.5">
+              {request.reject_reason}
+            </p>
+          )}
+
+          <div className="flex items-center justify-between text-[13px] text-muted-foreground border-t border-border/60 pt-2.5">
+            <span>Requested: {formatDate(request.requested_at || request.created_at)}</span>
+            {request.status === 'PENDING' && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-[13px] gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-500/10"
+                disabled={cancelMutation.isPending}
+                onClick={() => cancelMutation.mutate(request.id)}
+              >
+                {cancelMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Ban size={11} />}
+                Cancel Request
+              </Button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Main exported component ───────────────────────────────────────
 
 const TABS = [
   { id: 'loans',   label: 'My Loans',  icon: BookOpen  },
+  { id: 'requests',label: 'Requests',  icon: ClipboardList },
   { id: 'history', label: 'History',   icon: History   },
   { id: 'fines',   label: 'Fines',     icon: DollarSign },
   { id: 'holds',   label: 'Holds',     icon: Clock     },
+  { id: 'subscription', label: 'Subscription', icon: CalendarCheck },
 ]
 
 export default function LibraryMemberTabs() {
@@ -458,9 +623,11 @@ export default function LibraryMemberTabs() {
       </CardHeader>
       <CardContent className="p-5">
         {activeTab === 'loans'   && <MyLoansTab />}
+        {activeTab === 'requests' && <RequestsTab />}
         {activeTab === 'history' && <HistoryTab />}
         {activeTab === 'fines'   && <FinesTab />}
         {activeTab === 'holds'   && <HoldsTab />}
+        {activeTab === 'subscription' && <SubscriptionTab />}
       </CardContent>
     </Card>
   )

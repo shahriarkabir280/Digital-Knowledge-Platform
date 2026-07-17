@@ -39,10 +39,10 @@ export default function CatalogItemCard({ item }) {
         </div>
         <CardContent className="p-3.5 grid gap-1.5">
           <div className="flex items-start justify-between gap-2">
-            <Badge variant="outline" className="text-[9px] font-bold uppercase px-1.5 py-0 bg-background">
+            <Badge variant="outline" className="text-[11px] font-bold uppercase px-1.5 py-0 bg-background">
               {item.category || 'Other'}
             </Badge>
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
+            <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
               available
                 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                 : 'bg-red-500/10 text-red-600 border-red-500/20'
@@ -56,9 +56,18 @@ export default function CatalogItemCard({ item }) {
           </p>
           <p className="text-xs text-muted-foreground truncate">{item.authors || 'Unknown author'}</p>
 
-          <div className="flex items-center justify-between gap-2 pt-1 text-[10px] text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 pt-1 text-[12px] text-muted-foreground">
             {item.isbn ? <span className="font-mono truncate">ISBN {item.isbn}</span> : <span />}
-            {item.location && (
+            {(item.location_floor || item.location_shelf || item.location_column) ? (
+              <span className="flex items-center gap-0.5 shrink-0" title="Floor · Shelf · Column">
+                <MapPin size={10} />
+                {[
+                  item.location_floor && `F${item.location_floor}`,
+                  item.location_shelf && `S${item.location_shelf}`,
+                  item.location_column && `C${item.location_column}`,
+                ].filter(Boolean).join(' · ')}
+              </span>
+            ) : item.location && (
               <span className="flex items-center gap-0.5 shrink-0">
                 <MapPin size={10} /> {item.location}
               </span>

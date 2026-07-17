@@ -99,7 +99,7 @@ router.post(
       }
 
       const staffRoles = ["STAFF", "LAB_MANAGER", "ADMIN"];
-      if (loan.member_id !== req.auth.id && !staffRoles.includes(req.auth.role)) {
+      if (Number(loan.member_id) !== Number(req.auth.id) && !staffRoles.includes(req.auth.role)) {
         return next({
           statusCode: 403,
           code: "NOT_YOUR_LOAN",

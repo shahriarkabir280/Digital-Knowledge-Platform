@@ -145,16 +145,16 @@ export default function CheckoutDialog({ open, onClose, catalogItem, onSuccess }
               {catalogItem.isbn ? ` · ISBN: ${catalogItem.isbn}` : ''}
             </p>
             <div className="flex items-center gap-2 mt-1">
-              <Badge variant="outline" className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+              <Badge variant="outline" className="text-[12px] font-semibold bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
                 {catalogItem.available_copies ?? 0} available
               </Badge>
               {catalogItem.location && (
-                <Badge variant="outline" className="text-[10px] font-semibold bg-muted/30">
+                <Badge variant="outline" className="text-[12px] font-semibold bg-muted/30">
                   {catalogItem.location}
                 </Badge>
               )}
               {catalogItem.barcode && (
-                <Badge variant="outline" className="text-[10px] font-mono bg-muted/30">
+                <Badge variant="outline" className="text-[12px] font-mono bg-muted/30">
                   {catalogItem.barcode}
                 </Badge>
               )}
@@ -207,7 +207,7 @@ export default function CheckoutDialog({ open, onClose, catalogItem, onSuccess }
             )}
 
             {searchingMember && (
-              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <p className="text-[13px] text-muted-foreground flex items-center gap-1">
                 <Loader2 size={11} className="animate-spin" /> Searching…
               </p>
             )}
@@ -217,7 +217,7 @@ export default function CheckoutDialog({ open, onClose, catalogItem, onSuccess }
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1.5 text-[11px] w-fit"
+              className="h-7 gap-1.5 text-[13px] w-fit"
               onClick={() => {
                 setScanMode('member')
                 setShowScanner(true)
@@ -228,13 +228,13 @@ export default function CheckoutDialog({ open, onClose, catalogItem, onSuccess }
             </Button>
 
             {memberId && (
-              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+              <p className="text-[12px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                 ✓ Member ID {memberId} selected
                 {memberName ? ` — ${memberName}` : ''}
               </p>
             )}
 
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               Loan period: 14 days · Max 2 renewals of 7 days each
             </p>
           </div>

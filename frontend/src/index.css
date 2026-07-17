@@ -5,6 +5,12 @@
 /* ─── Reset ──────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
 
+html {
+  /* Bumped from the 16px browser default so every rem-based Tailwind text
+     utility (text-xs..text-xl) scales up proportionally app-wide. */
+  font-size: 17.5px;
+}
+
 html, body {
   overflow-x: hidden;
   max-width: 100%;

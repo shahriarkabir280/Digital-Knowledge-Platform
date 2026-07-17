@@ -30,7 +30,7 @@ function StatCard({ label, value, sublabel, color = 'text-accent' }) {
     <div className="rounded-xl border border-border bg-card p-4 grid gap-1">
       <p className={`text-2xl font-extrabold tracking-tight ${color}`}>{value ?? '—'}</p>
       <p className="text-xs font-semibold text-foreground">{label}</p>
-      {sublabel && <p className="text-[10px] text-muted-foreground">{sublabel}</p>}
+      {sublabel && <p className="text-[12px] text-muted-foreground">{sublabel}</p>}
     </div>
   )
 }
@@ -272,7 +272,7 @@ export default function ReportsDashboard() {
           >
             <Icon size={15} className={activeReport === id ? 'text-accent' : 'text-muted-foreground'} />
             <span className="font-bold">{label}</span>
-            <span className="text-[10px] text-muted-foreground leading-tight">{description}</span>
+            <span className="text-[12px] text-muted-foreground leading-tight">{description}</span>
           </button>
         ))}
       </div>
@@ -280,11 +280,11 @@ export default function ReportsDashboard() {
       {/* Date range filter */}
       <div className="flex flex-wrap gap-3 items-end">
         <div className="grid gap-1">
-          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">From</Label>
+          <Label className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">From</Label>
           <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-8 text-xs w-36" />
         </div>
         <div className="grid gap-1">
-          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">To</Label>
+          <Label className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">To</Label>
           <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-8 text-xs w-36" />
         </div>
         <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => refetch()}>

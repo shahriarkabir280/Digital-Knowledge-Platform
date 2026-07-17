@@ -17,6 +17,8 @@ const {
 const finesRepo = require("../../db/repositories/fines");
 const holdsRepo = require("../../db/repositories/holds");
 const wishlistsRepo = require("../../db/repositories/wishlists");
+const subscriptionsRepo = require("../../db/repositories/subscriptions");
+const borrowRequestsRepo = require("../../db/repositories/borrowRequests");
 const auditLog = require("../../db/repositories/auditLog");
 const reportService = require("./reportService");
 const importService = require("./importService");
@@ -242,7 +244,7 @@ router.post("/fines/:id/pay", requireAuth, async (req, res, next) => {
     // Members can only pay their own fines; staff can pay any
     const staffRoles = ["STAFF", "LAB_MANAGER", "ADMIN"];
     if (
-      fine.member_id !== req.auth.id &&
+      Number(fine.member_id) !== Number(req.auth.id) &&
       !staffRoles.includes(req.auth.role)
     ) {
       return next({
@@ -315,6 +317,213 @@ router.delete("/holds/:id", requireAuth, async (req, res, next) => {
     const holdId = parseInt(req.params.id, 10);
     const result = await holdsRepo.cancelHold(holdId, req.auth.id);
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ── Subscriptions (offline/physical library membership) ────────────
+
+// GET /api/library/subscriptions/my — Member's current subscription
+router.get("/subscriptions/my", requireAuth, async (req, res, next) => {
+  try {
+    const subscription = await subscriptionsRepo.findByMember(req.auth.id);
+    const active = await subscriptionsRepo.getActive(req.auth.id);
+    res.json({ subscription: subscription || null, isActive: Boolean(active) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/library/subscriptions/request-renewal — Member requests renewal
+router.post("/subscriptions/request-renewal", requireAuth, async (req, res, next) => {
+  try {
+    const subscription = await subscriptionsRepo.requestRenewal(req.auth.id);
+    res.json(subscription);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/library/subscriptions/:memberId/reject-renewal — Reject a pending renewal request (STAFF+)
+router.post(
+  "/subscriptions/:memberId/reject-renewal",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const memberId = parseInt(req.params.memberId, 10);
+      const subscription = await subscriptionsRepo.rejectRenewal(memberId, req.auth.id, req.body.reason);
+
+      await auditLog.record({
+        entityType: "subscription",
+        entityId: subscription.id,
+        action: "UPDATE",
+        changedBy: req.auth?.id,
+        newValues: { renewal_requested_at: null, reject_reason: req.body.reason || null },
+      });
+
+      res.json(subscription);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// GET /api/library/subscriptions — List subscriptions (STAFF+)
+router.get(
+  "/subscriptions",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+      const status = req.query.status || undefined;
+      const result = await subscriptionsRepo.findAll({ page, limit, status });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /api/library/subscriptions/:memberId/activate — Activate/renew (STAFF+)
+router.post(
+  "/subscriptions/:memberId/activate",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const memberId = parseInt(req.params.memberId, 10);
+      const months = parseInt(req.body.months, 10) || 1;
+
+      const subscription = await subscriptionsRepo.activate(memberId, req.auth.id, months);
+
+      await auditLog.record({
+        entityType: "subscription",
+        entityId: subscription.id,
+        action: "UPDATE",
+        changedBy: req.auth?.id,
+        newValues: subscription,
+      });
+
+      res.status(201).json(subscription);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ── Borrow Requests (member-initiated, librarian-approved) ─────────
+
+// POST /api/library/borrow-requests — Request to borrow an available item
+router.post("/borrow-requests", requireAuth, async (req, res, next) => {
+  try {
+    const { catalog_item_id } = req.body;
+    if (!catalog_item_id) {
+      return next({
+        statusCode: 400,
+        code: "MISSING_FIELDS",
+        message: "catalog_item_id is required",
+      });
+    }
+
+    const request = await borrowRequestsRepo.create(
+      parseInt(catalog_item_id, 10),
+      req.auth.id
+    );
+    res.status(201).json(request);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/library/borrow-requests/my — Member's own requests
+router.get("/borrow-requests/my", requireAuth, async (req, res, next) => {
+  try {
+    const requests = await borrowRequestsRepo.findByMember(req.auth.id);
+    res.json(requests);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/library/borrow-requests/pending — Librarian queue (STAFF+)
+router.get(
+  "/borrow-requests/pending",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const requests = await borrowRequestsRepo.findPending();
+      res.json(requests);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /api/library/borrow-requests/:id/approve — Approve & checkout (STAFF+)
+router.post(
+  "/borrow-requests/:id/approve",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const requestId = parseInt(req.params.id, 10);
+      const loanDays = req.body.loan_days ? parseInt(req.body.loan_days, 10) : undefined;
+
+      const { request, loan } = await borrowRequestsRepo.approve(requestId, req.auth.id, loanDays);
+
+      await auditLog.record({
+        entityType: "borrow_request",
+        entityId: request.id,
+        action: "UPDATE",
+        changedBy: req.auth?.id,
+        oldValues: { status: "PENDING" },
+        newValues: { status: request.status, loan_id: request.loan_id },
+      });
+
+      res.json({ request, loan });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /api/library/borrow-requests/:id/reject — Reject (STAFF+)
+router.post(
+  "/borrow-requests/:id/reject",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const requestId = parseInt(req.params.id, 10);
+      const request = await borrowRequestsRepo.reject(requestId, req.auth.id, req.body.reason);
+
+      await auditLog.record({
+        entityType: "borrow_request",
+        entityId: request.id,
+        action: "UPDATE",
+        changedBy: req.auth?.id,
+        oldValues: { status: "PENDING" },
+        newValues: { status: request.status, reject_reason: request.reject_reason },
+      });
+
+      res.json(request);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// DELETE /api/library/borrow-requests/:id — Member cancels own pending request
+router.delete("/borrow-requests/:id", requireAuth, async (req, res, next) => {
+  try {
+    const requestId = parseInt(req.params.id, 10);
+    const request = await borrowRequestsRepo.cancel(requestId, req.auth.id);
+    res.json(request);
   } catch (error) {
     next(error);
   }

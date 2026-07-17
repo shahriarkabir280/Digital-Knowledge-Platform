@@ -9,6 +9,7 @@
 const db = require("../db");
 const loansRepository = require("../db/repositories/loans");
 const finesRepository = require("../db/repositories/fines");
+const subscriptionsRepository = require("../db/repositories/subscriptions");
 const emailService = require("../services/emailService");
 
 const JOB_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -205,6 +206,9 @@ async function runOnce() {
 
     const overdueCount = await processOverdueLoans();
     console.log(`[dueTrackingJob] Marked ${overdueCount} new loans as overdue`);
+
+    const expiredSubscriptions = await subscriptionsRepository.expireDue();
+    console.log(`[dueTrackingJob] Expired ${expiredSubscriptions} lapsed subscriptions`);
   } catch (error) {
     console.error("[dueTrackingJob] Error during cycle:", error.message);
   }

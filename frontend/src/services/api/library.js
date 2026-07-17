@@ -220,6 +220,89 @@ export async function searchMembers(query) {
   return apiRequest(`/loans/members/search?q=${encodeURIComponent(query)}`)
 }
 
+// ── Subscriptions (offline/physical library membership) ────────────
+
+/**
+ * Get the current user's subscription status.
+ * @returns {Promise<{ subscription: object|null, isActive: boolean }>}
+ */
+export async function getMySubscription() {
+  return apiRequest('/library/subscriptions/my')
+}
+
+/**
+ * List subscriptions (STAFF+).
+ */
+export async function listSubscriptions(params = {}) {
+  const query = new URLSearchParams()
+  if (params.page) query.set('page', params.page)
+  if (params.limit) query.set('limit', params.limit)
+  if (params.status) query.set('status', params.status)
+  return apiRequest(`/library/subscriptions?${query.toString()}`)
+}
+
+/**
+ * Activate or renew a member's subscription (STAFF+).
+ */
+export async function activateSubscription(memberId, months = 1) {
+  return apiRequest(`/library/subscriptions/${memberId}/activate`, {
+    method: 'POST',
+    body: JSON.stringify({ months }),
+  })
+}
+
+/**
+ * Member requests a renewal of their own subscription — notifies librarians.
+ */
+export async function requestSubscriptionRenewal() {
+  return apiRequest('/library/subscriptions/request-renewal', { method: 'POST' })
+}
+
+/**
+ * Librarian rejects a member's pending renewal request.
+ */
+export async function rejectSubscriptionRenewal(memberId, reason) {
+  return apiRequest(`/library/subscriptions/${memberId}/reject-renewal`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  })
+}
+
+// ── Borrow Requests (member-initiated, librarian-approved) ─────────
+
+export async function createBorrowRequest(catalogItemId) {
+  return apiRequest('/library/borrow-requests', {
+    method: 'POST',
+    body: JSON.stringify({ catalog_item_id: catalogItemId }),
+  })
+}
+
+export async function getMyBorrowRequests() {
+  return apiRequest('/library/borrow-requests/my')
+}
+
+export async function getPendingBorrowRequests() {
+  return apiRequest('/library/borrow-requests/pending')
+}
+
+export async function approveBorrowRequest(requestId, loanDays) {
+  return apiRequest(`/library/borrow-requests/${requestId}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ loan_days: loanDays }),
+  })
+}
+
+export async function rejectBorrowRequest(requestId, reason) {
+  return apiRequest(`/library/borrow-requests/${requestId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  })
+}
+
+export async function cancelBorrowRequest(requestId) {
+  return apiRequest(`/library/borrow-requests/${requestId}`, { method: 'DELETE' })
+}
+
 // ── Wishlist ───────────────────────────────────────────────────────
 
 export async function getMyWishlist() {

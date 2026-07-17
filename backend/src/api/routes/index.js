@@ -3,6 +3,7 @@ const authRouter = require("../../modules/auth");
 const documentsRouter = require("../../modules/documents");
 const libraryRouter = require("../../modules/library");
 const usersRouter = require("../../modules/users");
+const profileRouter = require("../../modules/profile");
 const projectsRouter = require("../../modules/projects");
 const collaborationRouter = require("../../modules/collaboration");
 const loansRouter = require("../../modules/loans");
@@ -33,6 +34,7 @@ router.get("/status", (_req, res) => {
 
 router.use("/auth", authRouter);
 router.use("/users", usersRouter);
+router.use("/profile", profileRouter);
 router.use("/repository", documentsRouter);
 router.use("/documents", documentsRouter);
 router.use("/library", libraryRouter);

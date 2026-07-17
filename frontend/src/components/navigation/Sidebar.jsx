@@ -16,6 +16,7 @@ import {
   FilePlus,
   Layers,
   Heart,
+  History,
   X,
   ChevronLeft,
   ChevronRight,
@@ -50,6 +51,7 @@ const iconMap = {
   FilePlus,
   Layers,
   Heart,
+  History,
 }
 
 // Fallback icons for items without an iconName

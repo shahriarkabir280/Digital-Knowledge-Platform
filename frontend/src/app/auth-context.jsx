@@ -18,6 +18,7 @@ export function AuthProvider({ children }) {
         isAuthenticated: false,
         role: ROLES.GUEST,
         name: '',
+        email: '',
         token: '',
         refreshToken: '',
         expiresAt: null,
@@ -28,17 +29,19 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(stored.isAuthenticated),
       role: normalizeRole(stored.role),
       name: stored.name || '',
+      email: stored.email || '',
       token,
       refreshToken,
       expiresAt: stored.expiresAt || null,
     }
   })
 
-  const login = ({ role, name, token, refreshToken = '', expiresAt = null }) => {
+  const login = ({ role, name, email = '', token, refreshToken = '', expiresAt = null }) => {
     const next = {
       isAuthenticated: true,
       role: normalizeRole(role),
       name: name || 'Platform User',
+      email,
       token,
       refreshToken,
       expiresAt,
@@ -52,6 +55,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: false,
       role: ROLES.GUEST,
       name: '',
+      email: '',
       token: '',
       expiresAt: null,
     }

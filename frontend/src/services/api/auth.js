@@ -29,6 +29,7 @@ function extractUser(payload) {
   const user = payload?.user || payload?.data?.user || {}
   return {
     name: user.name || payload?.name || payload?.username || 'Platform User',
+    email: user.email || payload?.email || '',
     role: normalizeRole(user.role || payload?.role || ROLES.MEMBER),
   }
 }

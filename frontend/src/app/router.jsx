@@ -8,6 +8,7 @@ import DashboardPage from '../pages/DashboardPage.jsx'
 import LibraryPage from '../pages/LibraryPage.jsx'
 import LibraryBookmarksPage from '../pages/LibraryBookmarksPage.jsx'
 import LibraryProfilePage from '../pages/LibraryProfilePage.jsx'
+import LibraryActivityPage from '../pages/LibraryActivityPage.jsx'
 import LibraryResourceDetailsPage from '../pages/LibraryResourceDetailsPage.jsx'
 import LibrarySettingsPage from '../pages/LibrarySettingsPage.jsx'
 import LibraryUploadPage from '../pages/LibraryUploadPage.jsx'
@@ -94,6 +95,10 @@ export const appRouter = createBrowserRouter([
               {
                 path: '/library/profile',
                 element: <LibraryProfilePage />,
+              },
+              {
+                path: '/library/activity',
+                element: <LibraryActivityPage />,
               },
               {
                 path: '/library/settings',

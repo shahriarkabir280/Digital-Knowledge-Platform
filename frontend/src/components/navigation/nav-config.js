@@ -32,6 +32,12 @@ export const navItems = [
     roles: ROUTE_ACCESS.libraryBookmarks,
   },
   {
+    to: '/library/activity',
+    label: 'Library Activity',
+    iconName: 'History',
+    roles: ROUTE_ACCESS.libraryActivity,
+  },
+  {
     to: '/library/analytics',
     label: 'Insights',
     iconName: 'BarChart3',

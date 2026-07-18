@@ -497,22 +497,6 @@ export default function DashboardPage() {
                 </Link>
               </Button>
 
-              <Button asChild variant="outline" className="w-full justify-start text-xs h-9 font-semibold hover:bg-amber-500/5 hover:text-amber-600 border-border/80">
-                <Link to="/dashboard" className="gap-2">
-                  <FileEdit size={14} className="text-amber-500" />
-                  My Drafts
-                </Link>
-              </Button>
-
-              {isReviewer && (
-                <Button asChild variant="outline" className="w-full justify-start text-xs h-9 font-semibold hover:bg-emerald-500/5 hover:text-emerald-600 border-border/80">
-                  <Link to="/library-moderation-queue" className="gap-2">
-                    <ClipboardCheck size={14} className="text-emerald-600" />
-                    Library Moderation
-                  </Link>
-                </Button>
-              )}
-
               {isAdmin && (
                 <Button asChild variant="outline" className="w-full justify-start text-xs h-9 font-semibold hover:bg-red-500/5 hover:text-red-500 border-border/80">
                   <Link to="/admin" className="gap-2">

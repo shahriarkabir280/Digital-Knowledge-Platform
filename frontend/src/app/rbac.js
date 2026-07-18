@@ -30,7 +30,7 @@ export const ROUTE_ACCESS = Object.freeze({
   libraryUpload: ALL_AUTH_ROLES,
   librarySettings: ALL_AUTH_ROLES,
   libraryProfile: ALL_AUTH_ROLES,
-  libraryActivity: ALL_AUTH_ROLES,
+  libraryActivity: [ROLES.MEMBER, ROLES.CONTRIBUTOR],
   libraryAnalytics: [ROLES.ADMIN, ROLES.STAFF, ROLES.LAB_MANAGER],
   repository: PUBLIC_ROUTES,
   search: PUBLIC_ROUTES,

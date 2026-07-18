@@ -8,12 +8,10 @@ const usersRepository = require("../../db/repositories/users");
 const router = Router();
 
 const allowedRoles = [
+  "ADMIN",
   "MEMBER",
   "CONTRIBUTOR",
   "STAFF",
-  "LAB_MANAGER",
-  "ADMIN",
-  "REVIEWER",
 ];
 
 const roleUpdateSchema = z.object({

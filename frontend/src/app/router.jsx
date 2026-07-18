@@ -97,10 +97,6 @@ export const appRouter = createBrowserRouter([
                 element: <LibraryProfilePage />,
               },
               {
-                path: '/library/activity',
-                element: <LibraryActivityPage />,
-              },
-              {
                 path: '/library/settings',
                 element: <LibrarySettingsPage />,
               },
@@ -211,6 +207,15 @@ export const appRouter = createBrowserRouter([
               {
                 path: '/library/analytics',
                 element: <LibraryAnalyticsPage />,
+              },
+            ],
+          },
+          {
+            element: <RoleRoute allowedRoles={ROUTE_ACCESS.libraryActivity} />,
+            children: [
+              {
+                path: '/library/activity',
+                element: <LibraryActivityPage />,
               },
             ],
           },

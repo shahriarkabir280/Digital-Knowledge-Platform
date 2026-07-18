@@ -13,12 +13,10 @@ import {
 import { fetchRoleRequests, decideRoleRequest } from '../services/api/roleRequests.js'
 
 const manageableRoles = [
+  ROLES.ADMIN,
   ROLES.MEMBER,
   ROLES.CONTRIBUTOR,
   ROLES.STAFF,
-  ROLES.LAB_MANAGER,
-  ROLES.ADMIN,
-  ROLES.REVIEWER,
 ]
 
 function resolveStatusBadge(status) {

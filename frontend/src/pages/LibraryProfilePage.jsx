@@ -414,9 +414,7 @@ export default function LibraryProfilePage() {
                     <option value="ADMIN">Admin</option>
                     <option value="MEMBER">Member</option>
                     <option value="CONTRIBUTOR">Contributor (Ability to upload resource cards directly)</option>
-                    <option value="LAB_MANAGER">Lab Manager</option>
                     <option value="STAFF">Operations Staff (Manage circulations & operational tasks)</option>
-                    <option value="REVIEWER">Technical Reviewer (Access to Review queue desk)</option>
                   </Select>
                 </div>
 

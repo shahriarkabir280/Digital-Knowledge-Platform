@@ -60,6 +60,7 @@ function buildApiError(parsedBody, status) {
   const err = new Error(extractErrorMessage(parsedBody, status))
   err.status = status
   err.code = extractErrorCode(parsedBody)
+  err.data = parsedBody && typeof parsedBody === 'object' ? parsedBody : null
   return err
 }
 

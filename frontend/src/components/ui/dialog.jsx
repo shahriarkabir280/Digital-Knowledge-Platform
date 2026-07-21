@@ -1,4 +1,5 @@
 import { useState, createContext, useContext } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -16,17 +17,20 @@ function Dialog({ open, onOpenChange, children }) {
 
   return (
     <DialogContext.Provider value={{ open: dialogOpen, onOpenChange: handleOpenChange }}>
-      {dialogOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => handleOpenChange(false)}
-          />
-          <div className="relative z-50">
-            {children}
-          </div>
-        </div>
-      ) : null}
+      {dialogOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={() => handleOpenChange(false)}
+              />
+              <div className="relative z-50">
+                {children}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </DialogContext.Provider>
   )
 }
@@ -36,7 +40,7 @@ function DialogContent({ children, className }) {
   
   return (
     <div className={cn(
-      'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-background p-6 shadow-lg rounded-lg',
+      'fixed left-[50%] top-[50%] z-50 grid grid-cols-[minmax(0,1fr)] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-background p-6 shadow-lg rounded-lg',
       className,
     )}>
       <button

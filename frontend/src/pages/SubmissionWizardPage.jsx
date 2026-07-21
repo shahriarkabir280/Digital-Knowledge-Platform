@@ -30,7 +30,11 @@ const steps = [
 ]
 
 const languageOptions = ['English', 'Bangla', 'Arabic', 'Hindi', 'Other']
-const accessTierOptions = ['PUBLIC', 'REGISTERED', 'RESTRICTED', 'PRIVATE']
+const accessTierOptions = [
+  { value: 'PUBLIC', label: 'Public' },
+  { value: 'REGISTERED', label: 'Private' },
+  { value: 'RESTRICTED', label: 'Restricted' },
+]
 const departmentOptions = [
   'Computer Science and Engineering',
   'Information Science and Library Management',
@@ -540,7 +544,7 @@ export default function SubmissionWizardPage() {
       {error ? <Alert variant="error">{error}</Alert> : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="rounded-2xl border border-border bg-card shadow-sm">
+        <div className="rounded-2xl border border-border bg-card shadow-sm min-w-0">
           {currentStep === 1 ? (
             <section className="p-4 sm:p-6">
               <Card className="border-0 shadow-none">
@@ -554,7 +558,7 @@ export default function SubmissionWizardPage() {
                         <strong>Uploaded document #{uploadedDocument.id}</strong>
                         <Badge variant="outline">{uploadedDocument.state || 'draft'}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground break-words">
                         {uploadedDocument.title || 'Untitled'}
                         {uploadedDocument.format ? ` • ${uploadedDocument.format.toUpperCase()}` : ''}
                         {uploadedDocument.accessTier ? ` • ${uploadedDocument.accessTier}` : ''}
@@ -721,18 +725,11 @@ export default function SubmissionWizardPage() {
                     <Label htmlFor="accessTier">Access Tier *</Label>
                     <Select id="accessTier" name="accessTier" value={form.accessTier} onChange={handleFieldChange}>
                       {accessTierOptions.map((tier) => (
-                        <option key={tier} value={tier}>
-                          {tier}
+                        <option key={tier.value} value={tier.value}>
+                          {tier.label}
                         </option>
                       ))}
                     </Select>
-                  </div>
-
-                  <div className="rounded-md border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
-                    <p className="font-medium text-foreground">Access guidance</p>
-                    <p className="mt-1">
-                      Choose who should be able to view the submission once it is published.
-                    </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
@@ -754,10 +751,10 @@ export default function SubmissionWizardPage() {
                 <CardHeader className="px-0 pt-0">
                   <CardTitle>Step 4: Review</CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-3 px-0 pb-0 text-sm">
-                  <div className="grid gap-1 rounded-md border border-border p-3">
+                <CardContent className="grid gap-3 px-0 pb-0 text-sm min-w-0">
+                  <div className="grid gap-1 rounded-md border border-border p-3 min-w-0">
                     <span className="text-xs uppercase tracking-wide text-muted-foreground">Document</span>
-                    <strong>{uploadedDocument?.title || form.title || 'Untitled document'}</strong>
+                    <strong className="break-words">{uploadedDocument?.title || form.title || 'Untitled document'}</strong>
                     <span className="text-muted-foreground">
                       {uploadedDocument?.id ? `Document #${uploadedDocument.id}` : 'Upload not completed yet'}
                     </span>
@@ -798,7 +795,7 @@ export default function SubmissionWizardPage() {
 
                   <div className="grid gap-1 rounded-md border border-border p-3">
                     <span className="text-xs uppercase tracking-wide text-muted-foreground">Access Tier</span>
-                    <strong>{form.accessTier}</strong>
+                    <strong>{accessTierOptions.find((tier) => tier.value === form.accessTier)?.label || form.accessTier}</strong>
                   </div>
 
                   <div className="flex flex-wrap gap-2 pt-1">

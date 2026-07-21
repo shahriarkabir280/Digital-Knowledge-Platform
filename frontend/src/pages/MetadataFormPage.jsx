@@ -14,10 +14,9 @@ import { fetchMyUploads, saveDocumentMetadata, getDocumentMetadata } from '../se
 const languageOptions = ['English', 'Bangla', 'Arabic', 'Hindi', 'Other']
 
 const accessTierOptions = [
-  'PUBLIC',
-  'REGISTERED',
-  'RESTRICTED',
-  'PRIVATE',
+  { value: 'PUBLIC', label: 'Public' },
+  { value: 'REGISTERED', label: 'Private' },
+  { value: 'RESTRICTED', label: 'Restricted' },
 ]
 
 const departmentOptions = [
@@ -364,8 +363,8 @@ export default function MetadataFormPage() {
               <Label htmlFor="accessTier">Access Tier</Label>
               <Select id="accessTier" name="accessTier" value={form.accessTier} onChange={handleChange}>
                 {accessTierOptions.map((tier) => (
-                  <option key={tier} value={tier}>
-                    {tier}
+                  <option key={tier.value} value={tier.value}>
+                    {tier.label}
                   </option>
                 ))}
               </Select>

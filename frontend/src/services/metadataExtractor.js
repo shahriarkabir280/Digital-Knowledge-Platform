@@ -75,8 +75,9 @@ async function extractPDFMetadata(file) {
       success: true,
       error: null,
     }
-  } catch {
-    return { title: null, author: null, summary: null, tags: null, success: false, error: 'Metadata extraction encountered an unexpected error.' }
+  } catch (error) {
+    console.error('[metadataExtractor] PDF extraction failed:', error)
+    return { title: null, author: null, summary: null, tags: null, success: false, error: 'Could not auto-extract details from this file. Please fill in the fields manually.' }
   }
 }
 
@@ -135,7 +136,8 @@ async function extractWithLocalService(documentText) {
       console.groupEnd()
     }
     return data
-  } catch {
+  } catch (error) {
+    console.error('[metadataExtractor] Extraction service call failed:', error)
     return { title: null, author: null, abstract: null, keywords: [], success: false, error: 'Metadata extraction service unavailable. Fill fields manually.' }
   }
 }

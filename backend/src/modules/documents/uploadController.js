@@ -13,6 +13,7 @@ const { versionIncrementExpression } = require('./versionService');
 const { sameDocumentOwner } = require('./ownership');
 const { createResourceRecord, findResourceById, parseResourceId } = require('./resourceStorage');
 const metadataExtractionService = require('../../services/metadataExtractionService');
+const documentAccessRequests = require('../../db/repositories/documentAccessRequests');
 
 const PRIVILEGED_REPOSITORY_ROLES = new Set(['STAFF', 'LAB_MANAGER', 'REVIEWER', 'ADMIN']);
 const RESOURCE_CATEGORY_ALIASES = {
@@ -35,8 +36,8 @@ const RESOURCE_CATEGORY_ALIASES = {
   'documents': 'documents',
 };
 
-function canAccessDocumentContent(document, user) {
-  // If the document is published and public, anyone can access it
+async function canAccessDocumentContent(document, user, resourceTable) {
+  // If the document is published and public, anyone can access it — guests included.
   if (document.state === 'published' && document.access_tier === 'PUBLIC') {
     return true;
   }
@@ -49,11 +50,60 @@ function canAccessDocumentContent(document, user) {
     return true;
   }
 
-  if (document.state === 'published') {
+  if (PRIVILEGED_REPOSITORY_ROLES.has(user.role)) {
     return true;
   }
 
-  return PRIVILEGED_REPOSITORY_ROLES.has(user.role);
+  if (document.state !== 'published') {
+    return false;
+  }
+
+  if (document.access_tier === 'REGISTERED') {
+    return true;
+  }
+
+  if (document.access_tier === 'RESTRICTED') {
+    return documentAccessRequests.hasApprovedAccess({
+      requesterId: user.id,
+      documentId: document.id,
+      resourceTable,
+    });
+  }
+
+  return false;
+}
+
+/**
+ * Builds the 403 payload for a denied document, distinguishing a plain
+ * "forbidden" from a RESTRICTED document that the requester can ask the
+ * author for access to.
+ */
+async function buildAccessDeniedPayload(document, user, resourceTable) {
+  if (document.state !== 'published' || document.access_tier !== 'RESTRICTED') {
+    return {
+      code: 'FORBIDDEN',
+      message: 'Access denied',
+    };
+  }
+
+  let requestStatus = 'NONE';
+  if (user) {
+    const existing = await documentAccessRequests.findByRequesterAndDocument({
+      requesterId: user.id,
+      documentId: document.id,
+      resourceTable,
+    });
+    if (existing) {
+      requestStatus = existing.status;
+    }
+  }
+
+  return {
+    code: 'ACCESS_REQUEST_REQUIRED',
+    message: 'This document is restricted. Request access from the author to view it.',
+    requestStatus,
+    authorId: document.uploader_id,
+  };
 }
 
 /**
@@ -551,11 +601,14 @@ async function getFileInfo(req, res, next) {
       });
     }
 
-    if (!canAccessDocumentContent(document, req.user)) {
+    if (!(await canAccessDocumentContent(document, req.user, resourceLookup.table))) {
+      const denied = await buildAccessDeniedPayload(document, req.user, resourceLookup.table);
       return res.status(403).json({
         success: false,
-        error: 'Access denied',
-        code: 'FORBIDDEN',
+        error: denied.message,
+        code: denied.code,
+        requestStatus: denied.requestStatus,
+        authorId: denied.authorId,
       });
     }
 
@@ -626,11 +679,14 @@ async function getSignedFileUrl(req, res, next) {
       });
     }
 
-    if (!canAccessDocumentContent(document, req.user)) {
+    if (!(await canAccessDocumentContent(document, req.user, resourceLookup.table))) {
+      const denied = await buildAccessDeniedPayload(document, req.user, resourceLookup.table);
       return res.status(403).json({
         success: false,
-        error: 'Access denied',
-        code: 'FORBIDDEN',
+        error: denied.message,
+        code: denied.code,
+        requestStatus: denied.requestStatus,
+        authorId: denied.authorId,
       });
     }
 
@@ -749,11 +805,14 @@ async function streamFileContent(req, res, next) {
       });
     }
 
-    if (!canAccessDocumentContent(document, req.user)) {
+    if (!(await canAccessDocumentContent(document, req.user, resourceLookup.table))) {
+      const denied = await buildAccessDeniedPayload(document, req.user, resourceLookup.table);
       return res.status(403).json({
         success: false,
-        error: 'Access denied',
-        code: 'FORBIDDEN',
+        error: denied.message,
+        code: denied.code,
+        requestStatus: denied.requestStatus,
+        authorId: denied.authorId,
       });
     }
 

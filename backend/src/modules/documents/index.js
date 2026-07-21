@@ -1,10 +1,12 @@
 const { Router } = require("express");
 const { upload, uploadErrorHandler } = require("../../api/middlewares/uploadMiddleware");
 const requireAuth = require("../../api/middlewares/requireAuth");
+const optionalAuth = require("../../api/middlewares/optionalAuth");
 const uploadController = require("./uploadController");
 const metadataController = require("./metadataController");
 const stateController = require("./stateController");
 const listController = require("./listController");
+const accessRequestController = require("./accessRequestController");
 
 const router = Router();
 
@@ -20,6 +22,27 @@ function attachAuthUser(req, _res, next) {
   };
   next();
 }
+
+function attachOptionalAuthUser(req, _res, next) {
+  if (req.auth) {
+    req.user = {
+      id: Number(req.auth.sub),
+      email: req.auth.email,
+      role: req.auth.role,
+    };
+  }
+  next();
+}
+
+/**
+ * Public reads — available to guests (no token) as well as authenticated
+ * users. Access-tier enforcement happens inside these controllers based on
+ * whether req.user is set.
+ */
+router.get("/published", optionalAuth, attachOptionalAuthUser, listController.getPublishedDocuments);
+router.get("/files/:documentId", optionalAuth, attachOptionalAuthUser, uploadController.getFileInfo);
+router.get("/files/:documentId/signed-url", optionalAuth, attachOptionalAuthUser, uploadController.getSignedFileUrl);
+router.get("/files/:documentId/content", optionalAuth, attachOptionalAuthUser, uploadController.streamFileContent);
 
 router.use(requireAuth, attachAuthUser);
 
@@ -39,11 +62,8 @@ router.post(
 );
 
 /**
- * Read file metadata and content endpoints
+ * Remaining file endpoints (mutations require auth)
  */
-router.get("/files/:documentId", uploadController.getFileInfo);
-router.get("/files/:documentId/signed-url", uploadController.getSignedFileUrl);
-router.get("/files/:documentId/content", uploadController.streamFileContent);
 router.delete("/files/:documentId", uploadController.deleteFile);
 
 /**
@@ -106,15 +126,33 @@ router.get("/review-queue", listController.getReviewQueue);
 router.get("/pending", listController.getPendingDocuments);
 
 /**
- * Published documents visible to ALL authenticated users
- * GET /api/documents/published?resourceCategory=
- */
-router.get("/published", listController.getPublishedDocuments);
-
-/**
  * Staff/reviewer all uploads listing
  * GET /api/documents/all-uploads?state=&type=&uploaderId=&accessTier=
  */
 router.get("/all-uploads", listController.getAllUploads);
+
+/**
+ * Request access to a RESTRICTED document
+ * POST /api/documents/:id/access-requests
+ */
+router.post("/:id/access-requests", accessRequestController.requestAccess);
+
+/**
+ * Access requests I've submitted
+ * GET /api/documents/access-requests/mine
+ */
+router.get("/access-requests/mine", accessRequestController.listMine);
+
+/**
+ * Access requests awaiting my decision (documents I authored)
+ * GET /api/documents/access-requests/incoming?status=
+ */
+router.get("/access-requests/incoming", accessRequestController.listIncoming);
+
+/**
+ * Approve/reject an access request
+ * PATCH /api/documents/access-requests/:requestId/decision
+ */
+router.patch("/access-requests/:requestId/decision", accessRequestController.decide);
 
 module.exports = router;

@@ -8,7 +8,7 @@ import AuthLayout from '../components/auth/AuthLayout.jsx'
 import { defaultRouteForRole } from '../app/rbac.js'
 import { useAuth } from '../app/use-auth.js'
 import { loginRequest } from '../services/api/auth.js'
-import { Mail, Lock, LogIn, Compass, FileText, Users, Download, Loader2 } from 'lucide-react'
+import { Mail, Lock, LogIn, Compass, FileText, Users, Download, Loader2, Eye, EyeOff } from 'lucide-react'
 
 const STATS = [
   { label: 'Documents', value: '12,490+', Icon: FileText },
@@ -21,6 +21,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { authState, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -117,13 +118,22 @@ export default function LoginPage() {
             <Input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="Enter your password"
-              className="h-11 pl-9 text-[.95rem]"
+              className="h-11 pl-9 pr-9 text-[.95rem]"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[var(--ink)]"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
         </div>
 

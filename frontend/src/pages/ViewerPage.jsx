@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '../app/use-auth.js'
 import { apiRequest } from '../services/api/client'
+import { requestDocumentAccess } from '../services/api/documentAccessRequests.js'
 import JitsiRoom from '../components/JitsiRoom.jsx'
 import {
   fetchAnnotations,
@@ -52,6 +54,9 @@ export default function ViewerPage() {
   const [fileUrl, setFileUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [accessDenied, setAccessDenied] = useState(null)
+  const [accessRequestMessage, setAccessRequestMessage] = useState('')
+  const [requestingAccess, setRequestingAccess] = useState(false)
 
   // Collaboration State
   const [activeTab, setActiveTab] = useState('annotations')
@@ -101,6 +106,7 @@ export default function ViewerPage() {
       try {
         setLoading(true)
         setError('')
+        setAccessDenied(null)
 
         // Fetch document info
         const docResponse = await apiRequest(`/repository/files/${docId}`, {
@@ -133,7 +139,14 @@ export default function ViewerPage() {
           console.error('Error fetching signed URL:', err)
         }
       } catch (err) {
-        setError(err.message || 'Failed to load document')
+        if (err.code === 'ACCESS_REQUEST_REQUIRED') {
+          setAccessDenied({
+            requestStatus: err.data?.requestStatus || 'NONE',
+            authorId: err.data?.authorId || null,
+          })
+        } else {
+          setError(err.message || 'Failed to load document')
+        }
       } finally {
         setLoading(false)
       }
@@ -141,6 +154,30 @@ export default function ViewerPage() {
 
     fetchDocument()
   }, [docId, authState?.token])
+
+  const handleRequestAccess = async () => {
+    if (!docId || !authState?.token) return
+    try {
+      setRequestingAccess(true)
+      await requestDocumentAccess({
+        authToken: authState.token,
+        documentId: docId,
+        message: accessRequestMessage.trim(),
+      })
+      setAccessDenied((prev) => ({ ...(prev || {}), requestStatus: 'PENDING' }))
+    } catch (err) {
+      if (err.code === 'ALREADY_REQUESTED' || err.code === 'ALREADY_APPROVED') {
+        setAccessDenied((prev) => ({
+          ...(prev || {}),
+          requestStatus: err.code === 'ALREADY_APPROVED' ? 'APPROVED' : 'PENDING',
+        }))
+      } else {
+        alert(err.message || 'Failed to submit access request')
+      }
+    } finally {
+      setRequestingAccess(false)
+    }
+  }
 
   // Fetch collaboration data (annotations, rooms)
   const loadAnnotationsAndRooms = async () => {
@@ -394,6 +431,68 @@ export default function ViewerPage() {
             <p className="text-sm text-red-600">{error}</p>
           </div>
         </div>
+      </section>
+    )
+  }
+
+  if (accessDenied) {
+    return (
+      <section className="mx-auto grid w-full max-w-2xl gap-4 p-4">
+        <Card>
+          <CardContent className="pt-6 grid gap-3">
+            <div className="flex items-center gap-2 text-amber-600">
+              <Lock className="h-5 w-5" />
+              <h3 className="text-base font-bold">Restricted document</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This document requires the author's approval before it can be viewed. You can send a
+              request below.
+            </p>
+
+            {accessDenied.requestStatus === 'PENDING' && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+                Your access request is pending review by the author.
+              </div>
+            )}
+
+            {accessDenied.requestStatus === 'APPROVED' && (
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-400">
+                Your access request was approved — reloading the page should now show the document.
+              </div>
+            )}
+
+            {accessDenied.requestStatus === 'REJECTED' && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600">
+                Your previous request for this document was rejected. You may send a new request below.
+              </div>
+            )}
+
+            {(accessDenied.requestStatus === 'NONE' || accessDenied.requestStatus === 'REJECTED') && (
+              <div className="grid gap-2">
+                <Label htmlFor="access-request-message" className="text-xs">
+                  Message to the author (optional)
+                </Label>
+                <Textarea
+                  id="access-request-message"
+                  placeholder="Let the author know why you'd like access..."
+                  value={accessRequestMessage}
+                  onChange={(e) => setAccessRequestMessage(e.target.value)}
+                  className="text-sm"
+                  rows={3}
+                />
+                <Button
+                  type="button"
+                  onClick={handleRequestAccess}
+                  disabled={requestingAccess}
+                  className="w-fit gap-2"
+                >
+                  {requestingAccess ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Request access
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
     )
   }

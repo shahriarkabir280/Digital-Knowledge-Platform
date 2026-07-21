@@ -8,7 +8,23 @@ import AuthLayout from '../components/auth/AuthLayout.jsx'
 import { useAuth } from '../app/use-auth.js'
 import { defaultRouteForRole } from '../app/rbac.js'
 import { registerRequest } from '../services/api/auth.js'
-import { User, Mail, Lock, UserPlus, BookOpen, FlaskConical, ShieldCheck, Loader2 } from 'lucide-react'
+import { User, Mail, Lock, UserPlus, BookOpen, FlaskConical, ShieldCheck, Loader2, Eye, EyeOff } from 'lucide-react'
+
+const PASSWORD_RULES = [
+  { test: (value) => value.length >= 8, message: 'at least 8 characters' },
+  { test: (value) => /[A-Z]/.test(value), message: 'an uppercase letter' },
+  { test: (value) => /[a-z]/.test(value), message: 'a lowercase letter' },
+  { test: (value) => /[0-9]/.test(value), message: 'a number' },
+  { test: (value) => /[^A-Za-z0-9]/.test(value), message: 'a special character' },
+]
+
+function getPasswordError(password) {
+  const failed = PASSWORD_RULES.filter((rule) => !rule.test(password)).map((rule) => rule.message)
+  if (failed.length === 0) {
+    return ''
+  }
+  return `Password must contain ${failed.join(', ')}.`
+}
 
 const FEATURES = [
   { Icon: BookOpen, text: 'Access thousands of academic resources' },
@@ -24,6 +40,8 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { authState } = useAuth()
   const navigate = useNavigate()
 
@@ -37,6 +55,11 @@ export default function RegisterPage() {
     setSuccessMessage('')
     if (!name.trim() || !email.trim() || !password.trim()) {
       setErrorMessage('Name, email, and password are required.')
+      return
+    }
+    const passwordError = getPasswordError(password)
+    if (passwordError) {
+      setErrorMessage(passwordError)
       return
     }
     if (password !== confirmPassword) {
@@ -120,14 +143,26 @@ export default function RegisterPage() {
             <Input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="At least 8 characters"
-              className="h-11 pl-9 text-[.95rem]"
+              className="h-11 pl-9 pr-9 text-[.95rem]"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[var(--ink)]"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
+          <p className="text-xs text-[var(--muted)]">
+            Must include an uppercase letter, a lowercase letter, a number, and a special character.
+          </p>
         </div>
 
         <div className="grid gap-1.5">
@@ -137,13 +172,22 @@ export default function RegisterPage() {
             <Input
               id="confirmPassword"
               name="confirmPassword"
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="Re-enter your password"
-              className="h-11 pl-9 text-[.95rem]"
+              className="h-11 pl-9 pr-9 text-[.95rem]"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[var(--ink)]"
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
         </div>
 

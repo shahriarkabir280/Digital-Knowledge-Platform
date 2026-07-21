@@ -330,7 +330,7 @@ a { color: var(--accent-strong); }
 
 .main-grid {
   display: grid;
-  grid-template-columns: var(--sidebar-width, 256px) 1fr;
+  grid-template-columns: var(--sidebar-width, 256px) minmax(0, 1fr);
   gap: 0;
   flex: 1;
   height: calc(100svh - 64px);
@@ -339,7 +339,7 @@ a { color: var(--accent-strong); }
 }
 
 .main-grid.library-full-grid {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */

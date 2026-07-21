@@ -3,7 +3,14 @@ const { z } = require("zod");
 const registerSchema = z.object({
   email: z.string().trim().email(),
   name: z.string().trim().min(2).max(120),
-  password: z.string().min(8).max(128),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters long")
+    .max(128)
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
 });
 
 const REQUIRED_INSTITUTIONAL_DOMAIN = "cs.du.ac.bd";

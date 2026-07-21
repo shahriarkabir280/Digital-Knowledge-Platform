@@ -711,8 +711,9 @@ export default function RepositoryPage() {
                     value={newResource.accessTier || 'PUBLIC'}
                     onChange={e => setNewResource(p => ({ ...p, accessTier: e.target.value }))}
                   >
-                    <option value="PUBLIC">Public — Visible to everyone (including guests)</option>
-                    <option value="REGISTERED">Registered — Visible only to logged-in members</option>
+                    <option value="PUBLIC">Public</option>
+                    <option value="REGISTERED">Private</option>
+                    <option value="RESTRICTED">Restricted</option>
                   </Select>
                 </div>
 
@@ -761,7 +762,7 @@ export default function RepositoryPage() {
                         </div>
                       ) : (
                         /* Selected file display — show AI extraction loading while analyzing */
-                        <div className="flex items-center gap-3 p-3 rounded-xl border border-accent/30 bg-accent/5">
+                        <div className="flex items-center gap-3 p-3 rounded-xl border border-accent/30 bg-accent/5 min-w-0">
                           <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
                             {isExtracting ? (
                               <Loader2 size={18} className="text-accent animate-spin" />
@@ -812,7 +813,7 @@ export default function RepositoryPage() {
                 {newResource._extractionError && (
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600">
                     <AlertCircle size={13} className="shrink-0 mt-0.5" />
-                    <span>
+                    <span className="min-w-0 break-words">
                       <strong>Auto-fill note:</strong> {newResource._extractionError}
                     </span>
                   </div>
@@ -882,7 +883,7 @@ export default function RepositoryPage() {
             </div>
             <div className="grid gap-2">
               <DialogTitle>Submitted Successfully!</DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="break-words">
                 Your research paper "<strong>{uploadSuccessTitle}</strong>" has been submitted for admin review.
               </DialogDescription>
             </div>

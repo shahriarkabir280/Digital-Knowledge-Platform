@@ -304,7 +304,7 @@ async function getMyNotifications(req, res, next) {
     const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 100);
 
     const rows = await db("notifications")
-      .select("id", "document_id", "event_type", "title", "message", "is_read", "created_at")
+      .select("id", "document_id", "event_type", "title", "message", "is_read", "metadata", "created_at")
       .where({ user_id: req.user.id })
       .orderBy("created_at", "desc")
       .limit(limit);
@@ -319,6 +319,7 @@ async function getMyNotifications(req, res, next) {
           title: row.title,
           message: row.message,
           isRead: row.is_read,
+          metadata: row.metadata || null,
           createdAt: row.created_at,
         })),
       },

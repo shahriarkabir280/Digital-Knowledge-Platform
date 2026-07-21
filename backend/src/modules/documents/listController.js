@@ -697,9 +697,15 @@ async function getPublishedDocuments(req, res, next) {
       })
     );
 
-    const items = results
+    let items = results
       .flat()
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Guests (no authenticated user) may only ever see PUBLIC documents,
+    // regardless of any client-supplied filter — never trust the client here.
+    if (!req.user) {
+      items = items.filter((item) => item.accessTier === "PUBLIC");
+    }
 
     return res.status(200).json({
       success: true,

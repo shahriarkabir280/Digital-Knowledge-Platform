@@ -103,7 +103,7 @@ cp .env.example .env
    - Go to https://supabase.com/dashboard
    - Select your project
    - Go to Settings → Database
-   - Copy the connection string under "JDBC" or "PostgreSQL"
+   - Copy the connection string under "PostgreSQL"
    - Paste into `backend/.env` as `DATABASE_URL`
 
 4. Install dependencies:

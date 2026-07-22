@@ -6,6 +6,7 @@
 const { Router } = require("express");
 const requireAuth = require("../../api/middlewares/requireAuth");
 const requireRole = require("../../api/middlewares/requireRole");
+const optionalAuth = require("../../api/middlewares/optionalAuth");
 const catalogController = require("./catalogController");
 const {
   createCatalogItemSchema,
@@ -19,6 +20,7 @@ const holdsRepo = require("../../db/repositories/holds");
 const wishlistsRepo = require("../../db/repositories/wishlists");
 const subscriptionsRepo = require("../../db/repositories/subscriptions");
 const borrowRequestsRepo = require("../../db/repositories/borrowRequests");
+const bookDonationsRepo = require("../../db/repositories/bookDonations");
 const reviewsRepo = require("../../db/repositories/reviews");
 const catalogItems = require("../../db/repositories/catalogItems");
 const auditLog = require("../../db/repositories/auditLog");
@@ -585,6 +587,204 @@ router.delete("/borrow-requests/:id", requireAuth, async (req, res, next) => {
     res.json(request);
   } catch (error) {
     next(error);
+  }
+});
+
+// ── Book Donations (offline/physical library) ───────────────────────
+// Two entry points feed the same pipeline: a donor submitting an offer
+// themselves (public, no login required), or a librarian logging one after
+// a walk-in/phone/email conversation.
+
+// POST /api/library/donations — public: donor submits an offer
+router.post("/donations", optionalAuth, async (req, res, next) => {
+  try {
+    // Honeypot: a hidden field real users never fill in; bots that fill
+    // every field will trip it. Silently pretend success either way.
+    if (req.body.website) {
+      return res.status(201).json({ success: true, message: "Thank you for your offer." });
+    }
+
+    const donation = await bookDonationsRepo.createFromDonor({
+      donorName: req.body.donorName,
+      donorEmail: req.body.donorEmail,
+      donorPhone: req.body.donorPhone,
+      donorAffiliation: req.body.donorAffiliation,
+      deliveryMethod: req.body.deliveryMethod,
+      notes: req.body.notes,
+      items: req.body.items,
+      donorUserId: req.auth?.id,
+    });
+
+    res.status(201).json({ success: true, data: { donation } });
+  } catch (error) {
+    next(error.statusCode ? error : { statusCode: 500, message: error.message });
+  }
+});
+
+// GET /api/library/donations/track — public: donor status lookup
+router.get("/donations/track", async (req, res, next) => {
+  try {
+    const { code, email } = req.query;
+    if (!code || !email) {
+      return next({ statusCode: 400, code: "MISSING_FIELDS", message: "code and email are required" });
+    }
+
+    const donation = await bookDonationsRepo.findByReferenceCode(code, email);
+    if (!donation) {
+      return next({ statusCode: 404, code: "DONATION_NOT_FOUND", message: "No donation matched that code and email" });
+    }
+
+    res.json({ success: true, data: { donation } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/library/donations/log — librarian logs a walk-in/phone/email donation (STAFF+)
+router.post(
+  "/donations/log",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const donation = await bookDonationsRepo.createByStaff({
+        staffId: req.auth.id,
+        donorName: req.body.donorName,
+        donorEmail: req.body.donorEmail,
+        donorPhone: req.body.donorPhone,
+        donorAffiliation: req.body.donorAffiliation,
+        deliveryMethod: req.body.deliveryMethod,
+        notes: req.body.notes,
+        items: req.body.items,
+        initialStatus: req.body.initialStatus,
+      });
+
+      res.status(201).json({ success: true, data: { donation } });
+    } catch (error) {
+      next(error.statusCode ? error : { statusCode: 500, message: error.message });
+    }
+  },
+);
+
+// GET /api/library/donations/pending — librarian review queue (STAFF+)
+router.get(
+  "/donations/pending",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (_req, res, next) => {
+    try {
+      res.json({ success: true, data: { items: await bookDonationsRepo.findPending() } });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// GET /api/library/donations — full list w/ optional ?status filter (STAFF+)
+router.get(
+  "/donations",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const items = await bookDonationsRepo.findAll({ status: req.query.status });
+      res.json({ success: true, data: { items } });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// GET /api/library/donations/:id — detail (STAFF+)
+router.get(
+  "/donations/:id",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const donation = await bookDonationsRepo.findById(parseInt(req.params.id, 10));
+      if (!donation) {
+        return next({ statusCode: 404, code: "DONATION_NOT_FOUND", message: "Donation not found" });
+      }
+      res.json({ success: true, data: { donation } });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// POST /api/library/donations/:id/accept (STAFF+)
+router.post(
+  "/donations/:id/accept",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const donation = await bookDonationsRepo.accept(parseInt(req.params.id, 10), req.auth.id, req.body.staffNote);
+      res.json({ success: true, data: { donation } });
+    } catch (error) {
+      next(error.statusCode ? error : { statusCode: 500, message: error.message });
+    }
+  },
+);
+
+// POST /api/library/donations/:id/decline (STAFF+)
+router.post(
+  "/donations/:id/decline",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const donation = await bookDonationsRepo.decline(parseInt(req.params.id, 10), req.auth.id, req.body.reason);
+      res.json({ success: true, data: { donation } });
+    } catch (error) {
+      next(error.statusCode ? error : { statusCode: 500, message: error.message });
+    }
+  },
+);
+
+// POST /api/library/donations/:id/receive — mark received + decide each item (STAFF+)
+router.post(
+  "/donations/:id/receive",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const donation = await bookDonationsRepo.markReceived(
+        parseInt(req.params.id, 10),
+        req.auth.id,
+        req.body.decisions,
+      );
+      res.json({ success: true, data: { donation } });
+    } catch (error) {
+      next(error.statusCode ? error : { statusCode: 500, message: error.message });
+    }
+  },
+);
+
+// POST /api/library/donations/:id/items/:itemId/catalog — catalog a WANTED item (STAFF+)
+router.post(
+  "/donations/:id/items/:itemId/catalog",
+  requireAuth,
+  requireRole("STAFF", "LAB_MANAGER", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const result = await bookDonationsRepo.catalogItem(parseInt(req.params.itemId, 10), req.body);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error.statusCode ? error : { statusCode: 500, message: error.message });
+    }
+  },
+);
+
+// POST /api/library/donations/:id/cancel — donor (own) or STAFF+
+router.post("/donations/:id/cancel", requireAuth, async (req, res, next) => {
+  try {
+    const isStaff = ["STAFF", "LAB_MANAGER", "ADMIN"].includes(req.auth.role);
+    const donation = await bookDonationsRepo.cancel(parseInt(req.params.id, 10), req.auth.id, isStaff);
+    res.json({ success: true, data: { donation } });
+  } catch (error) {
+    next(error.statusCode ? error : { statusCode: 500, message: error.message });
   }
 });
 

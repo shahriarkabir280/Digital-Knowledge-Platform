@@ -50,6 +50,12 @@ export const navItems = [
     roles: ROUTE_ACCESS.studentProjectShowcase,
   },
   {
+    to: '/donate-books',
+    label: 'Donate Books',
+    iconName: 'Heart',
+    roles: ROUTE_ACCESS.donateBooks,
+  },
+  {
     to: '/all-uploads',
     label: 'Global Records',
     iconName: 'Globe2',

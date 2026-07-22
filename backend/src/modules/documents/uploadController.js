@@ -16,6 +16,7 @@ const metadataExtractionService = require('../../services/metadataExtractionServ
 const documentAccessRequests = require('../../db/repositories/documentAccessRequests');
 
 const PRIVILEGED_REPOSITORY_ROLES = new Set(['STAFF', 'LAB_MANAGER', 'REVIEWER', 'ADMIN']);
+const DOCUMENT_DELETE_ROLES = new Set(['STAFF', 'LAB_MANAGER', 'ADMIN']);
 const RESOURCE_CATEGORY_ALIASES = {
   'textbook': 'textbook',
   'lecture-slides': 'lecture-slides',
@@ -752,11 +753,11 @@ async function deleteFile(req, res, next) {
       });
     }
 
-    // Check ownership
-    if (document.uploader_id !== userId && req.user?.role !== 'ADMIN') {
+    // Check ownership — the uploader or library staff (STAFF/LAB_MANAGER/ADMIN) may delete anytime
+    if (document.uploader_id !== userId && !DOCUMENT_DELETE_ROLES.has(req.user?.role)) {
       return res.status(403).json({
         success: false,
-        error: 'Only the uploader can delete this file',
+        error: 'Only the uploader or library staff can delete this document',
         code: 'FORBIDDEN',
       });
     }

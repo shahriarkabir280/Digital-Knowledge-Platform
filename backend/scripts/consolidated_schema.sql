@@ -502,6 +502,58 @@ CREATE INDEX IF NOT EXISTS idx_borrow_requests_member ON borrow_requests(member_
 CREATE INDEX IF NOT EXISTS idx_borrow_requests_status ON borrow_requests(status);
 
 -- ============================================================
+-- 14b. BOOK DONATIONS — offline/physical library donation pipeline.
+--      Two entry points feed the same tables: a donor submits an offer via
+--      the public form, or a librarian logs one after a walk-in/phone/email
+--      conversation (origin = STAFF_ENTERED, may start ACCEPTED/RECEIVED).
+-- ============================================================
+CREATE TABLE IF NOT EXISTS book_donations (
+  id                BIGSERIAL PRIMARY KEY,
+  origin            TEXT        NOT NULL DEFAULT 'PUBLIC_FORM',  -- PUBLIC_FORM, STAFF_ENTERED
+  donor_user_id     BIGINT      REFERENCES users(id) ON DELETE SET NULL,
+  donor_name        TEXT        NOT NULL,
+  donor_email       TEXT        NOT NULL,
+  donor_phone       TEXT,
+  donor_affiliation TEXT,        -- ALUMNI, FACULTY, STUDENT, PUBLIC, ORGANIZATION
+  delivery_method   TEXT        NOT NULL DEFAULT 'DROP_OFF',  -- DROP_OFF, PICKUP_REQUESTED, ALREADY_RECEIVED
+  notes             TEXT,
+  reference_code    TEXT        NOT NULL UNIQUE,   -- e.g. "DON-7F3K9Q" — shown to donor for status lookup
+  status            TEXT        NOT NULL DEFAULT 'SUBMITTED',
+    -- SUBMITTED, ACCEPTED, DECLINED, RECEIVED, COMPLETED, CANCELLED
+  staff_note        TEXT,
+  decided_by        BIGINT      REFERENCES users(id) ON DELETE SET NULL,
+  decided_at        TIMESTAMPTZ,
+  received_by       BIGINT      REFERENCES users(id) ON DELETE SET NULL,
+  received_at       TIMESTAMPTZ,
+  logged_by         BIGINT      REFERENCES users(id) ON DELETE SET NULL,  -- staff who entered it, if STAFF_ENTERED
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS book_donation_items (
+  id               BIGSERIAL PRIMARY KEY,
+  donation_id      BIGINT      NOT NULL REFERENCES book_donations(id) ON DELETE CASCADE,
+  title            TEXT        NOT NULL,
+  authors          TEXT,
+  isbn             TEXT,
+  publisher        TEXT,
+  publication_year INTEGER,
+  quantity         INTEGER     NOT NULL DEFAULT 1,
+  condition_notes  TEXT,
+  decision         TEXT        NOT NULL DEFAULT 'PENDING',  -- PENDING, WANTED, NOT_NEEDED, CATALOGED
+  catalog_item_id  BIGINT      REFERENCES catalog_items(id) ON DELETE SET NULL,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_book_donations_status     ON book_donations(status);
+CREATE INDEX IF NOT EXISTS idx_book_donations_donor_user ON book_donations(donor_user_id);
+CREATE INDEX IF NOT EXISTS idx_book_donations_reference  ON book_donations(reference_code);
+CREATE INDEX IF NOT EXISTS idx_donation_items_donation   ON book_donation_items(donation_id);
+
+ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS acquisition_source TEXT NOT NULL DEFAULT 'PURCHASE'; -- PURCHASE, DONATION
+
+-- ============================================================
 -- 15. REVIEWS — physical catalog item ratings (source: supabase_library_5.7.sql)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS reviews (

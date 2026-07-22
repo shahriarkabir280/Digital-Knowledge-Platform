@@ -24,6 +24,16 @@ const CIRCULATION_ERROR_MESSAGES = {
   REQUEST_INVALID_STATUS: 'This request has already been decided.',
   NO_SUBSCRIPTION_TO_RENEW: "You don't have a subscription yet — contact a librarian to start one.",
   NO_PENDING_RENEWAL: 'This member has no pending renewal request.',
+  NO_ITEMS: 'Add at least one book with a title.',
+  MISSING_DONOR_NAME: 'A name is required.',
+  MISSING_DONOR_EMAIL: 'An email address is required.',
+  TOO_MANY_PENDING: 'There are already several pending offers for this email — a librarian will review them soon.',
+  DONATION_NOT_FOUND: 'No donation matched that reference code and email.',
+  INVALID_STATUS: 'This donation has already moved past that step.',
+  ALREADY_CATALOGED: 'This book has already been added to the catalog.',
+  NOT_WANTED: 'Mark this book as wanted before cataloging it.',
+  CATALOG_ITEM_NOT_FOUND: 'That catalog title could not be found.',
+  NOT_YOURS: 'You can only manage your own donation.',
 }
 
 /**

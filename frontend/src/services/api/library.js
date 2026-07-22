@@ -341,6 +341,96 @@ export async function removeFromWishlist(wishlistId) {
   return apiRequest(`/library/wishlist/${wishlistId}`, { method: 'DELETE' })
 }
 
+// ── Book Donations (offline/physical library) ───────────────────────
+
+/**
+ * Public: submit a donation offer. No auth required — a logged-in donor's
+ * user_id is attached automatically server-side if a token is present.
+ */
+export async function submitBookDonation(payload) {
+  return apiRequest('/library/donations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Public: look up a donation's status by reference code + donor email.
+ */
+export async function trackBookDonation(code, email) {
+  const query = new URLSearchParams({ code, email })
+  return apiRequest(`/library/donations/track?${query.toString()}`)
+}
+
+/**
+ * Librarian logs a walk-in/phone/email donation directly (STAFF+).
+ */
+export async function logBookDonation(payload) {
+  return apiRequest('/library/donations/log', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Librarian review queue — SUBMITTED offers (STAFF+).
+ */
+export async function fetchPendingDonations() {
+  return apiRequest('/library/donations/pending')
+}
+
+/**
+ * All donations, optionally filtered by status (STAFF+).
+ */
+export async function fetchDonations(status) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : ''
+  return apiRequest(`/library/donations${query}`)
+}
+
+export async function fetchDonation(id) {
+  return apiRequest(`/library/donations/${id}`)
+}
+
+export async function acceptDonation(id, staffNote) {
+  return apiRequest(`/library/donations/${id}/accept`, {
+    method: 'POST',
+    body: JSON.stringify({ staffNote }),
+  })
+}
+
+export async function declineDonation(id, reason) {
+  return apiRequest(`/library/donations/${id}/decline`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  })
+}
+
+/**
+ * Mark a donation received and decide each book (WANTED / NOT_NEEDED).
+ * @param {Array<{itemId:number, decision:'WANTED'|'NOT_NEEDED'}>} decisions
+ */
+export async function receiveDonation(id, decisions) {
+  return apiRequest(`/library/donations/${id}/receive`, {
+    method: 'POST',
+    body: JSON.stringify({ decisions }),
+  })
+}
+
+/**
+ * Catalog a WANTED donation item — either `{ mode: 'existing', catalogItemId }`
+ * or `{ mode: 'new', ...catalog item fields }`.
+ */
+export async function catalogDonationItem(donationId, itemId, payload) {
+  return apiRequest(`/library/donations/${donationId}/items/${itemId}/catalog`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function cancelDonation(id) {
+  return apiRequest(`/library/donations/${id}/cancel`, { method: 'POST' })
+}
+
 // ── Reports (STAFF+) ───────────────────────────────────────────────
 
 /**

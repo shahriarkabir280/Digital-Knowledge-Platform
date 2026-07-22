@@ -76,6 +76,14 @@ function buildTransitionNotification(document, fromState, toState, actorName, no
     };
   }
 
+  if (toState === "paused") {
+    return {
+      eventType,
+      title: "Document paused",
+      message: `"${document.title}" was paused by ${actorName} and is temporarily hidden from the library while it's updated.${noteSuffix}`,
+    };
+  }
+
   return {
     eventType,
     title: "Document status updated",
@@ -126,6 +134,11 @@ async function createTransitionNotifications(trx, document, fromState, toState, 
     if (document.uploader_id !== actor.id) {
       recipientIds.add(document.uploader_id);
     }
+  }
+
+  // Flow 5: published -> paused (notify the owner if staff paused it on their behalf).
+  if (toState === "paused" && document.uploader_id !== actor.id) {
+    recipientIds.add(document.uploader_id);
   }
 
   if (recipientIds.size === 0) {

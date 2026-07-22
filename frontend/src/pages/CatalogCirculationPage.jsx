@@ -15,12 +15,15 @@ import { Badge } from '@/components/ui/badge'
 import {
   BookCheck, Search, Loader2, AlertCircle, BookOpen,
   User, MapPin, CheckCircle2, X, RefreshCw, RotateCcw, ScanLine,
-  ClipboardList, CalendarCheck, PlusCircle, Check, Ban, Clock3
+  ClipboardList, CalendarCheck, PlusCircle, Check, Ban, Clock3,
+  Heart, Package, Library, Trash2,
 } from 'lucide-react'
 import {
   searchCatalog, checkoutItem, getOverdueLoans, returnItem, lookupCatalog, searchMembers,
   getPendingBorrowRequests, approveBorrowRequest, rejectBorrowRequest,
   listSubscriptions, activateSubscription, rejectSubscriptionRenewal, createCatalogItem,
+  fetchPendingDonations, fetchDonations, acceptDonation, declineDonation,
+  logBookDonation, receiveDonation, catalogDonationItem,
 } from '../services/api/library.js'
 import { circulationErrorMessage } from '../services/api/errorMessages.js'
 import BarcodeScanner from '../components/library/BarcodeScanner.jsx'
@@ -951,6 +954,471 @@ function AddBookPanel() {
   )
 }
 
+// ── Book Donations Panel ─────────────────────────────────────────────
+
+const DONATION_AFFILIATIONS = [
+  { value: '', label: 'Not specified' },
+  { value: 'ALUMNI', label: 'Alumni' },
+  { value: 'FACULTY', label: 'Faculty' },
+  { value: 'STUDENT', label: 'Current student' },
+  { value: 'ORGANIZATION', label: 'Organization' },
+  { value: 'PUBLIC', label: 'General public' },
+]
+
+function LogDonationForm({ onLogged }) {
+  const emptyBook = () => ({ title: '', authors: '', isbn: '', quantity: '1', conditionNotes: '' })
+  const [form, setForm] = useState({ donorName: '', donorEmail: '', donorPhone: '', donorAffiliation: '', initialStatus: 'ACCEPTED' })
+  const [books, setBooks] = useState([emptyBook()])
+
+  const logMutation = useMutation({
+    mutationFn: () => logBookDonation({
+      ...form,
+      donorPhone: form.donorPhone || undefined,
+      donorAffiliation: form.donorAffiliation || undefined,
+      items: books.filter(b => b.title.trim()).map(b => ({
+        title: b.title.trim(),
+        authors: b.authors.trim() || undefined,
+        isbn: b.isbn.trim() || undefined,
+        quantity: Number(b.quantity) || 1,
+        conditionNotes: b.conditionNotes.trim() || undefined,
+      })),
+    }),
+    onSuccess: () => {
+      toast.success('Donation logged.')
+      setForm({ donorName: '', donorEmail: '', donorPhone: '', donorAffiliation: '', initialStatus: 'ACCEPTED' })
+      setBooks([emptyBook()])
+      onLogged?.()
+    },
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Could not log donation.')),
+  })
+
+  const setBook = (index, field, value) => setBooks(current => current.map((b, i) => i === index ? { ...b, [field]: value } : b))
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!form.donorName.trim() || !form.donorEmail.trim()) { toast.error('Donor name and email are required.'); return }
+    if (!books.some(b => b.title.trim())) { toast.error('Add at least one book.'); return }
+    logMutation.mutate()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="grid gap-3 rounded-xl border border-border bg-muted/10 p-3.5">
+      <p className="text-xs font-bold text-foreground">Log a walk-in / phone / email donation</p>
+      <div className="grid sm:grid-cols-2 gap-2.5">
+        <Input placeholder="Donor name *" value={form.donorName} onChange={e => setForm(p => ({ ...p, donorName: e.target.value }))} className="text-xs" />
+        <Input placeholder="Donor email *" type="email" value={form.donorEmail} onChange={e => setForm(p => ({ ...p, donorEmail: e.target.value }))} className="text-xs" />
+      </div>
+      <div className="grid sm:grid-cols-3 gap-2.5">
+        <Input placeholder="Phone (optional)" value={form.donorPhone} onChange={e => setForm(p => ({ ...p, donorPhone: e.target.value }))} className="text-xs" />
+        <Select value={form.donorAffiliation} onChange={e => setForm(p => ({ ...p, donorAffiliation: e.target.value }))} className="text-xs">
+          {DONATION_AFFILIATIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </Select>
+        <Select value={form.initialStatus} onChange={e => setForm(p => ({ ...p, initialStatus: e.target.value }))} className="text-xs">
+          <option value="ACCEPTED">Accepted — books coming later</option>
+          <option value="RECEIVED">Received — books in hand now</option>
+        </Select>
+      </div>
+
+      <div className="grid gap-2">
+        {books.map((book, index) => (
+          <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_90px_28px] items-center">
+            <Input placeholder="Title *" value={book.title} onChange={e => setBook(index, 'title', e.target.value)} className="text-xs" />
+            <Input placeholder="Author" value={book.authors} onChange={e => setBook(index, 'authors', e.target.value)} className="text-xs" />
+            <Input type="number" min="1" placeholder="Qty" value={book.quantity} onChange={e => setBook(index, 'quantity', e.target.value)} className="text-xs" />
+            {books.length > 1 && (
+              <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500" onClick={() => setBooks(current => current.filter((_, i) => i !== index))}>
+                <Trash2 size={12} />
+              </Button>
+            )}
+          </div>
+        ))}
+        <Button type="button" size="sm" variant="outline" className="w-fit h-7 text-[13px] gap-1" onClick={() => setBooks(current => [...current, emptyBook()])}>
+          <PlusCircle size={12} /> Add book
+        </Button>
+      </div>
+
+      <Button type="submit" size="sm" className="w-fit gap-1.5" disabled={logMutation.isPending}>
+        {logMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Heart size={13} />}
+        {logMutation.isPending ? 'Logging…' : 'Log donation'}
+      </Button>
+    </form>
+  )
+}
+
+function PendingDonationsSection() {
+  const queryClient = useQueryClient()
+  const { data, isLoading, isError } = useQuery({ queryKey: ['donations-pending'], queryFn: fetchPendingDonations })
+  const donations = data?.data?.items || []
+  const [expanded, setExpanded] = useState(null) // { id, mode: 'accept'|'decline' }
+  const [staffNote, setStaffNote] = useState('')
+  const [declineReason, setDeclineReason] = useState('')
+
+  const acceptMutation = useMutation({
+    mutationFn: ({ id, note }) => acceptDonation(id, note),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['donations-pending'] })
+      queryClient.invalidateQueries({ queryKey: ['donations-accepted'] })
+      toast.success('Donation accepted.')
+      setExpanded(null)
+      setStaffNote('')
+    },
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Could not accept donation.')),
+  })
+
+  const declineMutation = useMutation({
+    mutationFn: ({ id, reason }) => declineDonation(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['donations-pending'] })
+      toast.success('Donation declined.')
+      setExpanded(null)
+      setDeclineReason('')
+    },
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Could not decline donation.')),
+  })
+
+  if (isLoading) return <div className="flex justify-center py-6"><Loader2 size={16} className="animate-spin text-muted-foreground" /></div>
+  if (isError) return <p className="text-xs text-red-500">Failed to load pending donations.</p>
+  if (!donations.length) return <p className="text-xs text-muted-foreground italic py-2">No pending donation offers.</p>
+
+  return (
+    <div className="grid gap-2">
+      {donations.map((donation) => (
+        <div key={donation.id} className="rounded-xl border border-border bg-card p-3.5 grid gap-2.5">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="grid gap-0.5 min-w-0">
+              <p className="text-sm font-bold text-foreground truncate">
+                {donation.donor_name} <span className="font-normal text-muted-foreground">· {donation.donor_email}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">{donation.items.length} book(s) · Ref {donation.reference_code}</p>
+            </div>
+            <Badge variant="outline" className="text-[11px] shrink-0">{donation.delivery_method.replace(/_/g, ' ')}</Badge>
+          </div>
+
+          <ul className="grid gap-1 text-xs text-muted-foreground">
+            {donation.items.map((item) => (
+              <li key={item.id}>&bull; {item.title}{item.authors ? ` — ${item.authors}` : ''} (x{item.quantity})</li>
+            ))}
+          </ul>
+
+          {expanded?.id !== donation.id && (
+            <div className="flex items-center gap-2 border-t border-border/50 pt-2.5">
+              <Button size="sm" variant="outline" className="h-7 text-[13px] gap-1.5 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
+                onClick={() => { setExpanded({ id: donation.id, mode: 'accept' }); setStaffNote('') }}>
+                <Check size={11} /> Accept
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-[13px] gap-1.5 border-red-500/30 text-red-700 hover:bg-red-500/10 dark:text-red-400"
+                onClick={() => { setExpanded({ id: donation.id, mode: 'decline' }); setDeclineReason('') }}>
+                <Ban size={11} /> Decline
+              </Button>
+            </div>
+          )}
+
+          {expanded?.id === donation.id && expanded.mode === 'accept' && (
+            <div className="border-t border-border/50 pt-2.5 grid gap-2">
+              <Label className="text-[13px] font-semibold">Note to donor (optional)</Label>
+              <Textarea rows={2} value={staffNote} onChange={e => setStaffNote(e.target.value)} className="text-xs resize-none" />
+              <div className="flex gap-2">
+                <Button size="sm" className="h-8 text-xs gap-1.5" disabled={acceptMutation.isPending}
+                  onClick={() => acceptMutation.mutate({ id: donation.id, note: staffNote })}>
+                  {acceptMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Confirm Accept
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setExpanded(null)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+
+          {expanded?.id === donation.id && expanded.mode === 'decline' && (
+            <div className="border-t border-border/50 pt-2.5 grid gap-2">
+              <Label className="text-[13px] font-semibold">Reason (shown to the donor)</Label>
+              <Textarea rows={2} value={declineReason} onChange={e => setDeclineReason(e.target.value)} className="text-xs resize-none" />
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-red-500/30 text-red-700 hover:bg-red-500/10 dark:text-red-400" disabled={declineMutation.isPending}
+                  onClick={() => declineMutation.mutate({ id: donation.id, reason: declineReason })}>
+                  {declineMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Ban size={12} />} Confirm Decline
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setExpanded(null)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AcceptedDonationsSection() {
+  const queryClient = useQueryClient()
+  const { data, isLoading } = useQuery({ queryKey: ['donations-accepted'], queryFn: () => fetchDonations('ACCEPTED') })
+  const donations = data?.data?.items || []
+  const [receiving, setReceiving] = useState(null)
+  const [decisions, setDecisions] = useState({})
+
+  const receiveMutation = useMutation({
+    mutationFn: ({ id, decisionsList }) => receiveDonation(id, decisionsList),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['donations-accepted'] })
+      queryClient.invalidateQueries({ queryKey: ['donations-received'] })
+      toast.success('Marked received.')
+      setReceiving(null)
+      setDecisions({})
+    },
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Could not mark received.')),
+  })
+
+  const startReceiving = (donation) => {
+    setReceiving(donation.id)
+    setDecisions(Object.fromEntries(donation.items.map(item => [item.id, 'WANTED'])))
+  }
+
+  const submitReceive = (donationId) => {
+    const decisionsList = Object.entries(decisions).map(([itemId, decision]) => ({ itemId: Number(itemId), decision }))
+    receiveMutation.mutate({ id: donationId, decisionsList })
+  }
+
+  if (isLoading) return <div className="flex justify-center py-6"><Loader2 size={16} className="animate-spin text-muted-foreground" /></div>
+  if (!donations.length) return <p className="text-xs text-muted-foreground italic py-2">No accepted donations awaiting books.</p>
+
+  return (
+    <div className="grid gap-2">
+      {donations.map((donation) => (
+        <div key={donation.id} className="rounded-xl border border-border bg-card p-3.5 grid gap-2.5">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="grid gap-0.5 min-w-0">
+              <p className="text-sm font-bold text-foreground truncate">{donation.donor_name}</p>
+              <p className="text-xs text-muted-foreground">{donation.items.length} book(s) · Ref {donation.reference_code}</p>
+            </div>
+            {receiving !== donation.id && (
+              <Button size="sm" variant="outline" className="h-7 text-[13px] gap-1.5" onClick={() => startReceiving(donation)}>
+                <Package size={12} /> Mark received
+              </Button>
+            )}
+          </div>
+
+          {receiving === donation.id && (
+            <div className="border-t border-border/50 pt-2.5 grid gap-2">
+              {donation.items.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="truncate">{item.title}{item.authors ? ` — ${item.authors}` : ''}</span>
+                  <div className="flex bg-muted rounded-md p-0.5 border border-border/50 shrink-0">
+                    {['WANTED', 'NOT_NEEDED'].map(opt => (
+                      <button key={opt} type="button"
+                        onClick={() => setDecisions(d => ({ ...d, [item.id]: opt }))}
+                        className={`px-2 py-1 rounded text-[11px] font-semibold transition-colors ${decisions[item.id] === opt ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>
+                        {opt === 'WANTED' ? 'Wanted' : 'Not needed'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="flex gap-2 pt-1">
+                <Button size="sm" className="h-8 text-xs gap-1.5" disabled={receiveMutation.isPending} onClick={() => submitReceive(donation.id)}>
+                  {receiveMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Confirm
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setReceiving(null)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CatalogItemAction({ donation, item, onDone }) {
+  const [mode, setMode] = useState(null) // 'new' | 'existing' | null
+  const [newForm, setNewForm] = useState({
+    title: item.title, author: item.authors || '', isbn: item.isbn || '',
+    item_type: 'textbook', publisher: item.publisher || '', publish_year: item.publication_year || '',
+  })
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [selectedExisting, setSelectedExisting] = useState(null)
+
+  const catalogMutation = useMutation({
+    mutationFn: (payload) => catalogDonationItem(donation.id, item.id, payload),
+    onSuccess: () => {
+      toast.success(`"${item.title}" added to the catalog.`)
+      onDone()
+    },
+    onError: (err) => toast.error(circulationErrorMessage(err, 'Could not catalog this item.')),
+  })
+
+  const runSearch = async () => {
+    if (!searchQuery.trim()) return
+    setSearching(true)
+    try {
+      const result = await searchCatalog({ q: searchQuery.trim(), limit: 5 })
+      setSearchResults(result?.items || [])
+    } catch {
+      toast.error('Search failed.')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  if (!mode) {
+    return (
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" className="h-7 text-[12px] gap-1" onClick={() => setMode('new')}>
+          <PlusCircle size={11} /> New title
+        </Button>
+        <Button size="sm" variant="outline" className="h-7 text-[12px] gap-1" onClick={() => setMode('existing')}>
+          <Library size={11} /> Add to existing title
+        </Button>
+      </div>
+    )
+  }
+
+  if (mode === 'new') {
+    return (
+      <div className="grid gap-2 rounded-lg border border-border/60 bg-muted/10 p-2.5">
+        <div className="grid sm:grid-cols-2 gap-2">
+          <Input placeholder="Title" value={newForm.title} onChange={e => setNewForm(p => ({ ...p, title: e.target.value }))} className="text-xs" />
+          <Input placeholder="Author" value={newForm.author} onChange={e => setNewForm(p => ({ ...p, author: e.target.value }))} className="text-xs" />
+        </div>
+        <div className="grid sm:grid-cols-3 gap-2">
+          <Input placeholder="ISBN" value={newForm.isbn} onChange={e => setNewForm(p => ({ ...p, isbn: e.target.value }))} className="text-xs" />
+          <Select value={newForm.item_type} onChange={e => setNewForm(p => ({ ...p, item_type: e.target.value }))} className="text-xs">
+            {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c[0].toUpperCase() + c.slice(1)}</option>)}
+          </Select>
+          <Input placeholder="Publish year" value={newForm.publish_year} onChange={e => setNewForm(p => ({ ...p, publish_year: e.target.value }))} className="text-xs" />
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" className="h-7 text-xs gap-1" disabled={catalogMutation.isPending}
+            onClick={() => catalogMutation.mutate({ mode: 'new', ...newForm, publish_year: newForm.publish_year ? Number(newForm.publish_year) : undefined })}>
+            {catalogMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} Add to catalog
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setMode(null)}>Back</Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-2 rounded-lg border border-border/60 bg-muted/10 p-2.5">
+      <div className="flex gap-2">
+        <Input placeholder="Search catalog by title/author/ISBN…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="text-xs" />
+        <Button type="button" size="sm" variant="outline" className="h-8 text-xs shrink-0" disabled={searching} onClick={runSearch}>
+          {searching ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+        </Button>
+      </div>
+      {searchResults.length > 0 && (
+        <div className="grid gap-1">
+          {searchResults.map((result) => (
+            <button key={result.id} type="button"
+              onClick={() => setSelectedExisting(result)}
+              className={`text-left text-xs rounded-md px-2 py-1.5 border transition-colors ${selectedExisting?.id === result.id ? 'border-accent bg-accent/10' : 'border-border hover:bg-muted/30'}`}>
+              <strong>{result.title}</strong> {result.authors ? `— ${result.authors}` : ''}{' '}
+              <span className="text-muted-foreground">({result.available_copies}/{result.total_copies} available)</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Button size="sm" className="h-7 text-xs gap-1" disabled={!selectedExisting || catalogMutation.isPending}
+          onClick={() => catalogMutation.mutate({ mode: 'existing', catalogItemId: selectedExisting.id })}>
+          {catalogMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} Add {item.quantity} copy(ies) here
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setMode(null)}>Back</Button>
+      </div>
+    </div>
+  )
+}
+
+function ReceivedDonationsSection() {
+  const queryClient = useQueryClient()
+  const { data, isLoading } = useQuery({ queryKey: ['donations-received'], queryFn: () => fetchDonations('RECEIVED') })
+  const donations = data?.data?.items || []
+
+  const handleItemDone = () => {
+    queryClient.invalidateQueries({ queryKey: ['donations-received'] })
+    queryClient.invalidateQueries({ queryKey: ['catalog-all'] })
+  }
+
+  if (isLoading) return <div className="flex justify-center py-6"><Loader2 size={16} className="animate-spin text-muted-foreground" /></div>
+  if (!donations.length) return <p className="text-xs text-muted-foreground italic py-2">No received donations awaiting cataloging.</p>
+
+  return (
+    <div className="grid gap-2">
+      {donations.map((donation) => {
+        const wantedItems = donation.items.filter(item => item.decision === 'WANTED')
+        const otherItems = donation.items.filter(item => item.decision !== 'WANTED')
+        return (
+          <div key={donation.id} className="rounded-xl border border-border bg-card p-3.5 grid gap-2.5">
+            <p className="text-sm font-bold text-foreground">
+              {donation.donor_name} <span className="font-normal text-xs text-muted-foreground">· Ref {donation.reference_code}</span>
+            </p>
+
+            {wantedItems.map((item) => (
+              <div key={item.id} className="grid gap-1.5 border-t border-border/50 pt-2.5">
+                <p className="text-xs font-semibold text-foreground">
+                  {item.title}{item.authors ? ` — ${item.authors}` : ''} <span className="text-muted-foreground font-normal">(x{item.quantity})</span>
+                </p>
+                <CatalogItemAction donation={donation} item={item} onDone={handleItemDone} />
+              </div>
+            ))}
+
+            {otherItems.length > 0 && (
+              <div className="border-t border-border/50 pt-2 grid gap-0.5">
+                {otherItems.map(item => (
+                  <p key={item.id} className="text-[13px] text-muted-foreground">
+                    {item.title} — <span className={item.decision === 'CATALOGED' ? 'text-emerald-600 font-semibold' : ''}>
+                      {item.decision === 'CATALOGED' ? 'Added to catalog' : 'Not needed'}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function DonationsPanel() {
+  const [showLogForm, setShowLogForm] = useState(false)
+  const [section, setSection] = useState('pending')
+  const queryClient = useQueryClient()
+
+  const SECTIONS = [
+    { id: 'pending', label: 'Pending offers' },
+    { id: 'accepted', label: 'Accepted — awaiting books' },
+    { id: 'received', label: 'Received — needs cataloging' },
+  ]
+
+  return (
+    <div className="grid gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex bg-muted p-0.5 rounded-lg border border-border/50">
+          {SECTIONS.map(s => (
+            <button key={s.id} type="button" onClick={() => setSection(s.id)}
+              className={`px-3 py-1.5 rounded-md text-[12px] font-bold transition-all ${section === s.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+        <Button size="sm" variant="outline" className="h-7 text-[13px] gap-1.5" onClick={() => setShowLogForm(v => !v)}>
+          <Heart size={12} /> {showLogForm ? 'Close' : 'Log a donation'}
+        </Button>
+      </div>
+
+      {showLogForm && (
+        <LogDonationForm onLogged={() => {
+          setShowLogForm(false)
+          queryClient.invalidateQueries({ queryKey: ['donations-accepted'] })
+          queryClient.invalidateQueries({ queryKey: ['donations-received'] })
+        }} />
+      )}
+
+      {section === 'pending' && <PendingDonationsSection />}
+      {section === 'accepted' && <AcceptedDonationsSection />}
+      {section === 'received' && <ReceivedDonationsSection />}
+    </div>
+  )
+}
+
 // ── Main Page ──────────────────────────────────────────────────────
 
 const TABS = [
@@ -958,6 +1426,7 @@ const TABS = [
   { id: 'requests', label: 'Borrow Requests', icon: ClipboardList },
   { id: 'subscriptions', label: 'Subscriptions', icon: CalendarCheck },
   { id: 'addbook', label: 'Add Book', icon: PlusCircle },
+  { id: 'donations', label: 'Donations', icon: Heart },
   { id: 'overdue',  label: 'Overdue',  icon: AlertCircle },
 ]
 
@@ -999,6 +1468,7 @@ export default function CatalogCirculationPage() {
           {activeTab === 'requests' && <BorrowRequestsPanel />}
           {activeTab === 'subscriptions' && <SubscriptionsPanel />}
           {activeTab === 'addbook' && <AddBookPanel />}
+          {activeTab === 'donations' && <DonationsPanel />}
           {activeTab === 'overdue'  && <OverduePanel />}
         </CardContent>
       </Card>

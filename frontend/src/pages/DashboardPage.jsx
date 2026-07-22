@@ -14,6 +14,7 @@ import {
   fetchReviewQueue,
   openDocumentInNewTab,
   patchDocumentState,
+  deleteDocument,
 } from '../services/api/documents.js'
 import {
   LayoutDashboard,
@@ -30,6 +31,7 @@ import {
   AlertCircle,
   ArrowUpRight,
   FileEdit,
+  Trash2,
   ShieldCheck,
   ClipboardCheck,
   Activity,
@@ -152,10 +154,22 @@ export default function DashboardPage() {
     }
   }
 
+  const onDeleteDocument = async (documentId, title) => {
+    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return
+    try {
+      await deleteDocument(documentId, authState.token)
+      await loadMyUploads()
+      toast.success('Document deleted')
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete document')
+    }
+  }
+
   const resolveStateBadge = (state) => {
     if (state === 'draft') return 'bg-slate-500/10 text-slate-600 border-slate-500/20'
     if (state === 'review') return 'bg-amber-500/10 text-amber-600 border-amber-500/20'
     if (state === 'published') return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+    if (state === 'paused') return 'bg-orange-500/10 text-orange-600 border-orange-500/20'
     return 'bg-muted text-muted-foreground'
   }
 
@@ -338,7 +352,7 @@ export default function DashboardPage() {
 
               {/* Status Filter buttons */}
               <div className="flex bg-muted p-0.5 rounded-lg border border-border/50">
-                {['All', 'pending', 'draft', 'review', 'published'].map(state => (
+                {['All', 'pending', 'draft', 'review', 'published', 'paused'].map(state => (
                   <button
                     key={state}
                     onClick={() => setSelectedState(state)}
@@ -420,9 +434,19 @@ export default function DashboardPage() {
                           )}
 
                           <Button asChild size="sm" variant="secondary" className="h-7 text-[10px] px-2.5">
-                            <Link to={`/submit-paper?documentId=${item.id}`}>
+                            <Link to={`/documents/${item.id}/edit`}>
                               <FileEdit size={12} /> Edit
                             </Link>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 w-7 p-0 text-red-500 border-red-500/25 hover:bg-red-500/10"
+                            onClick={() => onDeleteDocument(item.id, item.title)}
+                            title="Delete document"
+                          >
+                            <Trash2 size={12} />
                           </Button>
                         </div>
                       </div>

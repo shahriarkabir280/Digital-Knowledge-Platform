@@ -4,7 +4,7 @@ const AccessTier = require("../../../../shared/types/AccessTier");
 const db = require("../../db");
 
 const querySchema = z.object({
-  state: z.enum(["pending", "draft", "review", "published", "archived"]).optional(),
+  state: z.enum(["pending", "draft", "review", "published", "archived", "paused"]).optional(),
   type: z.string().trim().min(1).max(100).optional(),
 });
 
@@ -17,7 +17,7 @@ const pendingDocumentsQuerySchema = z.object({
 });
 
 const allUploadsQuerySchema = z.object({
-  state: z.enum(["pending", "draft", "review", "published", "archived"]).optional(),
+  state: z.enum(["pending", "draft", "review", "published", "archived", "paused"]).optional(),
   type: z.string().trim().min(1).max(100).optional(),
   uploaderId: z.preprocess((value) => {
     if (value === "" || value === undefined || value === null) {

@@ -7,6 +7,7 @@ const DOCUMENT_STATES = Object.freeze({
   REVIEW: "review",
   PUBLISHED: "published",
   ARCHIVED: "archived",
+  PAUSED: "paused",
 });
 
 const lifecycleSchema = z.object({
@@ -22,10 +23,13 @@ const allowedTransitions = {
   [DOCUMENT_STATES.DRAFT]: [DOCUMENT_STATES.REVIEW, DOCUMENT_STATES.PUBLISHED],
   // Reviewers can approve (publish) or request revision (back to draft)
   [DOCUMENT_STATES.REVIEW]: [DOCUMENT_STATES.PUBLISHED, DOCUMENT_STATES.DRAFT],
-  // Published can be archived
-  [DOCUMENT_STATES.PUBLISHED]: [DOCUMENT_STATES.ARCHIVED],
+  // Published can be archived, or paused by the owner/staff to make edits
+  [DOCUMENT_STATES.PUBLISHED]: [DOCUMENT_STATES.ARCHIVED, DOCUMENT_STATES.PAUSED],
   // Archived items can be restored directly to published by staff
   [DOCUMENT_STATES.ARCHIVED]: [DOCUMENT_STATES.PUBLISHED],
+  // A paused document is normally resubmitted for review, but staff/admin may
+  // also republish it directly (mirrors draft -> published)
+  [DOCUMENT_STATES.PAUSED]: [DOCUMENT_STATES.REVIEW, DOCUMENT_STATES.PUBLISHED],
 };
 
 const rolePolicyByTargetState = {
@@ -49,6 +53,7 @@ const rolePolicyByTargetState = {
     "ADMIN",
   ],
   [DOCUMENT_STATES.ARCHIVED]: ["STAFF", "LAB_MANAGER", "ADMIN"],
+  [DOCUMENT_STATES.PAUSED]: ["STAFF", "LAB_MANAGER", "ADMIN"],
 };
 
 function validateDocumentId(value) {
@@ -135,7 +140,9 @@ function validateTransitionNote(currentState, nextState, note, userRole) {
       (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.ARCHIVED)) ||
     (currentState === DOCUMENT_STATES.DRAFT && nextState === DOCUMENT_STATES.PUBLISHED) ||
     (currentState === DOCUMENT_STATES.REVIEW &&
-      (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.DRAFT));
+      (nextState === DOCUMENT_STATES.PUBLISHED || nextState === DOCUMENT_STATES.DRAFT)) ||
+    (currentState === DOCUMENT_STATES.PUBLISHED && nextState === DOCUMENT_STATES.PAUSED) ||
+    (currentState === DOCUMENT_STATES.PAUSED && nextState === DOCUMENT_STATES.PUBLISHED);
 
   if (!requiresNote) {
     return { ok: true };
@@ -173,6 +180,15 @@ function canMoveToDraft(document, user) {
   return allowedRoles.includes(user.role);
 }
 
+function canMoveToPaused(document, user) {
+  if (sameDocumentOwner(document, user)) {
+    return true;
+  }
+
+  const allowedRoles = rolePolicyByTargetState[DOCUMENT_STATES.PAUSED] || [];
+  return allowedRoles.includes(user.role);
+}
+
 function validateRolePermission(document, user, nextState) {
   if (nextState === DOCUMENT_STATES.REVIEW) {
     if (canMoveToReview(document, user)) {
@@ -200,6 +216,21 @@ function validateRolePermission(document, user, nextState) {
         statusCode: 403,
         code: "FORBIDDEN_STATE_TRANSITION",
         message: "You are not allowed to move this document to draft",
+      },
+    };
+  }
+
+  if (nextState === DOCUMENT_STATES.PAUSED) {
+    if (canMoveToPaused(document, user)) {
+      return { ok: true };
+    }
+
+    return {
+      ok: false,
+      error: {
+        statusCode: 403,
+        code: "FORBIDDEN_STATE_TRANSITION",
+        message: "You are not allowed to pause this document",
       },
     };
   }

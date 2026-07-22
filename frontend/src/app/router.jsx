@@ -5,6 +5,9 @@ import AdminRoleManagementPage from '../pages/AdminRoleManagementPage.jsx'
 import AllUploadsPage from '../pages/AllUploadsPage.jsx'
 import AppLayout from '../components/layout/AppLayout.jsx'
 import DashboardPage from '../pages/DashboardPage.jsx'
+import DocumentSettingsPage from '../pages/DocumentSettingsPage.jsx'
+import DonateBooksPage from '../pages/DonateBooksPage.jsx'
+import TrackDonationPage from '../pages/TrackDonationPage.jsx'
 import LibraryPage from '../pages/LibraryPage.jsx'
 import LibraryBookmarksPage from '../pages/LibraryBookmarksPage.jsx'
 import LibraryProfilePage from '../pages/LibraryProfilePage.jsx'
@@ -73,8 +76,8 @@ export const appRouter = createBrowserRouter([
                 element: <SubmissionWizardPage />,
               },
               {
-                path: '/metadata-form',
-                element: <SubmissionWizardPage />,
+                path: '/documents/:id/edit',
+                element: <DocumentSettingsPage />,
               },
               {
                 path: '/borrow-item',
@@ -178,6 +181,14 @@ export const appRouter = createBrowserRouter([
           {
             path: '/student-projects',
             element: <StudentProjectShowcasePage />,
+          },
+          {
+            path: '/donate-books',
+            element: <DonateBooksPage />,
+          },
+          {
+            path: '/donate-books/track',
+            element: <TrackDonationPage />,
           },
           {
             path: '/viewer/:docId?',

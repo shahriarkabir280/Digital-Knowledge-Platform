@@ -218,6 +218,14 @@ export default function AllUploadsPage() {
   }
 
   const renderStateActions = (item) => {
+    if (item.state === 'paused') {
+      return (
+        <span className="text-xs italic text-muted-foreground">
+          Paused by the author — awaiting resubmission for review.
+        </span>
+      )
+    }
+
     if (item.state !== 'published') {
       const publishingKey = `${item.id}:published`
 
@@ -301,6 +309,7 @@ export default function AllUploadsPage() {
               <option value="draft">draft</option>
               <option value="review">review</option>
               <option value="published">published</option>
+              <option value="paused">paused</option>
               <option value="archived">archived</option>
             </Select>
           </div>
@@ -362,8 +371,11 @@ export default function AllUploadsPage() {
                           ? 'warning'
                           : item.state === 'archived'
                             ? 'danger'
-                            : 'secondary'
+                            : item.state === 'paused'
+                              ? 'outline'
+                              : 'secondary'
                     }
+                    className={item.state === 'paused' ? 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400' : undefined}
                   >
                     {item.state}
                   </Badge>
@@ -417,7 +429,7 @@ export default function AllUploadsPage() {
                     {expandedAudit[item.id] ? 'Hide Audit Log' : 'View Audit Log'}
                   </Button>
                   {renderStateActions(item)}
-                  {authState.role === 'ADMIN' && (
+                  {['STAFF', 'LAB_MANAGER', 'ADMIN'].includes(authState.role) && (
                     <Button
                       type="button"
                       variant="outline"

@@ -1,0 +1,347 @@
+/* ─── Auth layout — aurora background, drifting grid, cursor spotlight ─── */
+
+.auth-panel {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.auth-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .08) 1px, transparent 1px);
+  background-size: 34px 34px;
+  animation: auth-grid-drift 26s linear infinite;
+  mask-image: radial-gradient(circle at 50% 40%, black 0%, transparent 78%);
+}
+
+/* Cursor-follow spotlight — position driven by --spot-x / --spot-y custom
+   properties set directly on the element (see AuthLayout.jsx), not React
+   state, to avoid re-render cost on every pointer move. */
+.auth-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(
+    420px circle at var(--spot-x, 50%) var(--spot-y, 30%),
+    rgba(255, 255, 255, .16),
+    transparent 65%
+  );
+  transition: opacity .3s ease;
+  opacity: var(--spot-opacity, 0);
+}
+
+.auth-blob {
+  position: absolute;
+  z-index: 0;
+  border-radius: 999px;
+  filter: blur(60px);
+  opacity: .55;
+  will-change: transform;
+}
+
+.auth-blob-a {
+  width: 340px;
+  height: 340px;
+  top: -80px;
+  left: -60px;
+  background: radial-gradient(circle, var(--brand-200) 0%, transparent 70%);
+  animation: auth-float-a 16s ease-in-out infinite;
+}
+
+.auth-blob-b {
+  width: 420px;
+  height: 420px;
+  bottom: -120px;
+  right: -100px;
+  background: radial-gradient(circle, var(--brand-300) 0%, transparent 70%);
+  animation: auth-float-b 20s ease-in-out infinite;
+}
+
+.auth-blob-c {
+  width: 260px;
+  height: 260px;
+  bottom: 30%;
+  left: 20%;
+  background: radial-gradient(circle, #ffffff 0%, transparent 72%);
+  opacity: .18;
+  animation: auth-float-c 22s ease-in-out infinite;
+}
+
+.auth-blob-d {
+  width: 300px;
+  height: 300px;
+  top: 40%;
+  right: 10%;
+  background: radial-gradient(circle, #f0abfc 0%, transparent 70%);
+  opacity: .28;
+  animation: auth-float-d 24s ease-in-out infinite;
+}
+
+.auth-blob-e {
+  width: 240px;
+  height: 240px;
+  top: 8%;
+  right: 25%;
+  background: radial-gradient(circle, #fbbf24 0%, transparent 70%);
+  opacity: .2;
+  animation: auth-float-e 19s ease-in-out infinite;
+}
+
+@keyframes auth-grid-drift {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 68px 34px, 68px 34px; }
+}
+
+@keyframes auth-float-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(30px, 40px) scale(1.08); }
+}
+
+@keyframes auth-float-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-40px, -30px) scale(1.1); }
+}
+
+@keyframes auth-float-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(20px, -50px) scale(1.15); }
+}
+
+@keyframes auth-float-d {
+  0%, 100%  { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(-35px, 25px) scale(1.12); }
+  66%       { transform: translate(20px, -20px) scale(.94); }
+}
+
+@keyframes auth-float-e {
+  0%, 100%  { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(-25px, 35px) scale(1.1); }
+}
+
+/* Animated rainbow gradient headline — a moving multi-colour sweep clipped
+   to the text, for a livelier "kinetic type" feel on the big title. */
+.auth-gradient-text {
+  background-image: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #a5f3fc 20%,
+    #67e8f9 35%,
+    #f0abfc 55%,
+    #fbcfe8 70%,
+    #ffffff 100%
+  );
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: auth-gradient-shift 7s linear infinite;
+}
+
+@keyframes auth-gradient-shift {
+  to { background-position: -250% center; }
+}
+
+/* Custom cursor ring — only over the branding panel, only for fine
+   pointers (mouse/trackpad). Position driven by --cursor-x/--cursor-y
+   custom properties written directly by AuthLayout.jsx's pointer handler. */
+@media (hover: hover) and (pointer: fine) {
+  .auth-panel { cursor: none; }
+}
+
+.auth-cursor-ring {
+  position: absolute;
+  z-index: 20;
+  left: var(--cursor-x, 50%);
+  top: var(--cursor-y, 50%);
+  width: 26px;
+  height: 26px;
+  margin-left: -13px;
+  margin-top: -13px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, .7);
+  background: rgba(255, 255, 255, .08);
+  pointer-events: none;
+  opacity: var(--cursor-opacity, 0);
+  transition:
+    left .09s linear,
+    top .09s linear,
+    width .25s cubic-bezier(.34, 1.56, .64, 1),
+    height .25s cubic-bezier(.34, 1.56, .64, 1),
+    margin .25s cubic-bezier(.34, 1.56, .64, 1),
+    background-color .25s ease,
+    border-color .25s ease,
+    opacity .25s ease;
+}
+
+.auth-panel.cursor-hover-active .auth-cursor-ring {
+  width: 58px;
+  height: 58px;
+  margin-left: -29px;
+  margin-top: -29px;
+  background: rgba(240, 171, 252, .18);
+  border-color: rgba(240, 171, 252, .9);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .auth-cursor-ring { display: none; }
+}
+
+/* Shimmer sweep across primary buttons on hover. */
+.auth-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.35) 45%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform .6s ease;
+}
+
+.auth-shimmer:hover::after {
+  transform: translateX(120%);
+}
+
+/* Right-side form panel: soft ambient wash, drifting colour blobs, and a
+   cursor spotlight so it doesn't feel like flat empty white next to the
+   animated brand panel. */
+.auth-form-panel {
+  position: relative;
+  /* Only clip horizontally — the panel keeps its own overflow-y-auto
+     (Tailwind utility) so tall form content on small screens still scrolls. */
+  overflow-x: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(600px circle at 15% 0%, var(--brand-50) 0%, transparent 55%),
+    radial-gradient(500px circle at 100% 100%, var(--brand-50) 0%, transparent 50%),
+    hsl(var(--background));
+}
+
+/* Cursor spotlight for the light panel — much softer than the brand-panel
+   version so it reads as ambient light, not a dark vignette. */
+.auth-form-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(
+    460px circle at var(--form-spot-x, 50%) var(--form-spot-y, 20%),
+    hsl(var(--primary) / .07),
+    transparent 65%
+  );
+  transition: opacity .3s ease;
+  opacity: var(--form-spot-opacity, 0);
+}
+
+.auth-form-blob {
+  position: absolute;
+  z-index: 0;
+  border-radius: 999px;
+  filter: blur(70px);
+  will-change: transform;
+}
+
+.auth-form-blob-a {
+  width: 320px;
+  height: 320px;
+  top: -60px;
+  right: -80px;
+  background: radial-gradient(circle, var(--brand-200) 0%, transparent 72%);
+  opacity: .45;
+  animation: auth-float-a 18s ease-in-out infinite;
+}
+
+.auth-form-blob-b {
+  width: 300px;
+  height: 300px;
+  bottom: -90px;
+  left: -70px;
+  background: radial-gradient(circle, #f0abfc 0%, transparent 72%);
+  opacity: .3;
+  animation: auth-float-b 21s ease-in-out infinite;
+}
+
+.auth-form-blob-c {
+  width: 220px;
+  height: 220px;
+  bottom: 15%;
+  right: 6%;
+  background: radial-gradient(circle, #fbbf24 0%, transparent 72%);
+  opacity: .22;
+  animation: auth-float-e 17s ease-in-out infinite;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  background: hsl(var(--card) / .78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-lg), 0 0 0 1px hsl(var(--primary) / .04);
+}
+
+/* Soft halo of light behind the glass card — the single "gorgeous" touch
+   that makes the card feel gently lit rather than just placed on a page. */
+.auth-card::before {
+  content: '';
+  position: absolute;
+  inset: -34px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(58% 58% at 50% 38%, hsl(var(--primary) / .20), transparent 72%);
+  filter: blur(28px);
+  animation: auth-halo-breathe 7s ease-in-out infinite;
+}
+
+@keyframes auth-halo-breathe {
+  0%, 100% { opacity: .7; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.05); }
+}
+
+.auth-badge {
+  position: relative;
+  z-index: 1;
+}
+
+/* Whole-page vignette — a very soft darkening toward the corners that ties
+   the animated brand panel and the light form panel into one atmosphere. */
+.auth-shell {
+  position: relative;
+}
+
+.auth-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: radial-gradient(130% 100% at 50% 45%, transparent 58%, rgba(4, 12, 20, .12) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-panel::before,
+  .auth-blob-a,
+  .auth-blob-b,
+  .auth-blob-c,
+  .auth-blob-d,
+  .auth-blob-e,
+  .auth-form-blob-a,
+  .auth-form-blob-b,
+  .auth-form-blob-c,
+  .auth-card::before,
+  .auth-gradient-text {
+    animation: none !important;
+  }
+
+  .auth-cursor-ring { display: none; }
+}

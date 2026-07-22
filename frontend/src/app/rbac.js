@@ -36,6 +36,7 @@ export const ROUTE_ACCESS = Object.freeze({
   search: PUBLIC_ROUTES,
   viewer: PUBLIC_ROUTES,
   studentProjectShowcase: PUBLIC_ROUTES,
+  donateBooks: PUBLIC_ROUTES,
   home: ALL_AUTH_ROLES,
   dashboard: ALL_AUTH_ROLES,
   notifications: ALL_AUTH_ROLES,

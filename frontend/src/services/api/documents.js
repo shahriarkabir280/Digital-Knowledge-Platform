@@ -146,6 +146,75 @@ export async function uploadDocument(file, metadata = {}, onProgress, authToken)
 }
 
 /**
+ * Replace the underlying file of an existing document, incrementing its
+ * version. Only valid while the document is in a state that allows file
+ * changes (draft/paused) — the backend enforces this via ownership; state
+ * gating is the caller's responsibility on the UI side.
+ * @param {number|string} documentId - Document ID
+ * @param {File} file - The replacement file
+ * @param {string} authToken - JWT authentication token
+ * @param {Function} [onProgress] - Progress callback (receives progress event)
+ * @returns {Promise<Object>} Replace response with updated document/file info
+ */
+export async function replaceDocumentFile(documentId, file, authToken, onProgress) {
+  const storedSession = loadAuthSession()
+  const effectiveAuthToken = authToken || storedSession?.token || ''
+
+  if (!effectiveAuthToken) {
+    return Promise.reject(new Error('You must be logged in to replace this file.'))
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.timeout = 120000
+
+    if (onProgress) {
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          onProgress({
+            loaded: event.loaded,
+            total: event.total,
+            percent: Math.round((event.loaded / event.total) * 100),
+          })
+        }
+      })
+    }
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText))
+        } catch (error) {
+          reject(new Error('Failed to parse replace-file response'))
+        }
+      } else if (xhr.status === 401) {
+        reject(new Error('Your session has expired. Please refresh the page and log in again.'))
+      } else {
+        try {
+          const error = JSON.parse(xhr.responseText)
+          reject(new Error(error.error || `Replacing the file failed with status ${xhr.status}`))
+        } catch {
+          reject(new Error(`Replacing the file failed with status ${xhr.status}`))
+        }
+      }
+    })
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Network error while replacing the file. Please check your connection.'))
+    })
+    xhr.addEventListener('abort', () => reject(new Error('Replace cancelled')))
+    xhr.addEventListener('timeout', () => reject(new Error('Replace timed out. Please retry with a smaller file or better connection.')))
+
+    xhr.open('PUT', `${API_BASE_URL}/documents/${documentId}/file`)
+    xhr.setRequestHeader('Authorization', `Bearer ${effectiveAuthToken}`)
+    xhr.send(formData)
+  })
+}
+
+/**
  * Fetch list of documents in the repository
  * @param {string} authToken - JWT authentication token
  * @returns {Promise<Array>} List of documents

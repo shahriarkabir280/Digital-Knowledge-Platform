@@ -26,7 +26,7 @@ export default function PasswordStrengthMeter({ password }) {
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: .25 }}
-      className="grid gap-2 overflow-hidden"
+      className="grid gap-1.5 overflow-hidden"
     >
       <div className="flex items-center gap-2">
         <div className="flex h-1.5 flex-1 gap-1">

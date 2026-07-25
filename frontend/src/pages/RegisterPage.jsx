@@ -118,12 +118,12 @@ export default function RegisterPage() {
 
       <motion.form
         onSubmit={onSubmit}
-        className="grid gap-3.5"
+        className="grid gap-2"
         variants={formStagger}
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={fieldVariants} className="grid gap-1.5">
+        <motion.div variants={fieldVariants} className="grid gap-1">
           <Label htmlFor="name">Full name</Label>
           <div className="group relative">
             <User size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] transition-colors group-focus-within:text-[var(--accent)]" />
@@ -132,14 +132,14 @@ export default function RegisterPage() {
               name="name"
               autoComplete="name"
               placeholder="Tamim Dewan"
-              className="h-11 pl-9 text-[.95rem] transition-shadow duration-200 focus-visible:shadow-[0_0_0_4px_hsl(var(--ring)/.15)]"
+              className="h-10 pl-9 text-[.95rem] transition-shadow duration-200 focus-visible:shadow-[0_0_0_4px_hsl(var(--ring)/.15)]"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
         </motion.div>
 
-        <motion.div variants={fieldVariants} className="grid gap-1.5">
+        <motion.div variants={fieldVariants} className="grid gap-1">
           <Label htmlFor="email">University email</Label>
           <div className="group relative">
             <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] transition-colors group-focus-within:text-[var(--accent)]" />
@@ -148,14 +148,14 @@ export default function RegisterPage() {
               name="email"
               autoComplete="email"
               placeholder="tamim@cs.du.ac.bd"
-              className="h-11 pl-9 text-[.95rem] transition-shadow duration-200 focus-visible:shadow-[0_0_0_4px_hsl(var(--ring)/.15)]"
+              className="h-10 pl-9 text-[.95rem] transition-shadow duration-200 focus-visible:shadow-[0_0_0_4px_hsl(var(--ring)/.15)]"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
         </motion.div>
 
-        <motion.div variants={fieldVariants} className="grid gap-1.5">
+        <motion.div variants={fieldVariants} className="grid gap-1">
           <Label htmlFor="password">Password</Label>
           <div className="group relative">
             <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] transition-colors group-focus-within:text-[var(--accent)]" />
@@ -165,7 +165,7 @@ export default function RegisterPage() {
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="At least 8 characters"
-              className="h-11 pl-9 pr-9 text-[.95rem] transition-shadow duration-200 focus-visible:shadow-[0_0_0_4px_hsl(var(--ring)/.15)]"
+              className="h-10 pl-9 pr-9 text-[.95rem] transition-shadow duration-200 focus-visible:shadow-[0_0_0_4px_hsl(var(--ring)/.15)]"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -184,7 +184,7 @@ export default function RegisterPage() {
           </AnimatePresence>
         </motion.div>
 
-        <motion.div variants={fieldVariants} className="grid gap-1.5">
+        <motion.div variants={fieldVariants} className="grid gap-1">
           <Label htmlFor="confirmPassword">Confirm password</Label>
           <div className="group relative">
             <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] transition-colors group-focus-within:text-[var(--accent)]" />
@@ -194,7 +194,7 @@ export default function RegisterPage() {
               type={showConfirmPassword ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="Re-enter your password"
-              className="h-11 pl-9 pr-9 text-[.95rem] transition-shadow duration-200 focus-visible:shadow-[0_0_0_4px_hsl(var(--ring)/.15)]"
+              className="h-10 pl-9 pr-9 text-[.95rem] transition-shadow duration-200 focus-visible:shadow-[0_0_0_4px_hsl(var(--ring)/.15)]"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />

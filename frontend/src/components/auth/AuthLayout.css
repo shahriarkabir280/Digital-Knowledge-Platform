@@ -216,9 +216,10 @@
    animated brand panel. */
 .auth-form-panel {
   position: relative;
-  /* Only clip horizontally — the panel keeps its own overflow-y-auto
-     (Tailwind utility) so tall form content on small screens still scrolls. */
-  overflow-x: hidden;
+  /* This layer only holds decorative bleed (blobs/glow) and is fully
+     clipped (overflow-hidden, set as a Tailwind utility in AuthLayout.jsx).
+     The actual scrollable content lives in an inner wrapper so blurred
+     shapes with negative offsets can never trigger a spurious scrollbar. */
   isolation: isolate;
   background:
     radial-gradient(600px circle at 15% 0%, var(--brand-50) 0%, transparent 55%),

@@ -67,13 +67,13 @@ export default function AuthLayout({ eyebrow, title, description, panelExtra, ch
   }
 
   return (
-    <div className="auth-shell grid min-h-[100svh] lg:grid-cols-2">
+    <div className="auth-shell grid h-[100svh] lg:grid-cols-2">
       {/* Left panel — branding */}
       <div
         ref={panelRef}
         onMouseMove={handlePointerMove}
         onMouseLeave={handlePointerLeave}
-        className="auth-panel hidden flex-col items-center justify-center gap-8 bg-gradient-to-br from-[var(--brand-700)] via-[var(--brand-500)] to-[var(--brand-400)] p-12 text-white lg:flex"
+        className="auth-panel hidden min-h-0 flex-col items-center justify-center gap-8 bg-gradient-to-br from-[var(--brand-700)] via-[var(--brand-500)] to-[var(--brand-400)] p-12 text-white lg:flex"
       >
         <span className="auth-blob auth-blob-a" aria-hidden="true" />
         <span className="auth-blob auth-blob-b" aria-hidden="true" />
@@ -136,36 +136,41 @@ export default function AuthLayout({ eyebrow, title, description, panelExtra, ch
         </motion.div>
       </div>
 
-      {/* Right panel — form */}
+      {/* Right panel — form. Decorative bleed (blobs/glow) lives in this
+          outer, clipped layer; only the inner layer scrolls, so blurred
+          shapes with negative offsets can never trigger a scrollbar for
+          content that's actually fully visible. */}
       <div
         ref={formPanelRef}
         onMouseMove={handleFormPointerMove}
         onMouseLeave={handleFormPointerLeave}
-        className="auth-form-panel flex flex-col items-center justify-center gap-5 overflow-y-auto p-8 sm:p-12"
+        className="auth-form-panel relative min-h-0 overflow-hidden"
       >
         <span className="auth-form-blob auth-form-blob-a" aria-hidden="true" />
         <span className="auth-form-blob auth-form-blob-b" aria-hidden="true" />
         <span className="auth-form-blob auth-form-blob-c" aria-hidden="true" />
         <AmbientGlow />
 
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: .5, ease: [0.22, 1, 0.36, 1] }}
-          className="auth-card grid w-full max-w-[400px] gap-6 rounded-2xl p-7 sm:p-8"
-        >
-          {children}
-        </motion.div>
+        <div className="relative z-[1] flex h-full min-h-0 flex-col items-center justify-center gap-3 overflow-y-auto p-6 sm:p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: .5, ease: [0.22, 1, 0.36, 1] }}
+            className="auth-card grid w-full max-w-[400px] gap-4 rounded-2xl p-6"
+          >
+            {children}
+          </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: .5, delay: .5, ease: [0.22, 1, 0.36, 1] }}
-          className="auth-badge flex items-center gap-1.5 text-xs font-medium text-[var(--muted)]"
-        >
-          <ShieldCheck size={13} className="text-[var(--accent)]" />
-          Secured institutional access for CSEDU students, faculty &amp; staff
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: .5, delay: .5, ease: [0.22, 1, 0.36, 1] }}
+            className="auth-badge flex shrink-0 items-center gap-1.5 text-xs font-medium text-[var(--muted)]"
+          >
+            <ShieldCheck size={13} className="text-[var(--accent)]" />
+            Secured institutional access for CSEDU students, faculty &amp; staff
+          </motion.div>
+        </div>
       </div>
     </div>
   )

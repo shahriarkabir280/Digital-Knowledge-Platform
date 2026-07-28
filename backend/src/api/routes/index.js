@@ -1,4 +1,6 @@
 const { Router } = require("express");
+const swaggerUi = require("swagger-ui-express");
+const openapiSpec = require("../docs/openapi");
 const authRouter = require("../../modules/auth");
 const documentsRouter = require("../../modules/documents");
 const libraryRouter = require("../../modules/library");
@@ -31,6 +33,9 @@ router.get("/health", async (_req, res, next) => {
 router.get("/status", (_req, res) => {
   res.status(200).json({ message: "API is ready" });
 });
+
+router.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
+router.get("/openapi.json", (_req, res) => res.json(openapiSpec));
 
 router.use("/auth", authRouter);
 router.use("/users", usersRouter);

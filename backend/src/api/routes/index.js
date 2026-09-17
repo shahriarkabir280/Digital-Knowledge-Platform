@@ -48,7 +48,9 @@ router.use("/collaboration", collaborationRouter);
 router.use("/loans", loansRouter);
 router.use("/role-requests", roleRequestsRouter);
 
-const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://python-service:8000";
+const PYTHON_SERVICE_URL =
+  process.env.PYTHON_SERVICE_URL ||
+  "http://python-service:8000";
 
 router.post("/extract-metadata", async (req, res) => {
   const { text } = req.body;

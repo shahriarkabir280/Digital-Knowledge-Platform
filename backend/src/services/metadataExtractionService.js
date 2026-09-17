@@ -4,7 +4,9 @@ const mammoth = require('mammoth');
 const db = require('../db');
 const { findResourceById } = require('../modules/documents/resourceStorage');
 
-const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://python-service:8000';
+const PYTHON_SERVICE_URL =
+  process.env.PYTHON_SERVICE_URL ||
+  'http://python-service:8000';
 
 const STOP_WORDS = new Set([
   'the', 'of', 'and', 'to', 'in', 'is', 'for', 'that', 'on', 'with', 'as', 'by', 'an', 'at', 'this', 'from', 'it', 'which', 'or', 'be', 'are', 'was', 'were', 'has', 'have', 'had', 'been', 'but', 'not', 'we', 'they', 'our', 'their', 'more', 'about', 'can', 'will', 'would', 'should', 'other', 'some', 'than', 'into', 'its', 'these', 'those', 'also', 'such', 'only', 'new', 'first', 'two', 'has', 'more', 'how', 'any', 'who', 'very', 'many'

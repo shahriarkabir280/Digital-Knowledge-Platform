@@ -1,6 +1,7 @@
 const { z } = require("zod");
 
 const envSchema = z.object({
+  PORT: z.coerce.number().int().positive().optional(),
   BACKEND_PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string(),
   SUPABASE_URL: z.string().optional(),

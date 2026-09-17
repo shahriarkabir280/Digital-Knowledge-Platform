@@ -5,7 +5,7 @@ const db = require("./db");
 const dueTrackingJob = require("./jobs/dueTrackingJob");
 const fineCalculationJob = require("./jobs/fineCalculationJob");
 
-const PORT = process.env.BACKEND_PORT || 3000;
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 3000;
 
 (async () => {
   await db.ping();

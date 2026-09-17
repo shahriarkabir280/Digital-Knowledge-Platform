@@ -48,7 +48,7 @@ services:
     plan: free
     healthCheckPath: /health
 
-  - type: static
+  - type: static_site
     name: dkp-frontend
     rootDir: frontend
     buildCommand: npm install && npm run build

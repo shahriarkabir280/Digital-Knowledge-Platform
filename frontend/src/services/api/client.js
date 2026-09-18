@@ -1,4 +1,10 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')
+
+export function buildApiUrl(path) {
+  if (!path) return API_BASE_URL
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
+}
 import { loadAuthSession, saveAuthSession } from '../../app/auth-session.js'
 
 async function parseResponseBody(response) {

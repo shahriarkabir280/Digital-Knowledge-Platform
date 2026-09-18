@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useAuth } from '../app/use-auth.js'
-import { apiRequest } from '../services/api/client'
+import { apiRequest, buildApiUrl } from '../services/api/client'
 import { uploadDocument } from '../services/api/documents.js'
 import { ResourceGridSkeleton, SidebarSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
 import ResourceCard from '../components/library/ResourceCard.jsx'
@@ -66,7 +66,7 @@ export default function RepositoryPage() {
           if (response?.data?.items?.length) {
             for (const doc of response.data.items) {
               const numericDocId = Number(doc.id)
-              const pdfUrl = `/api/repository/files/${numericDocId || doc.id}/content`
+              const pdfUrl = buildApiUrl(`/repository/files/${numericDocId || doc.id}/content`)
 
               const docId = `doc-${doc.id}`
               if (seenDocIds.has(docId)) continue

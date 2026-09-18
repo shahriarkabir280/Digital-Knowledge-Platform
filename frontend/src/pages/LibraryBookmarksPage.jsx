@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '../app/use-auth.js'
-import { apiRequest } from '../services/api/client'
+import { apiRequest, buildApiUrl } from '../services/api/client'
 import { ResourceGridSkeleton } from '../components/library/ResourceCardSkeleton.jsx'
 import ResourceCard from '../components/library/ResourceCard.jsx'
 import { 
@@ -61,7 +61,7 @@ export default function LibraryBookmarksPage() {
                   title: doc.title,
                   type: doc.type || 'PDF',
                   resourceCategory: doc.resourceCategory || resourceCategory,
-                  pdfUrl: `/api/repository/files/${Number(doc.id) || doc.id}/content`,
+                  pdfUrl: buildApiUrl(`/repository/files/${Number(doc.id) || doc.id}/content`),
                   updatedAt: doc.updatedAt,
                   department: doc.department || 'CSE',
                   course: doc.course || 'N/A',
